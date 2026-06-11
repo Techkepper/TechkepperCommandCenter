@@ -1,0 +1,94 @@
+networks:
+  techkepper:
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASS: ${MYSQL_ROOT_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE:-techkepper_command_center}
+      DB_DIALECT: mysql
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-techkepper-command-center}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-techkepper-web}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      PROXY_PORT: ${PROXY_PORT:-8080}
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-wwebjs}
+      REDIS_URL: redis://redis:6379
+      REDIS_DB: 2
+      INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-Administrador Techkepper}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
+      COMPANY_NAME: ${COMPANY_NAME:-Techkepper}
+      COMPANY_EMAIL: ${COMPANY_EMAIL:-ventas@techkeppercr.com}
+      COMPANY_PHONE: ${COMPANY_PHONE:-+506 72259973}
+      DEFAULT_THEME: ${DEFAULT_THEME:-dark}
+      ENABLE_ASSIGNMENT_AUTO_MESSAGE: ${ENABLE_ASSIGNMENT_AUTO_MESSAGE:-true}
+      PUPPETEER_EXECUTABLE_PATH: ${PUPPETEER_EXECUTABLE_PATH:-/usr/bin/chromium}
+      CHROME_BIN: ${CHROME_BIN:-/usr/bin/chromium}
+      CHROME_ARGS: ${CHROME_ARGS:---no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-accelerated-2d-canvas --no-first-run --no-zygote --disable-gpu}
+    ports:
+      - "${BACKEND_PORT:-8080}:3000"
+    volumes:
+      - ./backend/public/:/usr/src/app/public/
+      - ./backend/.wwebjs_auth/:/usr/src/app/.wwebjs_auth/
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+    networks:
+      - techkepper
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    environment:
+      URL_BACKEND: backend:3000
+      VITE_BACKEND_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8080}
+      FRONTEND_SERVER_NAME: ${FRONTEND_SERVER_NAME-localhost}
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+      - "${FRONTEND_SSL_PORT:-3001}:443"
+    volumes:
+      - ./ssl/certs/:/etc/nginx/ssl/
+      - ./ssl/www/:/var/www/letsencrypt/
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - techkepper
+
+  mysql:
+    image: "${MYSQL_ENGINE:-mariadb}:${MYSQL_VERSION:-10.11}"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_bin
+    volumes:
+      - ./.docker/data/:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-techkepper_command_center}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: ${TZ:-America/Costa_Rica}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    restart: unless-stopped
+    networks:
+      - techkepper
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - ./.docker/redis/:/data
+    restart: unless-stopped
+    networks:
+      - techkepper
