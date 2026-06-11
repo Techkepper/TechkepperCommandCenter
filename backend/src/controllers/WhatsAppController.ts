@@ -11,8 +11,7 @@ import {
   EmitWhatsapp
 } from "../helpers/EmitWhatsappSession";
 import {
-  SerializeWhatsapp,
-  SerializeWhatsappQr
+  SerializeWhatsapp
 } from "../helpers/SerializeWhatsapp";
 
 interface WhatsappData {
@@ -66,18 +65,6 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   const whatsapp = await ShowWhatsAppService(whatsappId);
 
   return res.status(200).json(SerializeWhatsapp(whatsapp));
-};
-
-export const qrcode = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
-  const { whatsappId } = req.params;
-  const whatsapp = await ShowWhatsAppService(whatsappId);
-
-  res.setHeader("Cache-Control", "no-store, private");
-  res.setHeader("Pragma", "no-cache");
-  return res.status(200).json(SerializeWhatsappQr(whatsapp));
 };
 
 export const update = async (

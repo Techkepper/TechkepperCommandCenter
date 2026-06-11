@@ -1,8 +1,7 @@
 import { getIO } from "../libs/socket";
 import Whatsapp from "../models/Whatsapp";
 import {
-  SerializeWhatsapp,
-  SerializeWhatsappQr
+  SerializeWhatsapp
 } from "./SerializeWhatsapp";
 
 export const EmitWhatsappSession = (whatsapp: Whatsapp): void => {
@@ -11,11 +10,6 @@ export const EmitWhatsappSession = (whatsapp: Whatsapp): void => {
   io.emit("whatsappSession", {
     action: "update",
     session: SerializeWhatsapp(whatsapp)
-  });
-
-  io.to("role:admin").emit("whatsappSessionQr", {
-    action: "update",
-    session: SerializeWhatsappQr(whatsapp)
   });
 };
 

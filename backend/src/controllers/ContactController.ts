@@ -169,6 +169,15 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { contactId } = req.params;
+  if (req.user.profile !== "admin") {
+    const scope = await BuildTicketScope(req.user.id, req.user.profile);
+    const accessibleTicket = await Ticket.findOne({
+      where: { [Op.and]: [scope, { contactId: Number(contactId) }] }
+    });
+    if (!accessibleTicket) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+  }
 
   await DeleteContactService(contactId);
 

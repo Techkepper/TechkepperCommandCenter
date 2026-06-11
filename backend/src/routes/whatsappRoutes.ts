@@ -8,13 +8,6 @@ const whatsappRoutes = express.Router();
 
 whatsappRoutes.get("/whatsapp/", isAuth, WhatsAppController.index);
 
-whatsappRoutes.get(
-  "/whatsapp/:whatsappId/qrcode",
-  isAuth,
-  requireRole("admin"),
-  WhatsAppController.qrcode
-);
-
 whatsappRoutes.post(
   "/whatsapp/",
   isAuth,

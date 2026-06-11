@@ -60,40 +60,32 @@ const messages = {
           deleteTitle: "Delete",
           deleteMessage: "Are you sure? It cannot be reverted.",
           disconnectTitle: "Disconnect",
-          disconnectMessage: "Are you sure? You'll need to read QR Code again.",
+          disconnectMessage: "Are you sure you want to disconnect this official API connection?",
         },
         buttons: {
           add: "Add WhatsApp",
           disconnect: "Disconnect",
           tryAgain: "Try Again",
-          qrcode: "QR CODE",
-          newQr: "New QR CODE",
-          connecting: "Connectiing",
-          generatingQr: "Generating QR code...",
+          connecting: "Connecting",
         },
         toolTips: {
           error: {
             title: "Error starting WhatsApp session",
             content:
-              "WhatsApp Web could not be started. Check the browser configuration on the server.",
+              "The official WhatsApp API could not be validated. Check the Meta credentials on the server.",
           },
           disconnected: {
             title: "Failed to start WhatsApp session",
             content:
-              "Make sure your cell phone is connected to the internet and try again, or request a new QR Code",
-          },
-          qrcode: {
-            title: "Waiting for QR Code read",
-            content:
-              "Click on 'QR CODE' button and read the QR Code with your cell phone to start session",
+              "Check the token, phone number ID, app secret, and webhook subscription in Meta.",
           },
           connected: {
             title: "Connection established",
           },
           timeout: {
-            title: "Connection with cell phone has been lost",
+            title: "The official API did not respond",
             content:
-              "Make sure your cell phone is connected to the internet and WhatsApp is open, or click on 'Disconnect' button to get a new QRcode",
+              "Check server connectivity to Meta and verify the connection again.",
           },
         },
         table: {
@@ -120,9 +112,6 @@ const messages = {
           cancel: "Cancel",
         },
         success: "WhatsApp saved successfully.",
-      },
-      qrCode: {
-        message: "Read QrCode to start the session",
       },
       contacts: {
         title: "Contacts",
@@ -443,6 +432,16 @@ const messages = {
         ERR_INVALID_CREDENTIALS: "Authentication error. Please try again.",
         ERR_SENDING_WAPP_MSG:
           "Error sending WhatsApp message. Check connections page.",
+        ERR_CLOUD_API_NOT_CONFIGURED:
+          "WhatsApp Cloud API is not configured on the server yet.",
+        ERR_CLOUD_API_REQUEST_FAILED:
+          "Meta rejected the WhatsApp Cloud API request. Check the token, permissions, and Phone Number ID.",
+        ERR_CLOUD_API_MEDIA_UPLOAD_FAILED:
+          "The file could not be uploaded to WhatsApp Cloud API.",
+        ERR_CLOUD_API_DELETE_NOT_SUPPORTED:
+          "WhatsApp Cloud API cannot delete this message from the platform.",
+        ERR_UNSUPPORTED_MEDIA_TYPE: "This file type is not allowed.",
+        ERR_MEDIA_TOO_LARGE: "The file exceeds the allowed size.",
         ERR_DELETE_WAPP_MSG: "Couldn't delete message from WhatsApp.",
         ERR_OTHER_OPEN_TICKET:
           "There's already an open ticket for this contact.",

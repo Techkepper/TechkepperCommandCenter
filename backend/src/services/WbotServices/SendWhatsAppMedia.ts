@@ -50,12 +50,18 @@ const SendWhatsAppMedia = async ({
 
     await ticket.update({ lastMessage: body || media.filename });
 
-    fs.unlinkSync(media.path);
-
     return sentMessage;
   } catch (err) {
-    console.log(err);
+    if (err instanceof AppError) throw err;
     throw new AppError("ERR_SENDING_WAPP_MSG");
+  } finally {
+    if (media.path && fs.existsSync(media.path)) {
+      try {
+        fs.unlinkSync(media.path);
+      } catch (_err) {
+        // Temporary upload cleanup must not mask the delivery result.
+      }
+    }
   }
 };
 

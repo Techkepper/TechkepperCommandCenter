@@ -28,18 +28,18 @@ class TicketAssignmentEvent extends Model<TicketAssignmentEvent> {
   ticket: Ticket;
 
   @ForeignKey(() => User)
-  @Column
-  oldUserId: number;
+  @Column(DataType.INTEGER)
+  oldUserId: number | null;
 
   @BelongsTo(() => User, "oldUserId")
-  oldUser: User;
+  oldUser: User | null;
 
   @ForeignKey(() => User)
-  @Column
-  newUserId: number;
+  @Column(DataType.INTEGER)
+  newUserId: number | null;
 
   @BelongsTo(() => User, "newUserId")
-  newUser: User;
+  newUser: User | null;
 
   @ForeignKey(() => User)
   @Column

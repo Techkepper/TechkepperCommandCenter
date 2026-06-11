@@ -96,7 +96,7 @@ const CreateOrUpdateContactService = async ({
     email,
     isGroup,
     extraInfo
-  });
+  } as any);
 
   await emitContact("create", created);
   return created;

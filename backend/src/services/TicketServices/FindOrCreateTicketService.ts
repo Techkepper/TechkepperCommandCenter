@@ -70,7 +70,7 @@ const FindOrCreateTicketService = async (
       isGroup: !!groupContact,
       unreadMessages,
       whatsappId
-    });
+    } as any);
   }
 
   ticket = await ShowTicketService(ticket.id);

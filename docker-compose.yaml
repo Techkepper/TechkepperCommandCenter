@@ -23,9 +23,12 @@ services:
       BACKEND_URL: ${BACKEND_URL:-http://localhost}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       PROXY_PORT: ${PROXY_PORT:-8080}
-      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-wwebjs}
-      REDIS_URL: redis://redis:6379
-      REDIS_DB: 2
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-cloudapi}
+      META_WHATSAPP_ACCESS_TOKEN: ${META_WHATSAPP_ACCESS_TOKEN}
+      META_WHATSAPP_PHONE_NUMBER_ID: ${META_WHATSAPP_PHONE_NUMBER_ID}
+      META_WHATSAPP_GRAPH_API_VERSION: ${META_WHATSAPP_GRAPH_API_VERSION}
+      META_WHATSAPP_VERIFY_TOKEN: ${META_WHATSAPP_VERIFY_TOKEN}
+      META_WHATSAPP_APP_SECRET: ${META_WHATSAPP_APP_SECRET}
       INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:-Administrador Techkepper}
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
@@ -34,17 +37,12 @@ services:
       COMPANY_PHONE: ${COMPANY_PHONE:-+506 72259973}
       DEFAULT_THEME: ${DEFAULT_THEME:-dark}
       ENABLE_ASSIGNMENT_AUTO_MESSAGE: ${ENABLE_ASSIGNMENT_AUTO_MESSAGE:-true}
-      PUPPETEER_EXECUTABLE_PATH: ${PUPPETEER_EXECUTABLE_PATH:-/usr/bin/chromium}
-      CHROME_BIN: ${CHROME_BIN:-/usr/bin/chromium}
-      CHROME_ARGS: ${CHROME_ARGS:---no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-accelerated-2d-canvas --no-first-run --no-zygote --disable-gpu}
     ports:
       - "${BACKEND_PORT:-8080}:3000"
     volumes:
       - ./backend/public/:/usr/src/app/public/
-      - ./backend/.wwebjs_auth/:/usr/src/app/.wwebjs_auth/
     depends_on:
       - mysql
-      - redis
     restart: unless-stopped
     networks:
       - techkepper
@@ -79,16 +77,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: ${TZ:-America/Costa_Rica}
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
-    restart: unless-stopped
-    networks:
-      - techkepper
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    volumes:
-      - ./.docker/redis/:/data
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     restart: unless-stopped
     networks:
       - techkepper

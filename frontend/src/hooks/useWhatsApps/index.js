@@ -30,7 +30,6 @@ const reducer = (state, action) => {
 		if (whatsAppIndex !== -1) {
 			state[whatsAppIndex].status = whatsApp.status;
 			state[whatsAppIndex].updatedAt = whatsApp.updatedAt;
-			state[whatsAppIndex].qrcode = whatsApp.qrcode;
 			state[whatsAppIndex].retries = whatsApp.retries;
 			return [...state];
 		} else {

@@ -23,6 +23,33 @@ interface QuickAnswerData {
   isActive?: boolean;
 }
 
+const getUserQueueIds = async (userId: string): Promise<number[]> => {
+  const user = await ShowUserService(userId);
+  return user.queues.map(queue => queue.id);
+};
+
+const ensureQueueReadAccess = async (
+  req: Request,
+  queueId: number | null
+): Promise<void> => {
+  if (req.user.profile === "admin" || queueId === null) return;
+  const queueIds = await getUserQueueIds(req.user.id);
+  if (!queueIds.includes(Number(queueId))) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+};
+
+const ensureSupervisorQueueWriteAccess = async (
+  req: Request,
+  queueId: number | null | undefined
+): Promise<void> => {
+  if (req.user.profile === "admin") return;
+  const queueIds = await getUserQueueIds(req.user.id);
+  if (!queueId || !queueIds.includes(Number(queueId))) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+};
+
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;
 
@@ -52,6 +79,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   } catch (err) {
     throw new AppError(err.message);
   }
+  await ensureSupervisorQueueWriteAccess(req, newQuickAnswer.queueId);
 
   const quickAnswer = await CreateQuickAnswerService({
     ...newQuickAnswer
@@ -70,6 +98,7 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   const { quickAnswerId } = req.params;
 
   const quickAnswer = await ShowQuickAnswerService(quickAnswerId);
+  await ensureQueueReadAccess(req, quickAnswer.queueId);
 
   return res.status(200).json(quickAnswer);
 };
@@ -94,6 +123,14 @@ export const update = async (
   }
 
   const { quickAnswerId } = req.params;
+  const existingQuickAnswer = await ShowQuickAnswerService(quickAnswerId);
+  await ensureSupervisorQueueWriteAccess(req, existingQuickAnswer.queueId);
+  await ensureSupervisorQueueWriteAccess(
+    req,
+    quickAnswerData.queueId === undefined
+      ? existingQuickAnswer.queueId
+      : quickAnswerData.queueId
+  );
 
   const quickAnswer = await UpdateQuickAnswerService({
     quickAnswerData,
@@ -114,6 +151,8 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { quickAnswerId } = req.params;
+  const quickAnswer = await ShowQuickAnswerService(quickAnswerId);
+  await ensureSupervisorQueueWriteAccess(req, quickAnswer.queueId);
 
   await DeleteQuickAnswerService(quickAnswerId);
 

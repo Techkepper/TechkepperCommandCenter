@@ -10,6 +10,7 @@ import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessag
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import EnsureTicketAccessService from "../services/TicketServices/EnsureTicketAccessService";
+import EnsureTicketReadAccessService from "../services/TicketServices/EnsureTicketReadAccessService";
 
 type IndexQuery = {
   pageNumber: string;
@@ -30,11 +31,22 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     pageNumber,
     ticketId
   });
-  await EnsureTicketAccessService(ticket, req.user.id, req.user.profile);
+  const access = await EnsureTicketReadAccessService(
+    ticket,
+    req.user.id,
+    req.user.profile
+  );
 
-  SetTicketMessagesAsRead(ticket);
+  if (!access.readOnly) {
+    SetTicketMessagesAsRead(ticket);
+  }
 
-  return res.json({ count, messages, ticket, hasMore });
+  return res.json({
+    count,
+    messages,
+    ticket: { ...ticket.get({ plain: true }), readOnly: access.readOnly },
+    hasMore
+  });
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {

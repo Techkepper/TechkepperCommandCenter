@@ -15,8 +15,13 @@ export const agentHistory = async (
   return res.json(data);
 };
 
-const escapeCsv = (value: unknown): string =>
-  `"${String(value ?? "").replace(/"/g, '""')}"`;
+const escapeCsv = (value: unknown): string => {
+  const rawValue = String(value ?? "");
+  const safeValue = /^[\t\r ]*[=+\-@]/.test(rawValue)
+    ? `'${rawValue}`
+    : rawValue;
+  return `"${safeValue.replace(/"/g, '""')}"`;
+};
 
 export const agentHistoryCsv = async (
   req: Request,

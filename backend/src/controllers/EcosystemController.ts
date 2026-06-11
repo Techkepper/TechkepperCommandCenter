@@ -14,7 +14,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const { name, color = "#8ee63f", isActive = true } = req.body;
   if (!name) throw new AppError("ERR_ECOSYSTEM_NAME_REQUIRED");
   return res.status(201).json(
-    await Ecosystem.create({ name, color, isActive })
+    await Ecosystem.create({ name, color, isActive } as any)
   );
 };
 

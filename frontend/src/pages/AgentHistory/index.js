@@ -14,8 +14,13 @@ import {
   Typography,
   Box,
 } from "@material-ui/core";
-import { GetAppOutlined, FilterListOutlined } from "@material-ui/icons";
+import {
+  GetAppOutlined,
+  FilterListOutlined,
+  VisibilityOutlined,
+} from "@material-ui/icons";
 import { makeStyles } from "@material-ui/core/styles";
+import { useHistory } from "react-router-dom";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -46,6 +51,7 @@ const statusLabels = {
 
 const AgentHistory = () => {
   const classes = useStyles();
+  const history = useHistory();
   const { user } = useContext(AuthContext);
   const canReviewTeam = user.profile === "admin" || user.profile === "supervisor";
   const [filters, setFilters] = useState(initialFilters);
@@ -266,6 +272,7 @@ const AgentHistory = () => {
                 <TableCell>Ecosistema</TableCell>
                 <TableCell align="right">Conversaciones</TableCell>
                 <TableCell>Última interacción</TableCell>
+                <TableCell align="right">Conversación</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -283,6 +290,19 @@ const AgentHistory = () => {
                   <TableCell align="right">{row.total}</TableCell>
                   <TableCell>
                     {new Date(row.lastInteractionAt).toLocaleString()}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      color="primary"
+                      startIcon={<VisibilityOutlined />}
+                      disabled={!row.lastTicket?.id}
+                      onClick={() =>
+                        history.push(`/tickets/${row.lastTicket.id}`)
+                      }
+                    >
+                      Abrir
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

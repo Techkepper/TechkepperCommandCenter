@@ -145,7 +145,7 @@ const UpdateTicketService = async ({
       ),
       action,
       autoMessageStatus: requestedUserId ? "pending" : "not_applicable"
-    });
+    } as any);
 
     if (newUser) {
       try {

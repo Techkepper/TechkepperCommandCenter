@@ -22,6 +22,18 @@ export const createRateLimiter = ({
   return (req: Request, res: Response, next: NextFunction): void => {
     const now = Date.now();
     const key = keyGenerator(req);
+
+    if (!entries.has(key) && entries.size >= 5000) {
+      entries.forEach((value, entryKey) => {
+        if (value.resetAt <= now) entries.delete(entryKey);
+      });
+      while (entries.size >= 5000) {
+        const oldestKey = entries.keys().next().value;
+        if (oldestKey === undefined) break;
+        entries.delete(oldestKey);
+      }
+    }
+
     const existing = entries.get(key);
     const entry =
       !existing || existing.resetAt <= now
@@ -47,12 +59,6 @@ export const createRateLimiter = ({
         String(Math.ceil((entry.resetAt - now) / 1000))
       );
       throw new AppError("ERR_TOO_MANY_REQUESTS", 429);
-    }
-
-    if (entries.size > 5000) {
-      entries.forEach((value, entryKey) => {
-        if (value.resetAt <= now) entries.delete(entryKey);
-      });
     }
 
     next();

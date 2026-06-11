@@ -27,7 +27,7 @@ const CreateQuickAnswerService = async ({
     message,
     queueId,
     isActive
-  });
+  } as any);
 
   return quickAnswer;
 };

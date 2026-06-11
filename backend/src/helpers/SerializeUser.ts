@@ -8,8 +8,8 @@ interface SerializedUser {
   email: string;
   profile: string;
   queues: Queue[];
-  whatsapp: Whatsapp;
-  whatsappId: number;
+  whatsapp: Whatsapp | null;
+  whatsappId: number | null;
   isActive: boolean;
   theme: string;
   lastActivityAt: Date;

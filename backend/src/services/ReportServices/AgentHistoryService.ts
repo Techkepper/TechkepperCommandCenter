@@ -8,6 +8,7 @@ import TicketAssignmentEvent from "../../models/TicketAssignmentEvent";
 import User from "../../models/User";
 import GetSettingValueService from "../SettingServices/GetSettingValueService";
 import BuildTicketScope from "./BuildTicketScope";
+import ShowUserService from "../UserServices/ShowUserService";
 
 export interface AgentHistoryFilters {
   agentId?: string;
@@ -32,10 +33,45 @@ const AgentHistoryService = async (
     filters.agentId = requesterId;
   }
 
-  const scope = await BuildTicketScope(requesterId, requesterProfile);
+  const selectedAgentId =
+    filters.agentId ||
+    (requesterProfile === "agent" || requesterProfile === "user"
+      ? requesterId
+      : undefined);
+  let scope: WhereOptions;
+  if (requesterProfile === "agent" || requesterProfile === "user") {
+    const requester = await ShowUserService(requesterId);
+    const queueIds = requester.queues?.map(queue => queue.id) || [];
+    scope = {
+      [Op.and]: [
+        { queueId: { [Op.or]: [queueIds, null] } },
+        {
+          [Op.or]: [
+            { userId: Number(requesterId) },
+            { userId: null, status: "pending" },
+            {
+              [Op.and]: [
+                { status: "closed" },
+                { "$assignmentEvents.id$": { [Op.ne]: null } }
+              ]
+            }
+          ]
+        }
+      ]
+    } as any;
+  } else {
+    scope = await BuildTicketScope(requesterId, requesterProfile);
+  }
   const conditions: WhereOptions[] = [scope];
 
-  if (filters.agentId) conditions.push({ userId: Number(filters.agentId) });
+  if (selectedAgentId) {
+    conditions.push({
+      [Op.or]: [
+        { userId: Number(selectedAgentId) },
+        { "$assignmentEvents.id$": { [Op.ne]: null } }
+      ]
+    } as any);
+  }
   if (filters.queueId) conditions.push({ queueId: Number(filters.queueId) });
   if (filters.status) conditions.push({ status: filters.status });
   if (filters.ecosystemId) {
@@ -80,8 +116,26 @@ const AgentHistoryService = async (
         model: Ecosystem,
         as: "ecosystem",
         attributes: ["id", "name", "color"]
+      },
+      {
+        model: TicketAssignmentEvent,
+        as: "assignmentEvents",
+        attributes: [],
+        required: false,
+        duplicating: false,
+        ...(selectedAgentId
+          ? {
+              where: {
+                [Op.or]: [
+                  { oldUserId: Number(selectedAgentId) },
+                  { newUserId: Number(selectedAgentId) }
+                ]
+              }
+            }
+          : {})
       }
     ],
+    subQuery: false,
     order: [["updatedAt", "DESC"]],
     limit: 2000
   });
@@ -119,11 +173,6 @@ const AgentHistoryService = async (
     grouped.set(contactId, current);
   });
 
-  const selectedAgentId =
-    filters.agentId ||
-    (requesterProfile === "agent" || requesterProfile === "user"
-      ? requesterId
-      : undefined);
   const assignmentWhere: any = selectedAgentId
     ? { newUserId: Number(selectedAgentId) }
     : {};

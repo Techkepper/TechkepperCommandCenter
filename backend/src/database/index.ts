@@ -10,7 +10,6 @@ import Queue from "../models/Queue";
 import WhatsappQueue from "../models/WhatsappQueue";
 import UserQueue from "../models/UserQueue";
 import QuickAnswer from "../models/QuickAnswer";
-import WppKey from "../models/WppKey";
 import Ecosystem from "../models/Ecosystem";
 import TicketAssignmentEvent from "../models/TicketAssignmentEvent";
 
@@ -32,7 +31,6 @@ const models = [
   WhatsappQueue,
   UserQueue,
   QuickAnswer,
-  WppKey,
   Ecosystem,
   TicketAssignmentEvent
 ];

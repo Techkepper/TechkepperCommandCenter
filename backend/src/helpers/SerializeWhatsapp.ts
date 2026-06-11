@@ -14,17 +14,3 @@ export const SerializeWhatsapp = (
     toPlainObject(whatsapp);
   return safeWhatsapp;
 };
-
-export const SerializeWhatsappQr = (
-  whatsapp: WhatsappSource
-): Record<string, any> => {
-  const plainWhatsapp = toPlainObject(whatsapp);
-  return {
-    id: plainWhatsapp.id,
-    name: plainWhatsapp.name,
-    status: plainWhatsapp.status,
-    qrcode: plainWhatsapp.qrcode || "",
-    retries: plainWhatsapp.retries || 0,
-    updatedAt: plainWhatsapp.updatedAt
-  };
-};

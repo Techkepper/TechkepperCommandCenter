@@ -91,6 +91,7 @@ const TicketsManager = () => {
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
+  const searchTimeoutRef = useRef();
   const { user } = useContext(AuthContext);
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -111,12 +112,10 @@ const TicketsManager = () => {
     }
   }, [tab]);
 
-  let searchTimeout;
-
   const handleSearch = (e) => {
     const searchedTerm = e.target.value.toLowerCase();
 
-    clearTimeout(searchTimeout);
+    clearTimeout(searchTimeoutRef.current);
 
     if (searchedTerm === "") {
       setSearchParam(searchedTerm);
@@ -124,7 +123,7 @@ const TicketsManager = () => {
       return;
     }
 
-    searchTimeout = setTimeout(() => {
+    searchTimeoutRef.current = setTimeout(() => {
       setSearchParam(searchedTerm);
     }, 500);
   };
@@ -147,7 +146,7 @@ const TicketsManager = () => {
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
       <NewTicketModal
         modalOpen={newTicketModalOpen}
-        onClose={(e) => setNewTicketModalOpen(false)}
+        onClose={() => setNewTicketModalOpen(false)}
       />
       <Paper elevation={0} square className={classes.tabsHeader}>
         <Tabs

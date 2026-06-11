@@ -4,6 +4,7 @@ import "express-async-errors";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import multer from "multer";
 import * as Sentry from "@sentry/node";
 
 import "./database";
@@ -12,6 +13,7 @@ import AppError from "./errors/AppError";
 import routes from "./routes";
 import { logger } from "./utils/logger";
 import ValidateSecurityConfig from "./helpers/ValidateSecurityConfig";
+import whatsappWebhookRoutes from "./routes/whatsappWebhookRoutes";
 
 Sentry.init({ dsn: process.env.SENTRY_DSN });
 ValidateSecurityConfig();
@@ -42,6 +44,7 @@ app.use(
   })
 );
 app.use(cookieParser());
+app.use("/webhooks/whatsapp", whatsappWebhookRoutes);
 app.use(express.json({ limit: "2mb" }));
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -64,7 +67,17 @@ app.use("/auth", (_req, res, next) => {
   next();
 });
 app.use(Sentry.Handlers.requestHandler());
-app.use("/public", express.static(uploadConfig.directory));
+app.use(
+  "/public",
+  express.static(uploadConfig.directory, {
+    dotfiles: "deny",
+    index: false,
+    setHeaders: res => {
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    }
+  })
+);
 app.use(routes);
 
 app.use(Sentry.Handlers.errorHandler());
@@ -73,6 +86,20 @@ app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
   if (err instanceof AppError) {
     logger.warn(err);
     return res.status(err.statusCode).json({ error: err.message });
+  }
+
+  if (err instanceof multer.MulterError) {
+    logger.warn({ code: err.code }, "Rejected media upload");
+    return res.status(err.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({
+      error:
+        err.code === "LIMIT_FILE_SIZE"
+          ? "ERR_MEDIA_TOO_LARGE"
+          : "ERR_INVALID_MEDIA"
+    });
+  }
+
+  if (err.message === "ERR_UNSUPPORTED_MEDIA_TYPE") {
+    return res.status(415).json({ error: err.message });
   }
 
   logger.error(err);

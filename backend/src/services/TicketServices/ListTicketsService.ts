@@ -9,6 +9,7 @@ import ShowUserService from "../UserServices/ShowUserService";
 import Whatsapp from "../../models/Whatsapp";
 import User from "../../models/User";
 import Ecosystem from "../../models/Ecosystem";
+import TicketAssignmentEvent from "../../models/TicketAssignmentEvent";
 
 interface Request {
   searchParam?: string;
@@ -50,6 +51,9 @@ const ListTicketsService = async ({
     userProfile === "admin"
       ? requestedQueueIds
       : requestedQueueIds.filter(id => userQueueIds.includes(id));
+  const includeHistoricalAssignments =
+    (userProfile === "agent" || userProfile === "user") &&
+    (status === "closed" || Boolean(searchParam));
 
   const andConditions: any[] = [];
   if (userProfile === "supervisor") {
@@ -57,11 +61,20 @@ const ListTicketsService = async ({
       queueId: { [Op.or]: [allowedQueueIds, null] }
     });
   } else if (userProfile !== "admin") {
+    const ticketVisibility: any[] = [
+      { userId: Number(userId) },
+      { userId: null, status: "pending" }
+    ];
+    if (includeHistoricalAssignments) {
+      ticketVisibility.push({
+        [Op.and]: [
+          { status: "closed" },
+          { "$assignmentEvents.id$": { [Op.ne]: null } }
+        ]
+      });
+    }
     andConditions.push({
-      [Op.or]: [
-        { userId: Number(userId) },
-        { userId: null, status: "pending" }
-      ]
+      [Op.or]: ticketVisibility
     });
     andConditions.push({
       queueId: { [Op.or]: [allowedQueueIds, null] }
@@ -124,6 +137,22 @@ const ListTicketsService = async ({
     }
   ];
 
+  if (includeHistoricalAssignments) {
+    includeCondition.push({
+      model: TicketAssignmentEvent,
+      as: "assignmentEvents",
+      attributes: [],
+      required: false,
+      duplicating: false,
+      where: {
+        [Op.or]: [
+          { oldUserId: Number(userId) },
+          { newUserId: Number(userId) }
+        ]
+      }
+    });
+  }
+
   if (searchParam) {
     const sanitizedSearchParam = searchParam.toLocaleLowerCase().trim();
     includeCondition = [
@@ -163,6 +192,7 @@ const ListTicketsService = async ({
     where: andConditions.length ? { [Op.and]: andConditions } : {},
     include: includeCondition,
     distinct: true,
+    subQuery: false,
     limit,
     offset,
     order: [["updatedAt", "DESC"]]

@@ -60,11 +60,11 @@ class User extends Model<User> {
   lastActivityAt: Date;
 
   @ForeignKey(() => Whatsapp)
-  @Column
-  whatsappId: number;
+  @Column(DataType.INTEGER)
+  whatsappId: number | null;
 
   @BelongsTo(() => Whatsapp)
-  whatsapp: Whatsapp;
+  whatsapp: Whatsapp | null;
 
   @CreatedAt
   createdAt: Date;

@@ -27,8 +27,8 @@ class QuickAnswer extends Model<QuickAnswer> {
   message: string;
 
   @ForeignKey(() => Queue)
-  @Column
-  queueId: number;
+  @Column(DataType.INTEGER)
+  queueId: number | null;
 
   @BelongsTo(() => Queue)
   queue: Queue;

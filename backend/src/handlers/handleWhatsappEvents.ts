@@ -1,6 +1,7 @@
 import { join } from "path";
 import { promisify } from "util";
 import { writeFile } from "fs";
+import { randomBytes } from "crypto";
 import * as Sentry from "@sentry/node";
 
 import { getIO } from "../libs/socket";
@@ -21,6 +22,7 @@ import CreateContactService from "../services/ContactServices/CreateContactServi
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
+import { getExtensionForMimeType } from "../config/upload";
 
 const writeFileAsync = promisify(writeFile);
 
@@ -60,19 +62,6 @@ export interface WhatsappContextPayload {
   groupContact?: ContactPayload;
 }
 
-const makeRandomId = (length: number): string => {
-  let result = "";
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const charactersLength = characters.length;
-  let counter = 0;
-  while (counter < length) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    counter += 1;
-  }
-  return result;
-};
-
 const processLocationMessage = (
   messagePayload: MessagePayload
 ): MessagePayload => {
@@ -82,18 +71,15 @@ const processLocationMessage = (
 };
 
 const saveMediaFile = async (mediaPayload: MediaPayload): Promise<string> => {
-  const randomId = makeRandomId(5);
-  const { filename: originalFilename } = mediaPayload;
-
-  let filename: string;
-  if (!originalFilename) {
-    const [extension] = mediaPayload.mimetype.split("/")[1].split(";");
-    filename = `${randomId}-${new Date().getTime()}.${extension}`;
-  } else {
-    const baseName = originalFilename.split(".").slice(0, -1).join(".");
-    const extension = originalFilename.split(".").slice(-1)[0];
-    filename = `${baseName}.${randomId}.${extension}`;
+  const extension = getExtensionForMimeType(mediaPayload.mimetype);
+  if (!extension) {
+    throw new Error("ERR_UNSUPPORTED_MEDIA_TYPE");
   }
+  const mediaSize = Buffer.byteLength(mediaPayload.data, "base64");
+  if (mediaSize > 16 * 1024 * 1024) {
+    throw new Error("ERR_MEDIA_TOO_LARGE");
+  }
+  const filename = `${randomBytes(20).toString("hex")}${extension}`;
 
   try {
     await writeFileAsync(
@@ -104,6 +90,7 @@ const saveMediaFile = async (mediaPayload: MediaPayload): Promise<string> => {
   } catch (err) {
     Sentry.captureException(err);
     logger.error(err);
+    throw err;
   }
 
   return filename;
@@ -309,14 +296,8 @@ export const handleMessage = async (
     }
   } catch (err) {
     Sentry.captureException(err);
-    logger.error({
-      info: "Error handling message",
-      err,
-      messagePayload,
-      contactPayload,
-      contextPayload,
-      mediaPayload
-    });
+    logger.error({ info: "Error handling message", err });
+    throw err;
   }
 };
 

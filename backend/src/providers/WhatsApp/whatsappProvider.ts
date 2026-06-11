@@ -6,8 +6,7 @@ import {
   SendMessageOptions,
   SendMediaOptions
 } from "./types";
-import { WhatsappWebJsProvider } from "./Implementations/wwebjs";
-import { WhaileysProvider } from "./Implementations/whaileys";
+import { CloudApiProvider } from "./Implementations/cloudapi";
 
 export interface WhatsappProvider {
   init(whatsapp: Whatsapp): Promise<void>;
@@ -42,13 +41,15 @@ export interface WhatsappProvider {
   ): Promise<ProviderMessage[]>;
 }
 
-const provider = process.env.WHATSAPP_PROVIDER || "wwebjs";
+const provider = process.env.WHATSAPP_PROVIDER || "cloudapi";
 
 const providersMap: Record<string, WhatsappProvider> = {
-  wwebjs: WhatsappWebJsProvider,
-  whaileys: WhaileysProvider
+  cloudapi: CloudApiProvider
 };
 
 const whatsappProvider = providersMap[provider];
+if (!whatsappProvider) {
+  throw new Error(`Unsupported WHATSAPP_PROVIDER: ${provider}`);
+}
 
 export { whatsappProvider };

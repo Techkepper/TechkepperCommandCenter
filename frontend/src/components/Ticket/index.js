@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import openSocket from "../../services/socket-io";
 import clsx from "clsx";
 
-import { Paper, makeStyles } from "@material-ui/core";
+import { Box, Chip, Paper, Typography, makeStyles } from "@material-ui/core";
 
 import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInput/";
@@ -111,7 +111,10 @@ const Ticket = () => {
 
     socket.on("ticket", (data) => {
       if (data.action === "update") {
-        setTicket(data.ticket);
+        setTicket((current) => ({
+          ...data.ticket,
+          readOnly: Boolean(current.readOnly || data.ticket.readOnly),
+        }));
       }
 
       if (data.action === "delete") {
@@ -162,16 +165,31 @@ const Ticket = () => {
             />
           </div>
           <div className={classes.ticketActionButtons}>
-            <TicketActionButtons ticket={ticket} />
+            {!ticket.readOnly && <TicketActionButtons ticket={ticket} />}
           </div>
         </TicketHeader>
+        {ticket.readOnly && (
+          <Box
+            px={2}
+            py={1}
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <Typography variant="body2" color="textSecondary">
+              Consulta historica: esta conversacion esta disponible en modo
+              solo lectura.
+            </Typography>
+            <Chip size="small" label="Solo lectura" />
+          </Box>
+        )}
         <AssignmentAudit ticketId={ticketId} />
         <ReplyMessageProvider>
           <MessagesList
             ticketId={ticketId}
             isGroup={ticket.isGroup}
           ></MessagesList>
-          <MessageInput ticketStatus={ticket.status} />
+          {!ticket.readOnly && <MessageInput ticketStatus={ticket.status} />}
         </ReplyMessageProvider>
       </Paper>
       <ContactDrawer

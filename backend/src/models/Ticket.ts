@@ -9,7 +9,8 @@ import {
   BelongsTo,
   HasMany,
   AutoIncrement,
-  Default
+  Default,
+  DataType
 } from "sequelize-typescript";
 
 import Contact from "./Contact";
@@ -47,11 +48,11 @@ class Ticket extends Model<Ticket> {
   updatedAt: Date;
 
   @ForeignKey(() => User)
-  @Column
-  userId: number;
+  @Column(DataType.INTEGER)
+  userId: number | null;
 
   @BelongsTo(() => User)
-  user: User;
+  user: User | null;
 
   @ForeignKey(() => Contact)
   @Column
@@ -68,18 +69,18 @@ class Ticket extends Model<Ticket> {
   whatsapp: Whatsapp;
 
   @ForeignKey(() => Queue)
-  @Column
-  queueId: number;
+  @Column(DataType.INTEGER)
+  queueId: number | null;
 
   @BelongsTo(() => Queue)
-  queue: Queue;
+  queue: Queue | null;
 
   @ForeignKey(() => Ecosystem)
-  @Column
-  ecosystemId: number;
+  @Column(DataType.INTEGER)
+  ecosystemId: number | null;
 
   @BelongsTo(() => Ecosystem)
-  ecosystem: Ecosystem;
+  ecosystem: Ecosystem | null;
 
   @Column
   firstResponseAt: Date;

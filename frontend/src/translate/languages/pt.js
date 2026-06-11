@@ -61,40 +61,32 @@ const messages = {
           deleteMessage: "Você tem certeza? Essa ação não pode ser revertida.",
           disconnectTitle: "Desconectar",
           disconnectMessage:
-            "Tem certeza? Você precisará ler o QR Code novamente.",
+            "Tem certeza de que deseja desconectar esta conexão da API oficial?",
         },
         buttons: {
           add: "Adicionar WhatsApp",
           disconnect: "desconectar",
           tryAgain: "Tentar novamente",
-          qrcode: "QR CODE",
-          newQr: "Novo QR CODE",
           connecting: "Conectando",
-          generatingQr: "Gerando código QR...",
         },
         toolTips: {
           error: {
             title: "Erro ao iniciar sessão do WhatsApp",
             content:
-              "Não foi possível iniciar o WhatsApp Web. Verifique a configuração do navegador no servidor.",
+              "Não foi possível validar a API oficial do WhatsApp. Verifique as credenciais da Meta no servidor.",
           },
           disconnected: {
             title: "Falha ao iniciar sessão do WhatsApp",
             content:
-              "Certifique-se de que seu celular esteja conectado à internet e tente novamente, ou solicite um novo QR Code",
-          },
-          qrcode: {
-            title: "Esperando leitura do QR Code",
-            content:
-              "Clique no botão 'QR CODE' e leia o QR Code com o seu celular para iniciar a sessão",
+              "Verifique o token, o ID do número, o segredo do aplicativo e a assinatura do webhook na Meta.",
           },
           connected: {
             title: "Conexão estabelecida!",
           },
           timeout: {
-            title: "A conexão com o celular foi perdida",
+            title: "A API oficial não respondeu",
             content:
-              "Certifique-se de que seu celular esteja conectado à internet e o WhatsApp esteja aberto, ou clique no botão 'Desconectar' para obter um novo QR Code",
+              "Verifique a conectividade do servidor com a Meta e valide a conexão novamente.",
           },
         },
         table: {
@@ -122,9 +114,6 @@ const messages = {
           cancel: "Cancelar",
         },
         success: "WhatsApp salvo com sucesso.",
-      },
-      qrCode: {
-        message: "Leia o QrCode para iniciar a sessão",
       },
       contacts: {
         title: "Contatos",
@@ -448,6 +437,16 @@ const messages = {
           "Erro de autenticação. Por favor, tente novamente.",
         ERR_SENDING_WAPP_MSG:
           "Erro ao enviar mensagem do WhatsApp. Verifique a página de conexões.",
+        ERR_CLOUD_API_NOT_CONFIGURED:
+          "A WhatsApp Cloud API ainda não está configurada no servidor.",
+        ERR_CLOUD_API_REQUEST_FAILED:
+          "A Meta rejeitou a solicitação da WhatsApp Cloud API. Verifique token, permissões e Phone Number ID.",
+        ERR_CLOUD_API_MEDIA_UPLOAD_FAILED:
+          "Não foi possível enviar o arquivo para a WhatsApp Cloud API.",
+        ERR_CLOUD_API_DELETE_NOT_SUPPORTED:
+          "A WhatsApp Cloud API não permite excluir esta mensagem pela plataforma.",
+        ERR_UNSUPPORTED_MEDIA_TYPE: "Este tipo de arquivo não é permitido.",
+        ERR_MEDIA_TOO_LARGE: "O arquivo excede o limite permitido.",
         ERR_DELETE_WAPP_MSG: "Não foi possível excluir a mensagem do WhatsApp.",
         ERR_OTHER_OPEN_TICKET: "Já existe um tíquete aberto para este contato.",
         ERR_SESSION_EXPIRED: "Sessão expirada. Por favor entre.",

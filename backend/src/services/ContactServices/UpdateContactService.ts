@@ -36,9 +36,22 @@ const UpdateContactService = async ({
   }
 
   if (extraInfo) {
+    const existingFieldIds = new Set(
+      contact.extraInfo.map(field => Number(field.id))
+    );
+    const hasForeignField = extraInfo.some(
+      info => info.id && !existingFieldIds.has(Number(info.id))
+    );
+    if (hasForeignField) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+
     await Promise.all(
       extraInfo.map(async info => {
-        await ContactCustomField.upsert({ ...info, contactId: contact.id });
+        await ContactCustomField.upsert({
+          ...info,
+          contactId: contact.id
+        } as any);
       })
     );
 

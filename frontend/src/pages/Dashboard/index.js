@@ -92,8 +92,8 @@ const Dashboard = () => {
   const connectionLabels = {
     CONNECTED: "Conectada",
     OPENING: "Conectando",
-    PAIRING: "Vinculando",
-    qrcode: "Esperando código QR",
+    CONFIG_REQUIRED: "Configuración oficial requerida",
+    ERROR: "Error de conexión",
     TIMEOUT: "Sin respuesta",
     DISCONNECTED: "Desconectada",
   };

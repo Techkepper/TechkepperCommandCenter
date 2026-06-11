@@ -5,8 +5,8 @@ import AppError from "../errors/AppError";
 import { logger } from "../utils/logger";
 import authConfig from "../config/auth";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
-import EnsureTicketAccessService from "../services/TicketServices/EnsureTicketAccessService";
 import ShowUserService from "../services/UserServices/ShowUserService";
+import EnsureTicketReadAccessService from "../services/TicketServices/EnsureTicketReadAccessService";
 
 interface SocketTokenPayload {
   id: string;
@@ -96,7 +96,7 @@ export const initIO = (httpServer: Server): SocketIO => {
     socket.on("joinChatBox", async (ticketId: string) => {
       try {
         const ticket = await ShowTicketService(ticketId);
-        await EnsureTicketAccessService(
+        await EnsureTicketReadAccessService(
           ticket,
           authenticatedUser.id,
           authenticatedUser.profile

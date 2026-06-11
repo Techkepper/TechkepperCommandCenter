@@ -76,7 +76,7 @@ const CreateUserService = async ({
       isActive,
       theme,
       whatsappId: whatsappId ? whatsappId : null
-    },
+    } as any,
     { include: ["queues", "whatsapp"] }
   );
 

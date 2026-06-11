@@ -28,9 +28,11 @@ const ListQuickAnswerService = async ({
       `%${searchParam.toLowerCase().trim()}%`
     )
   };
-  if (profile !== "admin" && profile !== "supervisor") {
-    whereCondition.isActive = true;
+  if (profile !== "admin") {
     whereCondition.queueId = { [Op.or]: [queueIds, null] };
+    if (profile !== "supervisor") {
+      whereCondition.isActive = true;
+    }
   }
 
   const limit = 50;

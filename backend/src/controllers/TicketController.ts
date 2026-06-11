@@ -12,6 +12,7 @@ import AppError from "../errors/AppError";
 import TicketAssignmentEvent from "../models/TicketAssignmentEvent";
 import User from "../models/User";
 import { EmitTicketEvent } from "../helpers/EmitTicketEvent";
+import EnsureTicketReadAccessService from "../services/TicketServices/EnsureTicketReadAccessService";
 
 type IndexQuery = {
   searchParam: string;
@@ -93,13 +94,16 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
 
   const contact = await ShowTicketService(ticketId);
-  await EnsureTicketAccessService(
+  const access = await EnsureTicketReadAccessService(
     contact,
     req.user.id,
     req.user.profile
   );
 
-  return res.status(200).json(contact);
+  return res.status(200).json({
+    ...contact.get({ plain: true }),
+    readOnly: access.readOnly
+  });
 };
 
 export const update = async (
@@ -133,8 +137,16 @@ export const update = async (
     }
   }
 
-  if (req.user.profile === "supervisor" && ticketData.whatsappId) {
-    throw new AppError("ERR_NO_PERMISSION", 403);
+  if (req.user.profile === "supervisor") {
+    if (ticketData.whatsappId) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+    if (
+      ticketData.queueId &&
+      !actor.queues.some(queue => queue.id === Number(ticketData.queueId))
+    ) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
   }
 
   const { ticket } = await UpdateTicketService({
@@ -165,7 +177,7 @@ export const assignmentEvents = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
   const ticket = await ShowTicketService(ticketId);
-  await EnsureTicketAccessService(ticket, req.user.id, req.user.profile);
+  await EnsureTicketReadAccessService(ticket, req.user.id, req.user.profile);
 
   const events = await TicketAssignmentEvent.findAll({
     where: { ticketId },

@@ -25,7 +25,6 @@ import {
 	SignalCellularConnectedNoInternet2Bar,
 	SignalCellularConnectedNoInternet0Bar,
 	SignalCellular4Bar,
-	CropFree,
 	DeleteOutline,
 	ErrorOutline,
 } from "@material-ui/icons";
@@ -39,7 +38,6 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import api from "../../services/api";
 import WhatsAppModal from "../../components/WhatsAppModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
-import QrcodeModal from "../../components/QrcodeModal";
 import { i18n } from "../../translate/i18n";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import toastError from "../../errors/toastError";
@@ -100,7 +98,6 @@ const Connections = () => {
 
 	const { whatsApps, loading } = useContext(WhatsAppsContext);
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
-	const [qrModalOpen, setQrModalOpen] = useState(false);
 	const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
 	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 	const confirmationModalInitialState = {
@@ -115,31 +112,17 @@ const Connections = () => {
 	);
 	const statusLabels = {
 		CONNECTED: "Conectada",
-		OPENING: "Generando código QR...",
-		PAIRING: "Vinculando",
-		qrcode: "Esperando código QR",
+		OPENING: "Verificando con Meta...",
+		CONFIG_REQUIRED: "Configuración requerida",
 		TIMEOUT: "Sin respuesta",
 		DISCONNECTED: "Desconectada",
 		ERROR: "Error",
 	};
 
-	const handleStartWhatsAppSession = async whatsApp => {
-		setSelectedWhatsApp(whatsApp);
-		setQrModalOpen(true);
-
+	const handleVerifyConnection = async whatsApp => {
 		try {
 			await api.post(`/whatsappsession/${whatsApp.id}`);
-		} catch (err) {
-			toastError(err);
-		}
-	};
-
-	const handleRequestNewQrCode = async whatsApp => {
-		setSelectedWhatsApp(whatsApp);
-		setQrModalOpen(true);
-
-		try {
-			await api.put(`/whatsappsession/${whatsApp.id}`);
+			toast.success("Verificación solicitada a WhatsApp Cloud API.");
 		} catch (err) {
 			toastError(err);
 		}
@@ -154,16 +137,6 @@ const Connections = () => {
 		setWhatsAppModalOpen(false);
 		setSelectedWhatsApp(null);
 	}, [setSelectedWhatsApp, setWhatsAppModalOpen]);
-
-	const handleOpenQrModal = whatsApp => {
-		setSelectedWhatsApp(whatsApp);
-		setQrModalOpen(true);
-	};
-
-	const handleCloseQrModal = useCallback(() => {
-		setSelectedWhatsApp(null);
-		setQrModalOpen(false);
-	}, [setQrModalOpen, setSelectedWhatsApp]);
 
 	const handleEditWhatsApp = whatsApp => {
 		setSelectedWhatsApp(whatsApp);
@@ -215,60 +188,18 @@ const Connections = () => {
 	const renderActionButtons = whatsApp => {
 		return (
 			<>
-				{whatsApp.status === "qrcode" && (
-					<Button
-						size="small"
-						variant="contained"
-						color="primary"
-						onClick={() => handleOpenQrModal(whatsApp)}
-					>
-						{i18n.t("connections.buttons.qrcode")}
-					</Button>
-				)}
-				{(whatsApp.status === "DISCONNECTED" ||
-					whatsApp.status === "ERROR") && (
-					<>
-						<Button
-							size="small"
-							variant="outlined"
-							color="primary"
-							onClick={() => handleStartWhatsAppSession(whatsApp)}
-						>
-							{i18n.t("connections.buttons.tryAgain")}
-						</Button>{" "}
-						<Button
-							size="small"
-							variant="outlined"
-							color="secondary"
-							onClick={() => handleRequestNewQrCode(whatsApp)}
-						>
-							{i18n.t("connections.buttons.newQr")}
-						</Button>
-					</>
-				)}
-				{(whatsApp.status === "CONNECTED" ||
-					whatsApp.status === "PAIRING" ||
-					whatsApp.status === "TIMEOUT") && (
+				{whatsApp.status !== "OPENING" && (
 					<Button
 						size="small"
 						variant="outlined"
-						color="secondary"
-						onClick={() => {
-							handleOpenConfirmationModal("disconnect", whatsApp.id);
-						}}
+						color="primary"
+						onClick={() => handleVerifyConnection(whatsApp)}
 					>
-						{i18n.t("connections.buttons.disconnect")}
+						Verificar API oficial
 					</Button>
 				)}
 				{whatsApp.status === "OPENING" && (
-					<Button
-						size="small"
-						variant="outlined"
-						color="primary"
-						onClick={() => handleOpenQrModal(whatsApp)}
-					>
-						{i18n.t("connections.buttons.generatingQr")}
-					</Button>
+					<CircularProgress size={22} className={classes.buttonProgress} />
 				)}
 			</>
 		);
@@ -296,12 +227,12 @@ const Connections = () => {
 						<ErrorOutline color="error" />
 					</CustomToolTip>
 				)}
-				{whatsApp.status === "qrcode" && (
+				{whatsApp.status === "CONFIG_REQUIRED" && (
 					<CustomToolTip
-						title={i18n.t("connections.toolTips.qrcode.title")}
-						content={i18n.t("connections.toolTips.qrcode.content")}
+						title="Falta configurar Meta"
+						content="Defina el token, Phone Number ID, versión de Graph API y secretos del webhook en el servidor."
 					>
-						<CropFree />
+						<ErrorOutline color="action" />
 					</CustomToolTip>
 				)}
 				{whatsApp.status === "CONNECTED" && (
@@ -309,7 +240,7 @@ const Connections = () => {
 						<SignalCellular4Bar style={{ color: green[500] }} />
 					</CustomToolTip>
 				)}
-				{(whatsApp.status === "TIMEOUT" || whatsApp.status === "PAIRING") && (
+				{whatsApp.status === "TIMEOUT" && (
 					<CustomToolTip
 						title={i18n.t("connections.toolTips.timeout.title")}
 						content={i18n.t("connections.toolTips.timeout.content")}
@@ -339,15 +270,10 @@ const Connections = () => {
 			>
 				{confirmModalInfo.message}
 			</ConfirmationModal>
-			<QrcodeModal
-				open={qrModalOpen}
-				onClose={handleCloseQrModal}
-				whatsAppId={!whatsAppModalOpen && selectedWhatsApp?.id}
-			/>
 			<WhatsAppModal
 				open={whatsAppModalOpen}
 				onClose={handleCloseWhatsAppModal}
-				whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
+				whatsAppId={selectedWhatsApp?.id}
 			/>
 			<MainHeader>
 				<Title>Conexión WhatsApp</Title>
@@ -364,11 +290,16 @@ const Connections = () => {
 			<Paper variant="outlined" style={{ padding: 16, marginBottom: 16 }}>
 				<Box display="flex" flexWrap="wrap" style={{ gap: 12 }}>
 					<Typography variant="body2">
-						<strong>Flujo rápido:</strong> agregue una conexión, abra el QR,
-						escanee desde WhatsApp Business y espere el estado Conectado.
+						<strong>Integración oficial:</strong> esta instalación usa
+						WhatsApp Cloud API de Meta, sin QR ni sesiones de WhatsApp Web.
 					</Typography>
 					<Typography variant="body2" color="textSecondary">
-						No requiere WhatsApp Cloud API ni servicios pagos.
+						Las respuestas de servicio dentro de la ventana de 24 horas no
+						tienen cargo; otras categorías pueden tener costo según Meta.
+					</Typography>
+					<Typography variant="caption" color="textSecondary">
+						Webhook: /webhooks/whatsapp. Los tokens permanecen únicamente
+						en variables de entorno del servidor.
 					</Typography>
 				</Box>
 			</Paper>
@@ -383,7 +314,7 @@ const Connections = () => {
 								{i18n.t("connections.table.status")}
 							</TableCell>
 							<TableCell align="center">
-								{i18n.t("connections.table.session")}
+								Verificación
 							</TableCell>
 							<TableCell align="center">
 								{i18n.t("connections.table.lastUpdate")}

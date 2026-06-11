@@ -143,11 +143,21 @@ const elements = [
 
 const allowedElements = ["a", "b", "strong", "em", "u", "code", "del"];
 
-const CustomLink = ({ children, ...props }) => (
-	<a {...props} target="_blank" rel="noopener noreferrer">
-		{children}
-	</a>
-);
+const CustomLink = ({ children, href, ...props }) => {
+	const safeHref = /^(https?:|mailto:|tel:)/i.test(href || "") ? href : null;
+	if (!safeHref) return <span>{children}</span>;
+
+	return (
+		<a
+			{...props}
+			href={safeHref}
+			target="_blank"
+			rel="noopener noreferrer"
+		>
+			{children}
+		</a>
+	);
+};
 
 const MarkdownWrapper = ({ children }) => {
 	const boldRegex = /\*(.*?)\*/g;
