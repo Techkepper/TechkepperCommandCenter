@@ -10,7 +10,7 @@ const FindOrCreateTicketService = async (
   unreadMessages: number,
   groupContact?: Contact
 ): Promise<Ticket> => {
-  const activeStatuses = ["open", "assigned", "in_progress", "pending"];
+  const activeStatuses = ["open", "pending"];
   let ticket = await Ticket.findOne({
     where: {
       status: {

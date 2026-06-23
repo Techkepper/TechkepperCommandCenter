@@ -192,7 +192,7 @@ const TicketListItem = ({ ticket }) => {
 							>
 								{ticket.contact.name}
 							</Typography>
-							{["closed", "resolved"].includes(ticket.status) && (
+							{ticket.status === "closed" && (
 								<Badge
 									className={classes.closedBadge}
 									badgeContent={"closed"}

@@ -152,26 +152,10 @@ const reducer = (state, action) => {
 	}
 };
 
-const OPEN_STATUSES = ["open", "assigned", "in_progress"];
-const CLOSED_STATUSES = ["closed", "resolved"];
-
-const getStatusGroup = status => {
-	if (OPEN_STATUSES.includes(status)) return "open";
-	if (CLOSED_STATUSES.includes(status)) return "closed";
-	return status;
-};
-
 const ticketMatchesStatus = (ticket, status) => {
 	if (!status) return true;
-	const statusGroup = getStatusGroup(status);
-	if (statusGroup === "pending") {
+	if (status === "pending") {
 		return ticket.status === "pending" && !ticket.userId;
-	}
-	if (statusGroup === "open") {
-		return OPEN_STATUSES.includes(ticket.status);
-	}
-	if (statusGroup === "closed") {
-		return CLOSED_STATUSES.includes(ticket.status);
 	}
 	return ticket.status === status;
 };
@@ -237,23 +221,6 @@ const TicketsList = (props) => {
 			hasQueueAccess(ticket) &&
 			hasEcosystemAccess(ticket);
 
-		const debugTicketFlow = (phase, ticket) => {
-			if (localStorage.getItem("DEBUG_TICKETS") !== "true") return;
-			console.debug("[tickets]", phase, {
-				ticketId: ticket?.id,
-				status: ticket?.status,
-				userId: ticket?.userId,
-				queueId: ticket?.queueId,
-				ecosystemId: ticket?.ecosystemId,
-				activeTab: status || "search",
-				searchParam: Boolean(searchParam),
-				showAll,
-				selectedQueueIds,
-				selectedEcosystemId: ecosystemId,
-				displayed: ticket ? shouldDisplayTicket(ticket) : false,
-			});
-		};
-
 		const notBelongsToUserQueues = ticket =>
 			!isAdmin &&
 			!showAll &&
@@ -278,7 +245,6 @@ const TicketsList = (props) => {
 			}
 
 			if (data.action === "update") {
-				debugTicketFlow("socket:update", data.ticket);
 				if (shouldDisplayTicket(data.ticket)) {
 					dispatch({
 						type: "UPDATE_TICKET",
@@ -299,7 +265,6 @@ const TicketsList = (props) => {
 		});
 
 		socket.on("appMessage", data => {
-			debugTicketFlow("socket:appMessage", data.ticket);
 			if (data.action === "create" && shouldDisplayTicket(data.ticket)) {
 				dispatch({
 					type: "UPDATE_TICKET_UNREAD_MESSAGES",

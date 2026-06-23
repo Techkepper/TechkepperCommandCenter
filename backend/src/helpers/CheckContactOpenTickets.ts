@@ -6,7 +6,7 @@ const CheckContactOpenTickets = async (
   contactId: number,
   whatsappId: number
 ): Promise<void> => {
-  const activeStatuses = ["open", "assigned", "in_progress", "pending"];
+  const activeStatuses = ["open", "pending"];
   const ticket = await Ticket.findOne({
     where: { contactId, whatsappId, status: { [Op.or]: activeStatuses } }
   });

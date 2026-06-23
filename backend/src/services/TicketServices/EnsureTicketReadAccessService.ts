@@ -36,7 +36,7 @@ const EnsureTicketReadAccessService = async (
     return { actor, readOnly: false };
   }
 
-  if (["closed", "resolved"].includes(ticket.status) && queueAllowed) {
+  if (ticket.status === "closed" && queueAllowed) {
     const historicalAssignment = await TicketAssignmentEvent.findOne({
       where: {
         ticketId: ticket.id,

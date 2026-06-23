@@ -10,7 +10,6 @@ import Whatsapp from "../../models/Whatsapp";
 import User from "../../models/User";
 import Ecosystem from "../../models/Ecosystem";
 import TicketAssignmentEvent from "../../models/TicketAssignmentEvent";
-import { logger } from "../../utils/logger";
 
 interface Request {
   searchParam?: string;
@@ -32,15 +31,6 @@ interface Response {
   hasMore: boolean;
 }
 
-const OPEN_STATUSES = ["open", "assigned", "in_progress"];
-const CLOSED_STATUSES = ["closed", "resolved"];
-
-const normalizeStatusGroup = (status?: string): string | undefined => {
-  if (status === "resolved") return "closed";
-  if (status === "assigned" || status === "in_progress") return "open";
-  return status;
-};
-
 const ListTicketsService = async ({
   searchParam = "",
   pageNumber = "1",
@@ -55,7 +45,6 @@ const ListTicketsService = async ({
   ecosystemId
 }: Request): Promise<Response> => {
   const user = await ShowUserService(userId);
-  const normalizedStatus = normalizeStatusGroup(status);
   const userQueueIds = user.queues?.map(queue => queue.id) || [];
   const requestedQueueIds = queueIds.length ? queueIds : userQueueIds;
   const allowedQueueIds =
@@ -64,7 +53,7 @@ const ListTicketsService = async ({
       : requestedQueueIds.filter(id => userQueueIds.includes(id));
   const includeHistoricalAssignments =
     (userProfile === "agent" || userProfile === "user") &&
-    (normalizedStatus === "closed" || Boolean(searchParam));
+    (status === "closed" || Boolean(searchParam));
 
   const andConditions: any[] = [];
   if (userProfile === "supervisor") {
@@ -79,7 +68,7 @@ const ListTicketsService = async ({
     if (includeHistoricalAssignments) {
       ticketVisibility.push({
         [Op.and]: [
-          { status: { [Op.in]: ["closed", "resolved"] } },
+          { status: "closed" },
           { "$assignmentEvents.id$": { [Op.ne]: null } }
         ]
       });
@@ -104,14 +93,10 @@ const ListTicketsService = async ({
     });
   }
 
-  if (normalizedStatus === "pending") {
+  if (status === "pending") {
     andConditions.push({ status: "pending", userId: null });
-  } else if (normalizedStatus === "open") {
-    andConditions.push({ status: { [Op.in]: OPEN_STATUSES } });
-  } else if (normalizedStatus === "closed") {
-    andConditions.push({ status: { [Op.in]: CLOSED_STATUSES } });
-  } else if (normalizedStatus) {
-    andConditions.push({ status: normalizedStatus });
+  } else if (status) {
+    andConditions.push({ status });
   }
   if (agentId) {
     andConditions.push({ userId: Number(agentId) });
@@ -215,28 +200,6 @@ const ListTicketsService = async ({
     offset,
     order: [["updatedAt", "DESC"]]
   });
-
-  logger.debug(
-    {
-      status,
-      normalizedStatus,
-      userId,
-      userProfile,
-      queueIds,
-      ecosystemId,
-      showAll,
-      pageNumber,
-      count,
-      returned: tickets.map(ticket => ({
-        id: ticket.id,
-        status: ticket.status,
-        userId: ticket.userId,
-        queueId: ticket.queueId,
-        ecosystemId: ticket.ecosystemId
-      }))
-    },
-    "Ticket list query result"
-  );
 
   return {
     tickets,

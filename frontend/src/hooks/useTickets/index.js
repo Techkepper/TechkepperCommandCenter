@@ -38,24 +38,6 @@ const useTickets = ({
                         },
                     })
                     if (!isMounted) return;
-                    if (localStorage.getItem("DEBUG_TICKETS") === "true") {
-                        console.debug("[tickets] api:list", {
-                            status,
-                            searchParam: Boolean(searchParam),
-                            pageNumber,
-                            showAll,
-                            queueIds,
-                            ecosystemId,
-                            count: data.count,
-                            returned: data.tickets.map(ticket => ({
-                                id: ticket.id,
-                                status: ticket.status,
-                                userId: ticket.userId,
-                                queueId: ticket.queueId,
-                                ecosystemId: ticket.ecosystemId,
-                            })),
-                        })
-                    }
                     setTickets(data.tickets)
 
                     let horasFecharAutomaticamente = getHoursCloseTicketsAuto(); 

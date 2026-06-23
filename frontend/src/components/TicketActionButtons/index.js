@@ -62,7 +62,7 @@ const TicketActionButtons = ({ ticket }) => {
 
 	return (
 		<div className={classes.actionButtons}>
-			{["closed", "resolved"].includes(ticket.status) && (
+			{ticket.status === "closed" && (
 				<ButtonWithSpinner
 					loading={loading}
 					startIcon={<Replay />}

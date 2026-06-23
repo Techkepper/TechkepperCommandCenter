@@ -1,6 +1,8 @@
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
+import User from "../../models/User";
+import Ecosystem from "../../models/Ecosystem";
 import { EmitTicketEvent } from "../../helpers/EmitTicketEvent";
 
 interface MessageData {
@@ -34,9 +36,19 @@ const CreateMessageService = async ({
           "contact",
           "queue",
           {
+            model: User,
+            as: "user",
+            attributes: ["id", "name", "profile"]
+          },
+          {
+            model: Ecosystem,
+            as: "ecosystem",
+            attributes: ["id", "name", "color"]
+          },
+          {
             model: Whatsapp,
             as: "whatsapp",
-            attributes: ["name"]
+            attributes: ["id", "name", "status"]
           }
         ]
       },
