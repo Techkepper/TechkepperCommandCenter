@@ -10,6 +10,7 @@ import Whatsapp from "../../models/Whatsapp";
 import User from "../../models/User";
 import Ecosystem from "../../models/Ecosystem";
 import TicketAssignmentEvent from "../../models/TicketAssignmentEvent";
+import { logger } from "../../utils/logger";
 
 interface Request {
   searchParam?: string;
@@ -31,6 +32,15 @@ interface Response {
   hasMore: boolean;
 }
 
+const OPEN_STATUSES = ["open", "assigned", "in_progress"];
+const CLOSED_STATUSES = ["closed", "resolved"];
+
+const normalizeStatusGroup = (status?: string): string | undefined => {
+  if (status === "resolved") return "closed";
+  if (status === "assigned" || status === "in_progress") return "open";
+  return status;
+};
+
 const ListTicketsService = async ({
   searchParam = "",
   pageNumber = "1",
@@ -45,7 +55,7 @@ const ListTicketsService = async ({
   ecosystemId
 }: Request): Promise<Response> => {
   const user = await ShowUserService(userId);
-  const normalizedStatus = status === "resolved" ? "closed" : status;
+  const normalizedStatus = normalizeStatusGroup(status);
   const userQueueIds = user.queues?.map(queue => queue.id) || [];
   const requestedQueueIds = queueIds.length ? queueIds : userQueueIds;
   const allowedQueueIds =
@@ -90,12 +100,16 @@ const ListTicketsService = async ({
     userProfile !== "supervisor"
   ) {
     andConditions.push({
-      [Op.or]: [{ userId: Number(userId) }, { status: "pending" }]
+      [Op.or]: [{ userId: Number(userId) }, { status: "pending", userId: null }]
     });
   }
 
-  if (normalizedStatus === "closed") {
-    andConditions.push({ status: { [Op.in]: ["closed", "resolved"] } });
+  if (normalizedStatus === "pending") {
+    andConditions.push({ status: "pending", userId: null });
+  } else if (normalizedStatus === "open") {
+    andConditions.push({ status: { [Op.in]: OPEN_STATUSES } });
+  } else if (normalizedStatus === "closed") {
+    andConditions.push({ status: { [Op.in]: CLOSED_STATUSES } });
   } else if (normalizedStatus) {
     andConditions.push({ status: normalizedStatus });
   }
@@ -201,6 +215,28 @@ const ListTicketsService = async ({
     offset,
     order: [["updatedAt", "DESC"]]
   });
+
+  logger.debug(
+    {
+      status,
+      normalizedStatus,
+      userId,
+      userProfile,
+      queueIds,
+      ecosystemId,
+      showAll,
+      pageNumber,
+      count,
+      returned: tickets.map(ticket => ({
+        id: ticket.id,
+        status: ticket.status,
+        userId: ticket.userId,
+        queueId: ticket.queueId,
+        ecosystemId: ticket.ecosystemId
+      }))
+    },
+    "Ticket list query result"
+  );
 
   return {
     tickets,

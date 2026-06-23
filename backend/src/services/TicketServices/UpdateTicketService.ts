@@ -33,6 +33,9 @@ interface Response {
   assignmentEvent?: TicketAssignmentEvent;
 }
 
+const OPEN_STATUSES = ["open", "assigned", "in_progress"];
+const CLOSED_STATUSES = ["closed", "resolved"];
+
 const replaceTemplateVariables = (
   template: string,
   ticket: Ticket,
@@ -65,11 +68,27 @@ const UpdateTicketService = async ({
     ticketData.status = "closed";
   }
 
+  const incomingUserId =
+    ticketData.userId === null || ticketData.userId === undefined
+      ? undefined
+      : Number(ticketData.userId);
+
+  if (
+    incomingUserId &&
+    (!ticketData.status || ticketData.status === "pending")
+  ) {
+    ticketData.status = "open";
+  }
+
+  if (ticketData.status === "pending") {
+    ticketData.userId = null;
+  }
+
   const ticket = await ShowTicketService(ticketId);
   await SetTicketMessagesAsRead(ticket);
 
   const oldStatus = ticket.status;
-  const oldStatusIsClosed = ["closed", "resolved"].includes(oldStatus);
+  const oldStatusIsClosed = CLOSED_STATUSES.includes(oldStatus);
   const oldUserId = ticket.userId || undefined;
   const oldAudience = {
     id: ticket.id,
@@ -122,12 +141,28 @@ const UpdateTicketService = async ({
   });
 
   if (
-    ticketData.status === "open" &&
+    ticketData.status &&
+    OPEN_STATUSES.includes(ticketData.status) &&
     !ticket.firstResponseAt &&
     requestedUserId
   ) {
     updateData.firstResponseAt = new Date();
   }
+  logger.debug(
+    {
+      ticketId: ticket.id,
+      oldStatus,
+      oldUserId,
+      requestedStatus: ticketData.status,
+      requestedUserId,
+      queueId: ticketData.queueId ?? ticket.queueId,
+      ecosystemId: ticketData.ecosystemId ?? ticket.ecosystemId,
+      performedByUserId,
+      performedByProfile
+    },
+    "Ticket update normalized"
+  );
+
   if (ticketData.status === "closed") {
     updateData.closedAt = new Date();
   } else if (ticketData.status && oldStatusIsClosed) {
@@ -213,6 +248,16 @@ const UpdateTicketService = async ({
   }
 
   const reloadedTicket = await ShowTicketService(ticket.id);
+  logger.debug(
+    {
+      ticketId: reloadedTicket.id,
+      status: reloadedTicket.status,
+      userId: reloadedTicket.userId,
+      queueId: reloadedTicket.queueId,
+      ecosystemId: reloadedTicket.ecosystemId
+    },
+    "Ticket update persisted"
+  );
   if (
     reloadedTicket.status !== oldStatus ||
     Number(reloadedTicket.userId || 0) !== Number(oldUserId || 0)

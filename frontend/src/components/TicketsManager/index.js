@@ -94,46 +94,23 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const getTicketFiltersKey = userId => `tickets:filters:${userId || "anon"}`;
-
-const readSavedTicketFilters = userId => {
-  try {
-    const value = sessionStorage.getItem(getTicketFiltersKey(userId));
-    return value ? JSON.parse(value) : {};
-  } catch (err) {
-    return {};
-  }
-};
-
 const TicketsManager = () => {
   const classes = useStyles();
   const { user } = useContext(AuthContext);
-  const savedFiltersRef = useRef(readSavedTicketFilters(user?.id));
-  const savedFilters = savedFiltersRef.current;
   const isAdmin = user?.profile?.toUpperCase() === "ADMIN";
-  const [searchParam, setSearchParam] = useState(savedFilters.searchParam || "");
-  const [tab, setTab] = useState(savedFilters.tab || "open");
-  const [tabOpen, setTabOpen] = useState(savedFilters.tabOpen || "open");
+  const [searchParam, setSearchParam] = useState("");
+  const [tab, setTab] = useState("open");
+  const [tabOpen, setTabOpen] = useState("open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
-  const [showAllTickets, setShowAllTickets] = useState(
-    typeof savedFilters.showAllTickets === "boolean"
-      ? savedFilters.showAllTickets
-      : Boolean(isAdmin)
-  );
+  const [showAllTickets, setShowAllTickets] = useState(Boolean(isAdmin));
   const searchInputRef = useRef();
   const searchTimeoutRef = useRef();
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [availableQueues, setAvailableQueues] = useState(user?.queues || []);
   const [ecosystems, setEcosystems] = useState([]);
-  const [selectedQueueIds, setSelectedQueueIds] = useState(
-    Array.isArray(savedFilters.selectedQueueIds)
-      ? savedFilters.selectedQueueIds
-      : []
-  );
-  const [selectedEcosystemId, setSelectedEcosystemId] = useState(
-    savedFilters.selectedEcosystemId || ""
-  );
+  const [selectedQueueIds, setSelectedQueueIds] = useState([]);
+  const [selectedEcosystemId, setSelectedEcosystemId] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -172,30 +149,8 @@ const TicketsManager = () => {
   }, [user?.id, user?.queues]);
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(
-        getTicketFiltersKey(user?.id),
-        JSON.stringify({
-          searchParam,
-          tab,
-          tabOpen,
-          showAllTickets,
-          selectedQueueIds,
-          selectedEcosystemId,
-        })
-      );
-    } catch (err) {
-      // La persistencia de filtros no debe bloquear la bandeja.
-    }
-  }, [
-    searchParam,
-    selectedEcosystemId,
-    selectedQueueIds,
-    showAllTickets,
-    tab,
-    tabOpen,
-    user?.id,
-  ]);
+    setShowAllTickets(Boolean(isAdmin));
+  }, [isAdmin]);
 
   useEffect(() => {
     if (tab === "search") {
