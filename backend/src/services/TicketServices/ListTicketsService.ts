@@ -45,6 +45,7 @@ const ListTicketsService = async ({
   ecosystemId
 }: Request): Promise<Response> => {
   const user = await ShowUserService(userId);
+  const normalizedStatus = status === "resolved" ? "closed" : status;
   const userQueueIds = user.queues?.map(queue => queue.id) || [];
   const requestedQueueIds = queueIds.length ? queueIds : userQueueIds;
   const allowedQueueIds =
@@ -53,7 +54,7 @@ const ListTicketsService = async ({
       : requestedQueueIds.filter(id => userQueueIds.includes(id));
   const includeHistoricalAssignments =
     (userProfile === "agent" || userProfile === "user") &&
-    (status === "closed" || Boolean(searchParam));
+    (normalizedStatus === "closed" || Boolean(searchParam));
 
   const andConditions: any[] = [];
   if (userProfile === "supervisor") {
@@ -68,7 +69,7 @@ const ListTicketsService = async ({
     if (includeHistoricalAssignments) {
       ticketVisibility.push({
         [Op.and]: [
-          { status: "closed" },
+          { status: { [Op.in]: ["closed", "resolved"] } },
           { "$assignmentEvents.id$": { [Op.ne]: null } }
         ]
       });
@@ -83,14 +84,20 @@ const ListTicketsService = async ({
     andConditions.push({ queueId: { [Op.in]: queueIds } });
   }
 
-  if (showAll !== "true" && userProfile !== "admin" && userProfile !== "supervisor") {
+  if (
+    showAll !== "true" &&
+    userProfile !== "admin" &&
+    userProfile !== "supervisor"
+  ) {
     andConditions.push({
       [Op.or]: [{ userId: Number(userId) }, { status: "pending" }]
     });
   }
 
-  if (status) {
-    andConditions.push({ status });
+  if (normalizedStatus === "closed") {
+    andConditions.push({ status: { [Op.in]: ["closed", "resolved"] } });
+  } else if (normalizedStatus) {
+    andConditions.push({ status: normalizedStatus });
   }
   if (agentId) {
     andConditions.push({ userId: Number(agentId) });
@@ -145,10 +152,7 @@ const ListTicketsService = async ({
       required: false,
       duplicating: false,
       where: {
-        [Op.or]: [
-          { oldUserId: Number(userId) },
-          { newUserId: Number(userId) }
-        ]
+        [Op.or]: [{ oldUserId: Number(userId) }, { newUserId: Number(userId) }]
       }
     });
   }

@@ -224,6 +224,8 @@ const messages = {
       },
       ticketsQueueSelect: {
         placeholder: "Departamentos",
+        all: "Todos",
+        selected: "{{count}} departamentos",
       },
       tickets: {
         toasts: {
@@ -242,6 +244,10 @@ const messages = {
         },
         buttons: {
           showAll: "Todos",
+        },
+        ecosystemFilter: {
+          all: "Todos los ecosistemas",
+          placeholder: "Ecosistema",
         },
       },
       transferTicketModal: {
@@ -471,6 +477,8 @@ const messages = {
           "Ya existe un usuario con este correo electrónico.",
         ERR_ASSIGNED_USER_INACTIVE:
           "No es posible asignar la conversación a un usuario inactivo.",
+        ERR_TICKET_ALREADY_ASSIGNED:
+          "Esta conversación ya fue asignada a otro responsable.",
         ERR_CORS_ORIGIN_NOT_ALLOWED:
           "El origen de la solicitud no está autorizado.",
         ERR_ECOSYSTEM_NAME_REQUIRED:

@@ -23,7 +23,7 @@ import { Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles(() => ({
 	ticket: {
 		position: "relative",
 	},
@@ -130,21 +130,23 @@ const TicketListItem = ({ ticket }) => {
 		};
 	}, []);
 
-	const handleAcepptTicket = async id => {
+	const handleAcepptTicket = async (e, id) => {
+		e.stopPropagation();
 		setLoading(true);
 		try {
-			await api.put(`/tickets/${id}`, {
+			const { data } = await api.put(`/tickets/${id}`, {
 				status: "open",
 				userId: user?.id,
 			});
+			history.push(`/tickets/${data.id}`);
 		} catch (err) {
 			setLoading(false);
 			toastError(err);
+			return;
 		}
 		if (isMounted.current) {
 			setLoading(false);
 		}
-		history.push(`/tickets/${id}`);
 	};
 
 	const handleSelectTicket = id => {
@@ -156,7 +158,7 @@ const TicketListItem = ({ ticket }) => {
 			<ListItem
 				dense
 				button
-				onClick={e => {
+				onClick={() => {
 					if (ticket.status === "pending") return;
 					handleSelectTicket(ticket.id);
 				}}
@@ -190,7 +192,7 @@ const TicketListItem = ({ ticket }) => {
 							>
 								{ticket.contact.name}
 							</Typography>
-							{ticket.status === "closed" && (
+							{["closed", "resolved"].includes(ticket.status) && (
 								<Badge
 									className={classes.closedBadge}
 									badgeContent={"closed"}
@@ -249,7 +251,7 @@ const TicketListItem = ({ ticket }) => {
 						className={classes.acceptButton}
 						size="small"
 						loading={loading}
-						onClick={e => handleAcepptTicket(ticket.id)}
+						onClick={e => handleAcepptTicket(e, ticket.id)}
 					>
 						{i18n.t("ticketsList.buttons.accept")}
 					</ButtonWithSpinner>

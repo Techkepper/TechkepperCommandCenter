@@ -11,6 +11,7 @@ const useTickets = ({
     date,
     showAll,
     queueIds,
+    ecosystemId,
     withUnreadMessages,
 }) => {
     const [loading, setLoading] = useState(true);
@@ -19,6 +20,7 @@ const useTickets = ({
     const [count, setCount] = useState(0);
 
     useEffect(() => {
+        let isMounted = true;
         setLoading(true);
         const delayDebounceFn = setTimeout(() => {
             const fetchTickets = async() => {
@@ -31,9 +33,11 @@ const useTickets = ({
                             date,
                             showAll,
                             queueIds,
+                            ecosystemId,
                             withUnreadMessages,
                         },
                     })
+                    if (!isMounted) return;
                     setTickets(data.tickets)
 
                     let horasFecharAutomaticamente = getHoursCloseTicketsAuto(); 
@@ -57,6 +61,7 @@ const useTickets = ({
                     setCount(data.count)
                     setLoading(false)
                 } catch (err) {
+                    if (!isMounted) return;
                     setLoading(false)
                     toastError(err)
                 }
@@ -71,7 +76,10 @@ const useTickets = ({
 
             fetchTickets()
         }, 500)
-        return () => clearTimeout(delayDebounceFn)
+        return () => {
+            isMounted = false;
+            clearTimeout(delayDebounceFn)
+        }
     }, [
         searchParam,
         pageNumber,
@@ -79,6 +87,7 @@ const useTickets = ({
         date,
         showAll,
         queueIds,
+        ecosystemId,
         withUnreadMessages,
     ])
 

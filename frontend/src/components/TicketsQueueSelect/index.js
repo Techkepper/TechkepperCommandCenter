@@ -8,15 +8,37 @@ import { i18n } from "../../translate/i18n";
 
 const TicketsQueueSelect = ({
 	userQueues,
+	queues,
 	selectedQueueIds = [],
 	onChange,
+	style,
 }) => {
+	const availableQueues = queues || userQueues || [];
+
 	const handleChange = e => {
-		onChange(e.target.value);
+		const values = e.target.value;
+		if (values.includes("__all__")) {
+			onChange([]);
+			return;
+		}
+		onChange(values);
+	};
+
+	const renderSelectedQueues = () => {
+		if (!selectedQueueIds.length) {
+			return i18n.t("ticketsQueueSelect.all");
+		}
+		if (selectedQueueIds.length === 1) {
+			const queue = availableQueues.find(q => q.id === selectedQueueIds[0]);
+			return queue?.name || i18n.t("ticketsQueueSelect.placeholder");
+		}
+		return i18n.t("ticketsQueueSelect.selected", {
+			count: selectedQueueIds.length,
+		});
 	};
 
 	return (
-		<div style={{ width: 120, marginTop: -4 }}>
+		<div style={{ width: 170, marginTop: -4, ...style }}>
 			<FormControl fullWidth margin="dense">
 				<Select
 					multiple
@@ -35,10 +57,18 @@ const TicketsQueueSelect = ({
 						},
 						getContentAnchorEl: null,
 					}}
-					renderValue={() => i18n.t("ticketsQueueSelect.placeholder")}
+					renderValue={renderSelectedQueues}
 				>
-					{userQueues?.length > 0 &&
-						userQueues.map(queue => (
+					<MenuItem dense value="__all__">
+						<Checkbox
+							size="small"
+							color="primary"
+							checked={selectedQueueIds.length === 0}
+						/>
+						<ListItemText primary={i18n.t("ticketsQueueSelect.all")} />
+					</MenuItem>
+					{availableQueues.length > 0 &&
+						availableQueues.map(queue => (
 							<MenuItem dense key={queue.id} value={queue.id}>
 								<Checkbox
 									style={{

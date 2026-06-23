@@ -23,6 +23,7 @@ interface Request {
   ticketData: TicketData;
   ticketId: string | number;
   performedByUserId?: string | number;
+  performedByProfile?: string;
 }
 
 interface Response {
@@ -57,12 +58,18 @@ const replaceTemplateVariables = (
 const UpdateTicketService = async ({
   ticketData,
   ticketId,
-  performedByUserId
+  performedByUserId,
+  performedByProfile
 }: Request): Promise<Response> => {
+  if (ticketData.status === "resolved") {
+    ticketData.status = "closed";
+  }
+
   const ticket = await ShowTicketService(ticketId);
   await SetTicketMessagesAsRead(ticket);
 
   const oldStatus = ticket.status;
+  const oldStatusIsClosed = ["closed", "resolved"].includes(oldStatus);
   const oldUserId = ticket.userId || undefined;
   const oldAudience = {
     id: ticket.id,
@@ -81,6 +88,16 @@ const UpdateTicketService = async ({
   const assignmentChanged =
     hasUserChange && Number(oldUserId || 0) !== Number(requestedUserId || 0);
 
+  if (
+    oldStatus === "pending" &&
+    oldUserId &&
+    requestedUserId &&
+    Number(oldUserId) !== Number(requestedUserId) &&
+    performedByProfile === "agent"
+  ) {
+    throw new AppError("ERR_TICKET_ALREADY_ASSIGNED", 409);
+  }
+
   let newUser: User | null = null;
   if (assignmentChanged && requestedUserId) {
     newUser = await User.findByPk(requestedUserId);
@@ -89,17 +106,11 @@ const UpdateTicketService = async ({
     }
   }
 
-  if (
-    ticketData.whatsappId &&
-    ticket.whatsappId !== ticketData.whatsappId
-  ) {
-    await CheckContactOpenTickets(
-      ticket.contactId,
-      ticketData.whatsappId
-    );
+  if (ticketData.whatsappId && ticket.whatsappId !== ticketData.whatsappId) {
+    await CheckContactOpenTickets(ticket.contactId, ticketData.whatsappId);
   }
 
-  if (oldStatus === "closed" && ticketData.status !== "closed") {
+  if (oldStatusIsClosed && ticketData.status !== "closed") {
     await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId);
   }
 
@@ -119,7 +130,7 @@ const UpdateTicketService = async ({
   }
   if (ticketData.status === "closed") {
     updateData.closedAt = new Date();
-  } else if (ticketData.status && oldStatus === "closed") {
+  } else if (ticketData.status && oldStatusIsClosed) {
     updateData.closedAt = null;
   }
 
@@ -128,13 +139,15 @@ const UpdateTicketService = async ({
 
   let assignmentEvent: TicketAssignmentEvent | undefined;
   if (assignmentChanged) {
-    const action =
-      oldUserId && requestedUserId
-        ? "reassignment"
-        : requestedUserId &&
-            Number(performedByUserId) === Number(requestedUserId)
-          ? "take"
-          : "assignment";
+    let action = "assignment";
+    if (oldUserId && requestedUserId) {
+      action = "reassignment";
+    } else if (
+      requestedUserId &&
+      Number(performedByUserId) === Number(requestedUserId)
+    ) {
+      action = "take";
+    }
 
     assignmentEvent = await TicketAssignmentEvent.create({
       ticketId: ticket.id,
@@ -149,23 +162,19 @@ const UpdateTicketService = async ({
 
     if (newUser) {
       try {
-        const [
-          enabled,
-          template,
-          companyName,
-          businessHours
-        ] = await Promise.all([
-          GetSettingValueService("assignmentAutoMessage", "enabled"),
-          GetSettingValueService(
-            "assignmentMessageTemplate",
-            "Hola, le saluda {EMPRESA}. Su solicitud ha sido asignada a {NOMBRE_AGENTE}, quien estará a cargo de brindarle seguimiento. Con gusto le atenderemos por este medio."
-          ),
-          GetSettingValueService("companyName", "Techkepper"),
-          GetSettingValueService(
-            "businessHours",
-            "lunes a viernes de 9:00 a.m. a 5:00 p.m."
-          )
-        ]);
+        const [enabled, template, companyName, businessHours] =
+          await Promise.all([
+            GetSettingValueService("assignmentAutoMessage", "enabled"),
+            GetSettingValueService(
+              "assignmentMessageTemplate",
+              "Hola, le saluda {EMPRESA}. Su solicitud ha sido asignada a {NOMBRE_AGENTE}, quien estará a cargo de brindarle seguimiento. Con gusto le atenderemos por este medio."
+            ),
+            GetSettingValueService("companyName", "Techkepper"),
+            GetSettingValueService(
+              "businessHours",
+              "lunes a viernes de 9:00 a.m. a 5:00 p.m."
+            )
+          ]);
 
         if (enabled !== "enabled") {
           await assignmentEvent.update({ autoMessageStatus: "disabled" });

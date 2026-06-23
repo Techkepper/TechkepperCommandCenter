@@ -17,7 +17,7 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
-import { Button } from "@material-ui/core";
+import { Button, FormControl, MenuItem, Select } from "@material-ui/core";
 import api from "../../services/api";
 
 const useStyles = makeStyles((theme) => ({
@@ -52,6 +52,16 @@ const useStyles = makeStyles((theme) => ({
     background: theme.palette.background.paper,
     padding: theme.spacing(1),
   },
+  filtersBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    marginLeft: theme.spacing(1),
+  },
+  ecosystemSelect: {
+    minWidth: 150,
+    marginTop: -4,
+  },
   serachInputWrapper: {
     flex: 1,
     background: theme.palette.background.default,
@@ -84,36 +94,112 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const getTicketFiltersKey = userId => `tickets:filters:${userId || "anon"}`;
+
+const readSavedTicketFilters = userId => {
+  try {
+    const value = sessionStorage.getItem(getTicketFiltersKey(userId));
+    return value ? JSON.parse(value) : {};
+  } catch (err) {
+    return {};
+  }
+};
+
 const TicketsManager = () => {
   const classes = useStyles();
-  const [searchParam, setSearchParam] = useState("");
-  const [tab, setTab] = useState("open");
-  const [tabOpen, setTabOpen] = useState("open");
+  const { user } = useContext(AuthContext);
+  const savedFiltersRef = useRef(readSavedTicketFilters(user?.id));
+  const savedFilters = savedFiltersRef.current;
+  const isAdmin = user?.profile?.toUpperCase() === "ADMIN";
+  const [searchParam, setSearchParam] = useState(savedFilters.searchParam || "");
+  const [tab, setTab] = useState(savedFilters.tab || "open");
+  const [tabOpen, setTabOpen] = useState(savedFilters.tabOpen || "open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
-  const [showAllTickets, setShowAllTickets] = useState(false);
+  const [showAllTickets, setShowAllTickets] = useState(
+    typeof savedFilters.showAllTickets === "boolean"
+      ? savedFilters.showAllTickets
+      : Boolean(isAdmin)
+  );
   const searchInputRef = useRef();
   const searchTimeoutRef = useRef();
-  const { user } = useContext(AuthContext);
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
-  const userQueueIds = user.queues.map((q) => q.id);
-  const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
+  const [availableQueues, setAvailableQueues] = useState(user?.queues || []);
+  const [ecosystems, setEcosystems] = useState([]);
+  const [selectedQueueIds, setSelectedQueueIds] = useState(
+    Array.isArray(savedFilters.selectedQueueIds)
+      ? savedFilters.selectedQueueIds
+      : []
+  );
+  const [selectedEcosystemId, setSelectedEcosystemId] = useState(
+    savedFilters.selectedEcosystemId || ""
+  );
 
   useEffect(() => {
-    if (user.profile.toUpperCase() === "ADMIN") {
-      setShowAllTickets(true);
-      api
-        .get("/queue")
-        .then(({ data }) => setSelectedQueueIds(data.map((queue) => queue.id)))
-        .catch(() => {});
+    let isMounted = true;
+
+    const loadFilters = async () => {
+      try {
+        const [{ data: queues }, { data: ecosystemOptions }] = await Promise.all([
+          api.get("/queue"),
+          api.get("/ecosystems"),
+        ]);
+
+        if (!isMounted) return;
+
+        setAvailableQueues(queues);
+        setEcosystems(ecosystemOptions);
+        setSelectedQueueIds(prev =>
+          prev.filter(queueId => queues.some(queue => queue.id === queueId))
+        );
+        setSelectedEcosystemId(prev =>
+          prev && ecosystemOptions.some(ecosystem => ecosystem.id === Number(prev))
+            ? prev
+            : ""
+        );
+      } catch (err) {
+        if (isMounted) {
+          setAvailableQueues(user?.queues || []);
+        }
+      }
+    };
+
+    loadFilters();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.queues]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        getTicketFiltersKey(user?.id),
+        JSON.stringify({
+          searchParam,
+          tab,
+          tabOpen,
+          showAllTickets,
+          selectedQueueIds,
+          selectedEcosystemId,
+        })
+      );
+    } catch (err) {
+      // La persistencia de filtros no debe bloquear la bandeja.
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    searchParam,
+    selectedEcosystemId,
+    selectedQueueIds,
+    showAllTickets,
+    tab,
+    tabOpen,
+    user?.id,
+  ]);
 
   useEffect(() => {
     if (tab === "search") {
-      searchInputRef.current.focus();
-      setSearchParam("");
+      searchInputRef.current?.focus();
     }
   }, [tab]);
 
@@ -191,6 +277,7 @@ const TicketsManager = () => {
               inputRef={searchInputRef}
               placeholder={i18n.t("tickets.search.placeholder")}
               type="search"
+              defaultValue={searchParam}
               onChange={handleSearch}
             />
           </div>
@@ -226,12 +313,39 @@ const TicketsManager = () => {
             />
           </>
         )}
-        <TicketsQueueSelect
-          style={{ marginLeft: 6 }}
-          selectedQueueIds={selectedQueueIds}
-          userQueues={user?.queues}
-          onChange={(values) => setSelectedQueueIds(values)}
-        />
+        <div className={classes.filtersBox}>
+          <TicketsQueueSelect
+            selectedQueueIds={selectedQueueIds}
+            queues={availableQueues}
+            userQueues={user?.queues}
+            onChange={(values) => setSelectedQueueIds(values)}
+          />
+          <FormControl
+            variant="outlined"
+            margin="dense"
+            className={classes.ecosystemSelect}
+          >
+            <Select
+              displayEmpty
+              value={selectedEcosystemId}
+              onChange={(event) => setSelectedEcosystemId(event.target.value)}
+              renderValue={(value) => {
+                if (!value) return i18n.t("tickets.ecosystemFilter.all");
+                const ecosystem = ecosystems.find(item => item.id === Number(value));
+                return ecosystem?.name || i18n.t("tickets.ecosystemFilter.placeholder");
+              }}
+            >
+              <MenuItem value="">
+                {i18n.t("tickets.ecosystemFilter.all")}
+              </MenuItem>
+              {ecosystems.map(ecosystem => (
+                <MenuItem key={ecosystem.id} value={ecosystem.id}>
+                  {ecosystem.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </div>
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
         <Tabs
@@ -271,6 +385,7 @@ const TicketsManager = () => {
             status="open"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
+            ecosystemId={selectedEcosystemId}
             updateCount={(val) => setOpenCount(val)}
             style={applyPanelStyle("open")}
           />
@@ -278,6 +393,7 @@ const TicketsManager = () => {
             status="pending"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
+            ecosystemId={selectedEcosystemId}
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}
           />
@@ -288,6 +404,7 @@ const TicketsManager = () => {
           status="closed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          ecosystemId={selectedEcosystemId}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
@@ -295,6 +412,7 @@ const TicketsManager = () => {
           searchParam={searchParam}
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          ecosystemId={selectedEcosystemId}
         />
       </TabPanel>
     </Paper>
