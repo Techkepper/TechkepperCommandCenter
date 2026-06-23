@@ -11,6 +11,7 @@ import TicketOptionsMenu from "../TicketOptionsMenu";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import TransferTicketModal from "../TransferTicketModal";
 
 const useStyles = makeStyles(theme => ({
 	actionButtons: {
@@ -28,9 +29,11 @@ const TicketActionButtons = ({ ticket }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
+	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const ticketOptionsMenuOpen = Boolean(anchorEl);
 	const { user } = useContext(AuthContext);
+	const isManager = user?.profile === "admin" || user?.profile === "supervisor";
 
 	const handleOpenTicketOptionsMenu = e => {
 		setAnchorEl(e.currentTarget);
@@ -102,7 +105,27 @@ const TicketActionButtons = ({ ticket }) => {
 					/>
 				</>
 			)}
-			{ticket.status === "pending" && (
+			{ticket.status === "pending" && isManager && (
+				<>
+					<ButtonWithSpinner
+						loading={loading}
+						size="small"
+						variant="contained"
+						color="primary"
+						onClick={() => setTransferTicketModalOpen(true)}
+					>
+						{i18n.t("messagesList.header.buttons.assign")}
+					</ButtonWithSpinner>
+					<TransferTicketModal
+						modalOpen={transferTicketModalOpen}
+						onClose={() => setTransferTicketModalOpen(false)}
+						ticketid={ticket.id}
+						ticketWhatsappId={ticket.whatsappId}
+						ticketEcosystemId={ticket.ecosystemId}
+					/>
+				</>
+			)}
+			{ticket.status === "pending" && !isManager && (
 				<ButtonWithSpinner
 					loading={loading}
 					size="small"

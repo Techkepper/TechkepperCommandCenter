@@ -272,6 +272,7 @@ const messages = {
           "No se encontraron conversaciones con el estado o término indicado.",
         buttons: {
           accept: "Aceptar",
+          assign: "Asignar",
         },
       },
       newTicketModal: {
@@ -388,6 +389,7 @@ const messages = {
             resolve: "Resolver",
             reopen: "Reabrir",
             accept: "Aceptar",
+            assign: "Asignar",
           },
         },
       },
@@ -395,6 +397,8 @@ const messages = {
         placeholderOpen: "Escriba un mensaje o presione '' / '' para usar las respuestas rápidas registradas",
         placeholderClosed:
           "Reabra o acepte esta conversación para enviar un mensaje.",
+        placeholderObserver:
+          "Modo observador: asigna la conversacion para poder responder.",
         signMessage: "Firmar",
       },
       contactDrawer: {

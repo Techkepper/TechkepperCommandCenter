@@ -122,12 +122,17 @@ const useStyles = makeStyles((theme) => ({
   serachInputWrapper: {
     flex: "1 1 280px",
     minWidth: 220,
+    maxWidth: 520,
     background: theme.palette.background.default,
     display: "flex",
+    alignItems: "center",
     borderRadius: 40,
+    border: `1px solid ${theme.palette.divider}`,
+    minHeight: 40,
     padding: 4,
     [theme.breakpoints.down("xs")]: {
       flexBasis: "100%",
+      maxWidth: "100%",
       minWidth: 0,
     },
   },

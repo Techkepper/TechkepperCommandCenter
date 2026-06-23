@@ -270,6 +270,7 @@ const messages = {
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         buttons: {
           accept: "Aceitar",
+          assign: "Atribuir",
         },
       },
       newTicketModal: {
@@ -385,6 +386,7 @@ const messages = {
             resolve: "Resolver",
             reopen: "Reabrir",
             accept: "Aceitar",
+            assign: "Atribuir",
           },
         },
       },
@@ -392,6 +394,8 @@ const messages = {
         placeholderOpen: "Digite uma mensagem ou tecle ''/'' para utilizar as respostas rápidas cadastrada",
         placeholderClosed:
           "Reabra ou aceite esse ticket para enviar uma mensagem.",
+        placeholderObserver:
+          "Modo observador: atribua a conversa antes de responder.",
         signMessage: "Assinar",
       },
       contactDrawer: {

@@ -141,11 +141,32 @@ const handleQueueLogic = async (
 ): Promise<void> => {
   const { queues, greetingMessage } = await ShowWhatsAppService(whatsappId);
 
+  const sendGreeting = async (bodyTemplate: string): Promise<void> => {
+    if (!bodyTemplate) return;
+
+    const body = formatBody(`\u200e${bodyTemplate}`, contactPayload as any);
+    try {
+      await whatsappProvider.sendMessage(
+        whatsappId,
+        `${contactPayload.number}@c.us`,
+        body
+      );
+    } catch (error) {
+      logger.error("Error sending greeting message:", error);
+    }
+  };
+
+  if (queues.length === 0) {
+    await sendGreeting(greetingMessage);
+    return;
+  }
+
   if (queues.length === 1) {
     await UpdateTicketService({
       ticketData: { queueId: queues[0].id },
       ticketId: ticket.id
     });
+    await sendGreeting(queues[0].greetingMessage || greetingMessage);
     return;
   }
 
@@ -158,20 +179,7 @@ const handleQueueLogic = async (
       ticketId: ticket.id
     });
 
-    const body = formatBody(
-      `\u200e${choosenQueue.greetingMessage}`,
-      contactPayload as any
-    );
-
-    try {
-      await whatsappProvider.sendMessage(
-        whatsappId,
-        `${contactPayload.number}@c.us`,
-        body
-      );
-    } catch (error) {
-      logger.error("Error sending queue greeting message:", error);
-    }
+    await sendGreeting(choosenQueue.greetingMessage || greetingMessage);
   } else {
     let options = "";
     queues.forEach((queue, index) => {
@@ -254,7 +262,7 @@ export const handleMessage = async (
       !contextPayload.groupContact &&
       !processedMessage.fromMe &&
       !activeTicket.userId &&
-      whatsapp.queues.length >= 1
+      (whatsapp.queues.length >= 1 || Boolean(whatsapp.greetingMessage))
     ) {
       await handleQueueLogic(
         contextPayload.whatsappId,

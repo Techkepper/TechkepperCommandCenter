@@ -226,6 +226,26 @@ const UpdateTicketService = async ({
   }
 
   const reloadedTicket = await ShowTicketService(ticket.id);
+
+  if (
+    ticketData.status === "closed" &&
+    oldStatus !== "closed" &&
+    reloadedTicket.whatsapp?.farewellMessage
+  ) {
+    try {
+      await SendWhatsAppMessage({
+        body: reloadedTicket.whatsapp.farewellMessage,
+        ticket: reloadedTicket,
+        skipProviderPersist: true
+      });
+    } catch (err) {
+      logger.error(
+        { err, ticketId: reloadedTicket.id },
+        "Farewell message failed"
+      );
+    }
+  }
+
   if (
     reloadedTicket.status !== oldStatus ||
     Number(reloadedTicket.userId || 0) !== Number(oldUserId || 0)

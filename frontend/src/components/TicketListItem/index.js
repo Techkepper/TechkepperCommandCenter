@@ -22,6 +22,7 @@ import MarkdownWrapper from "../MarkdownWrapper";
 import { Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
+import TransferTicketModal from "../TransferTicketModal";
 
 const useStyles = makeStyles(() => ({
 	ticket: {
@@ -120,9 +121,11 @@ const TicketListItem = ({ ticket }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [loading, setLoading] = useState(false);
+	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
 	const { ticketId } = useParams();
 	const isMounted = useRef(true);
 	const { user } = useContext(AuthContext);
+	const isManager = user?.profile === "admin" || user?.profile === "supervisor";
 
 	useEffect(() => {
 		return () => {
@@ -153,13 +156,18 @@ const TicketListItem = ({ ticket }) => {
 		history.push(`/tickets/${id}`);
 	};
 
+	const handleOpenTransferModal = e => {
+		e.stopPropagation();
+		setTransferTicketModalOpen(true);
+	};
+
 	return (
 		<React.Fragment key={ticket.id}>
 			<ListItem
 				dense
 				button
 				onClick={() => {
-					if (ticket.status === "pending") return;
+					if (ticket.status === "pending" && !isManager) return;
 					handleSelectTicket(ticket.id);
 				}}
 				selected={ticketId && +ticketId === ticket.id}
@@ -251,13 +259,26 @@ const TicketListItem = ({ ticket }) => {
 						className={classes.acceptButton}
 						size="small"
 						loading={loading}
-						onClick={e => handleAcepptTicket(e, ticket.id)}
+						onClick={e =>
+							isManager
+								? handleOpenTransferModal(e)
+								: handleAcepptTicket(e, ticket.id)
+						}
 					>
-						{i18n.t("ticketsList.buttons.accept")}
+						{isManager
+							? i18n.t("ticketsList.buttons.assign")
+							: i18n.t("ticketsList.buttons.accept")}
 					</ButtonWithSpinner>
 				)}
 			</ListItem>
 			<Divider variant="inset" component="li" />
+			<TransferTicketModal
+				modalOpen={transferTicketModalOpen}
+				onClose={() => setTransferTicketModalOpen(false)}
+				ticketid={ticket.id}
+				ticketWhatsappId={ticket.whatsappId}
+				ticketEcosystemId={ticket.ecosystemId}
+			/>
 		</React.Fragment>
 	);
 };

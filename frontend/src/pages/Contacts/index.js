@@ -234,7 +234,7 @@ const Contacts = () => {
         }
         open={confirmOpen}
         onClose={setConfirmOpen}
-        onConfirm={(e) =>
+        onConfirm={() =>
           deletingContact
             ? handleDeleteContact(deletingContact.id)
             : handleimportContact()
@@ -250,6 +250,8 @@ const Contacts = () => {
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
             type="search"
+            variant="outlined"
+            size="small"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
@@ -263,7 +265,7 @@ const Contacts = () => {
           <Button
             variant="contained"
             color="primary"
-            onClick={(e) => setConfirmOpen(true)}
+            onClick={() => setConfirmOpen(true)}
           >
             {i18n.t("contacts.buttons.import")}
           </Button>
@@ -326,7 +328,7 @@ const Contacts = () => {
                       yes={() => (
                         <IconButton
                           size="small"
-                          onClick={(e) => {
+                          onClick={() => {
                             setConfirmOpen(true);
                             setDeletingContact(contact);
                           }}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useContext, useState, useEffect } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import { toast } from "react-toastify";
@@ -17,6 +17,7 @@ import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
 import AssignmentAudit from "../AssignmentAudit";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const drawerWidth = 320;
 
@@ -78,11 +79,20 @@ const Ticket = () => {
   const { ticketId } = useParams();
   const history = useHistory();
   const classes = useStyles();
+  const { user } = useContext(AuthContext);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
+
+  const resolveCanReply = useCallback(nextTicket => {
+    if (typeof nextTicket.canReply === "boolean") return nextTicket.canReply;
+    return (
+      nextTicket.status === "open" &&
+      Number(nextTicket.userId) === Number(user?.id)
+    );
+  }, [user?.id]);
 
   useEffect(() => {
     setLoading(true);
@@ -92,7 +102,10 @@ const Ticket = () => {
           const { data } = await api.get("/tickets/" + ticketId);
 
           setContact(data.contact);
-          setTicket(data);
+          setTicket({
+            ...data,
+            canReply: resolveCanReply(data),
+          });
           setLoading(false);
         } catch (err) {
           setLoading(false);
@@ -102,7 +115,7 @@ const Ticket = () => {
       fetchTicket();
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [ticketId, history]);
+  }, [ticketId, history, resolveCanReply]);
 
   useEffect(() => {
     const socket = openSocket();
@@ -114,6 +127,7 @@ const Ticket = () => {
         setTicket((current) => ({
           ...data.ticket,
           readOnly: Boolean(current.readOnly || data.ticket.readOnly),
+          canReply: resolveCanReply(data.ticket),
         }));
       }
 
@@ -137,7 +151,7 @@ const Ticket = () => {
     return () => {
       socket.disconnect();
     };
-  }, [ticketId, history]);
+  }, [ticketId, history, resolveCanReply]);
 
   const handleDrawerOpen = () => {
     setDrawerOpen(true);
@@ -146,6 +160,8 @@ const Ticket = () => {
   const handleDrawerClose = () => {
     setDrawerOpen(false);
   };
+
+  const isObserver = !ticket.readOnly && ticket.canReply === false;
 
   return (
     <div className={classes.root} id="drawer-container">
@@ -183,13 +199,33 @@ const Ticket = () => {
             <Chip size="small" label="Solo lectura" />
           </Box>
         )}
+        {isObserver && (
+          <Box
+            px={2}
+            py={1}
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <Typography variant="body2" color="textSecondary">
+              Modo observador: puedes ver esta conversacion en tiempo real sin
+              participar ni notificar al cliente.
+            </Typography>
+            <Chip size="small" label="Observador" />
+          </Box>
+        )}
         <AssignmentAudit ticketId={ticketId} />
         <ReplyMessageProvider>
           <MessagesList
             ticketId={ticketId}
             isGroup={ticket.isGroup}
           ></MessagesList>
-          {!ticket.readOnly && <MessageInput ticketStatus={ticket.status} />}
+          {!ticket.readOnly && (
+            <MessageInput
+              ticketStatus={ticket.status}
+              canReply={ticket.canReply !== false}
+            />
+          )}
         </ReplyMessageProvider>
       </Paper>
       <ContactDrawer

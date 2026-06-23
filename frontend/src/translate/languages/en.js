@@ -267,6 +267,7 @@ const messages = {
         connectionTitle: "Connection that is currently being used.",
         buttons: {
           accept: "Accept",
+          assign: "Assign",
         },
       },
       newTicketModal: {
@@ -381,12 +382,15 @@ const messages = {
             resolve: "Resolve",
             reopen: "Reopen",
             accept: "Accept",
+            assign: "Assign",
           },
         },
       },
       messagesInput: {
         placeholderOpen: "Type a message or press ''/'' to use the registered quick responses",
         placeholderClosed: "Reopen or accept this ticket to send a message.",
+        placeholderObserver:
+          "Observer mode: assign the conversation before replying.",
         signMessage: "Sign",
       },
       contactDrawer: {
