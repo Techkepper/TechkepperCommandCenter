@@ -3,6 +3,7 @@ import multer from "multer";
 
 import isAuth from "../middleware/isAuth";
 import * as DocumentController from "../controllers/DocumentController";
+import * as DocumentTemplateController from "../controllers/DocumentTemplateController";
 import {
   getDocumentExtension,
   maxDocumentSize
@@ -27,6 +28,31 @@ const upload = multer({
 });
 
 documentRoutes.get("/documents", isAuth, DocumentController.index);
+
+documentRoutes.get(
+  "/document-templates",
+  isAuth,
+  DocumentTemplateController.index
+);
+
+documentRoutes.post(
+  "/document-templates",
+  isAuth,
+  upload.single("file"),
+  DocumentTemplateController.store
+);
+
+documentRoutes.get(
+  "/document-templates/:templateId",
+  isAuth,
+  DocumentTemplateController.show
+);
+
+documentRoutes.post(
+  "/document-templates/:templateId/generate",
+  isAuth,
+  DocumentTemplateController.generate
+);
 
 documentRoutes.post(
   "/documents",

@@ -20,7 +20,7 @@ const rethrowDocumentDbError = (err: Error): never => {
   };
   const code = databaseError.original?.code || databaseError.parent?.code;
 
-  if (code === "ER_NO_SUCH_TABLE") {
+  if (code === "ER_NO_SUCH_TABLE" || code === "ER_BAD_FIELD_ERROR") {
     throw new AppError("ERR_SMART_DOCUMENTS_NOT_INSTALLED", 503);
   }
 

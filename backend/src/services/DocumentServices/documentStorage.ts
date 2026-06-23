@@ -44,7 +44,8 @@ export const resolveDocumentPath = (relativePath: string): string => {
 
 export const saveDocumentBuffer = async (
   buffer: Buffer,
-  mimeType: string
+  mimeType: string,
+  namespace = ""
 ): Promise<{ storedName: string; storagePath: string }> => {
   const extension = getDocumentExtension(mimeType);
   if (!extension) {
@@ -55,7 +56,9 @@ export const saveDocumentBuffer = async (
   const year = String(now.getFullYear());
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const storedName = `${randomBytes(24).toString("hex")}${extension}`;
-  const storagePath = path.join(year, month, storedName).replace(/\\/g, "/");
+  const storagePath = path
+    .join(namespace, year, month, storedName)
+    .replace(/\\/g, "/");
   const outputPath = resolveDocumentPath(storagePath);
 
   await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });

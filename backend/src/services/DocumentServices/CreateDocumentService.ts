@@ -51,7 +51,8 @@ const CreateDocumentService = async ({
 
   const { storedName, storagePath } = await saveDocumentBuffer(
     file.buffer,
-    file.mimetype
+    file.mimetype,
+    "documents"
   );
 
   const documentData = {
