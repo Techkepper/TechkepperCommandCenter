@@ -12,6 +12,7 @@ const TicketsQueueSelect = ({
 	selectedQueueIds = [],
 	onChange,
 	style,
+	className,
 }) => {
 	const availableQueues = queues || userQueues || [];
 
@@ -38,7 +39,10 @@ const TicketsQueueSelect = ({
 	};
 
 	return (
-		<div style={{ width: 170, marginTop: -4, ...style }}>
+		<div
+			className={className}
+			style={className ? style : { width: 170, marginTop: -4, ...style }}
+		>
 			<FormControl fullWidth margin="dense">
 				<Select
 					multiple

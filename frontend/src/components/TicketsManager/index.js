@@ -47,28 +47,89 @@ const useStyles = makeStyles((theme) => ({
   },
   ticketOptionsBox: {
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: theme.spacing(1.25),
     background: theme.palette.background.paper,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1, 1.25),
+    overflow: "visible",
+    [theme.breakpoints.down("sm")]: {
+      alignItems: "stretch",
+      gap: theme.spacing(1),
+    },
+  },
+  primaryActions: {
+    display: "flex",
+    alignItems: "center",
+    flex: "0 0 auto",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    minWidth: 0,
+    [theme.breakpoints.down("xs")]: {
+      width: "100%",
+    },
+  },
+  newTicketButton: {
+    flexShrink: 0,
+    minWidth: 176,
+    whiteSpace: "nowrap",
+    [theme.breakpoints.down("xs")]: {
+      flex: "1 1 100%",
+      minWidth: 0,
+    },
+  },
+  showAllControl: {
+    flexShrink: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    whiteSpace: "nowrap",
   },
   filtersBox: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "flex-end",
+    flex: "1 1 320px",
+    flexWrap: "wrap",
     gap: theme.spacing(1),
-    marginLeft: theme.spacing(1),
+    minWidth: 0,
+    marginLeft: "auto",
+    [theme.breakpoints.down("sm")]: {
+      justifyContent: "flex-start",
+      marginLeft: 0,
+      width: "100%",
+    },
+  },
+  queueSelectWrapper: {
+    flex: "1 1 190px",
+    minWidth: 190,
+    maxWidth: 260,
+    [theme.breakpoints.down("xs")]: {
+      maxWidth: "100%",
+    },
   },
   ecosystemSelect: {
-    minWidth: 150,
-    marginTop: -4,
+    flex: "1 1 190px",
+    minWidth: 190,
+    maxWidth: 260,
+    marginTop: 0,
+    [theme.breakpoints.down("xs")]: {
+      maxWidth: "100%",
+    },
+  },
+  filterSelect: {
+    width: "100%",
   },
   serachInputWrapper: {
-    flex: 1,
+    flex: "1 1 280px",
+    minWidth: 220,
     background: theme.palette.background.default,
     display: "flex",
     borderRadius: 40,
     padding: 4,
-    marginRight: theme.spacing(1),
+    [theme.breakpoints.down("xs")]: {
+      flexBasis: "100%",
+      minWidth: 0,
+    },
   },
   searchIcon: {
     color: "grey",
@@ -237,10 +298,11 @@ const TicketsManager = () => {
             />
           </div>
         ) : (
-          <>
+          <div className={classes.primaryActions}>
             <Button
               variant="outlined"
               color="primary"
+              className={classes.newTicketButton}
               onClick={() => setNewTicketModalOpen(true)}
             >
               {i18n.t("ticketsManager.buttons.newTicket")}
@@ -250,6 +312,7 @@ const TicketsManager = () => {
               perform="tickets-manager:showall"
               yes={() => (
                 <FormControlLabel
+                  className={classes.showAllControl}
                   label={i18n.t("tickets.buttons.showAll")}
                   labelPlacement="start"
                   control={
@@ -266,10 +329,11 @@ const TicketsManager = () => {
                 />
               )}
             />
-          </>
+          </div>
         )}
         <div className={classes.filtersBox}>
           <TicketsQueueSelect
+            className={classes.queueSelectWrapper}
             selectedQueueIds={selectedQueueIds}
             queues={availableQueues}
             userQueues={user?.queues}
@@ -281,6 +345,7 @@ const TicketsManager = () => {
             className={classes.ecosystemSelect}
           >
             <Select
+              className={classes.filterSelect}
               displayEmpty
               value={selectedEcosystemId}
               onChange={(event) => setSelectedEcosystemId(event.target.value)}
