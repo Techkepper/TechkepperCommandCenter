@@ -14,6 +14,7 @@ import routes from "./routes";
 import { logger } from "./utils/logger";
 import ValidateSecurityConfig from "./helpers/ValidateSecurityConfig";
 import whatsappWebhookRoutes from "./routes/whatsappWebhookRoutes";
+import { isAllowedOrigin } from "./config/allowedOrigins";
 
 Sentry.init({ dsn: process.env.SENTRY_DSN });
 ValidateSecurityConfig();
@@ -22,21 +23,18 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 
-const allowedOrigins = (
-  process.env.FRONTEND_URL || "http://localhost:3000"
-)
-  .split(",")
-  .map(origin => origin.trim())
-  .filter(Boolean);
-
 app.use(
   cors({
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Authorization", "Content-Type"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: [
+      "Authorization",
+      "Content-Type",
+      "ngrok-skip-browser-warning"
+    ],
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
+      if (isAllowedOrigin(origin)) {
+        callback(null, origin || true);
         return;
       }
       callback(new AppError("ERR_CORS_ORIGIN_NOT_ALLOWED", 403));
@@ -82,14 +80,36 @@ app.use(routes);
 
 app.use(Sentry.Handlers.errorHandler());
 
+const getRequestLogContext = (req: Request, statusCode?: number) => ({
+  method: req.method,
+  path: req.originalUrl || req.path,
+  statusCode,
+  userId: req.user?.id,
+  ip: req.ip
+});
+
 app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
   if (err instanceof AppError) {
-    logger.warn(err);
+    if (err.message === "ERR_SESSION_EXPIRED" && err.statusCode === 401) {
+      logger.debug(
+        getRequestLogContext(req, err.statusCode),
+        "Rejected expired or missing session"
+      );
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+
+    logger.warn(
+      { err, ...getRequestLogContext(req, err.statusCode) },
+      "Handled application error"
+    );
     return res.status(err.statusCode).json({ error: err.message });
   }
 
   if (err instanceof multer.MulterError) {
-    logger.warn({ code: err.code }, "Rejected media upload");
+    logger.warn(
+      { err, code: err.code, ...getRequestLogContext(req) },
+      "Rejected media upload"
+    );
     return res.status(err.code === "LIMIT_FILE_SIZE" ? 413 : 400).json({
       error:
         err.code === "LIMIT_FILE_SIZE"
@@ -102,7 +122,10 @@ app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
     return res.status(415).json({ error: err.message });
   }
 
-  logger.error(err);
+  logger.error(
+    { err, ...getRequestLogContext(req, 500) },
+    "Unhandled server error"
+  );
   return res.status(500).json({ error: "Internal server error" });
 });
 

@@ -8,6 +8,7 @@ import { getIO } from "../libs/socket";
 import { logger } from "../utils/logger";
 import { debounce } from "../helpers/Debounce";
 import formatBody from "../helpers/Mustache";
+import { EmitTicketEvent } from "../helpers/EmitTicketEvent";
 
 import Contact from "../models/Contact";
 import Ticket from "../models/Ticket";
@@ -16,6 +17,7 @@ import Message from "../models/Message";
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
 import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
+import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
@@ -245,9 +247,27 @@ export const handleMessage = async (
       groupContact
     );
 
+    let activeTicket = await ShowTicketService(ticket.id);
+
+    if (
+      !activeTicket.queueId &&
+      !contextPayload.groupContact &&
+      !processedMessage.fromMe &&
+      !activeTicket.userId &&
+      whatsapp.queues.length >= 1
+    ) {
+      await handleQueueLogic(
+        contextPayload.whatsappId,
+        processedMessage.body,
+        activeTicket,
+        contactPayload
+      );
+      activeTicket = await ShowTicketService(ticket.id);
+    }
+
     const messageData: any = {
       id: processedMessage.id,
-      ticketId: ticket.id,
+      ticketId: activeTicket.id,
       contactId: processedMessage.fromMe ? undefined : contact.id,
       body: processedMessage.body,
       fromMe: processedMessage.fromMe,
@@ -274,26 +294,17 @@ export const handleMessage = async (
       lastMessageText = processedMessage.body || mediaPayload?.filename || "";
     }
 
-    await ticket.update({ lastMessage: lastMessageText });
+    await activeTicket.update({ lastMessage: lastMessageText });
 
     await CreateMessageService({ messageData });
 
     await processVcardMessage(processedMessage);
 
-    if (
-      !ticket.queue &&
-      !contextPayload.groupContact &&
-      !processedMessage.fromMe &&
-      !ticket.userId &&
-      whatsapp.queues.length >= 1
-    ) {
-      await handleQueueLogic(
-        contextPayload.whatsappId,
-        processedMessage.body,
-        ticket,
-        contactPayload
-      );
-    }
+    const updatedTicket = await ShowTicketService(activeTicket.id);
+    EmitTicketEvent(updatedTicket, "ticket", {
+      action: "update",
+      ticket: updatedTicket
+    });
   } catch (err) {
     Sentry.captureException(err);
     logger.error({ info: "Error handling message", err });

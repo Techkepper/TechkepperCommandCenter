@@ -1,14 +1,14 @@
-import { useState, useEffect, useReducer } from "react";
+import { useState, useEffect, useReducer, useCallback } from "react";
 import openSocket from "../../services/socket-io";
 import toastError from "../../errors/toastError";
 
 import api from "../../services/api";
 
+const normalizeWhatsApps = payload => (Array.isArray(payload) ? payload : []);
+
 const reducer = (state, action) => {
 	if (action.type === "LOAD_WHATSAPPS") {
-		const whatsApps = action.payload;
-
-		return [...whatsApps];
+		return [...normalizeWhatsApps(action.payload)];
 	}
 
 	if (action.type === "UPDATE_WHATSAPPS") {
@@ -16,11 +16,12 @@ const reducer = (state, action) => {
 		const whatsAppIndex = state.findIndex(s => s.id === whatsApp.id);
 
 		if (whatsAppIndex !== -1) {
-			state[whatsAppIndex] = whatsApp;
-			return [...state];
-		} else {
-			return [whatsApp, ...state];
+			const next = [...state];
+			next[whatsAppIndex] = whatsApp;
+			return next;
 		}
+
+		return [whatsApp, ...state];
 	}
 
 	if (action.type === "UPDATE_SESSION") {
@@ -28,59 +29,66 @@ const reducer = (state, action) => {
 		const whatsAppIndex = state.findIndex(s => s.id === whatsApp.id);
 
 		if (whatsAppIndex !== -1) {
-			state[whatsAppIndex].status = whatsApp.status;
-			state[whatsAppIndex].updatedAt = whatsApp.updatedAt;
-			state[whatsAppIndex].retries = whatsApp.retries;
-			return [...state];
-		} else {
-			return [...state];
+			const next = [...state];
+			next[whatsAppIndex] = { ...next[whatsAppIndex], ...whatsApp };
+			return next;
 		}
+
+		return [whatsApp, ...state];
 	}
 
 	if (action.type === "DELETE_WHATSAPPS") {
 		const whatsAppId = action.payload;
-
-		const whatsAppIndex = state.findIndex(s => s.id === whatsAppId);
-		if (whatsAppIndex !== -1) {
-			state.splice(whatsAppIndex, 1);
-		}
-		return [...state];
+		return state.filter(whatsApp => whatsApp.id !== whatsAppId);
 	}
 
 	if (action.type === "RESET") {
 		return [];
 	}
+
+	return state;
 };
 
 const useWhatsApps = () => {
 	const [whatsApps, dispatch] = useReducer(reducer, []);
 	const [loading, setLoading] = useState(true);
 
-	useEffect(() => {
+	const loadWhatsApps = useCallback(async ({ showToast = true } = {}) => {
 		setLoading(true);
-		const fetchSession = async () => {
-			try {
-				const { data } = await api.get("/whatsapp/");
-				dispatch({ type: "LOAD_WHATSAPPS", payload: data });
-				setLoading(false);
-			} catch (err) {
-				setLoading(false);
+		try {
+			const { data } = await api.get("/whatsapp/");
+			dispatch({
+				type: "LOAD_WHATSAPPS",
+				payload: normalizeWhatsApps(data),
+			});
+		} catch (err) {
+			if (showToast) {
 				toastError(err);
 			}
-		};
-		fetchSession();
+			throw err;
+		} finally {
+			setLoading(false);
+		}
 	}, []);
 
 	useEffect(() => {
+		loadWhatsApps();
+	}, [loadWhatsApps]);
+
+	useEffect(() => {
 		const socket = openSocket();
+
+		const handleConnect = () => {
+			loadWhatsApps({ showToast: false }).catch(() => {});
+		};
+
+		socket.on("connect", handleConnect);
 
 		socket.on("whatsapp", data => {
 			if (data.action === "update") {
 				dispatch({ type: "UPDATE_WHATSAPPS", payload: data.whatsapp });
 			}
-		});
 
-		socket.on("whatsapp", data => {
 			if (data.action === "delete") {
 				dispatch({ type: "DELETE_WHATSAPPS", payload: data.whatsappId });
 			}
@@ -93,11 +101,12 @@ const useWhatsApps = () => {
 		});
 
 		return () => {
+			socket.off("connect", handleConnect);
 			socket.disconnect();
 		};
-	}, []);
+	}, [loadWhatsApps]);
 
-	return { whatsApps, loading };
+	return { whatsApps, loading, reloadWhatsApps: loadWhatsApps };
 };
 
 export default useWhatsApps;

@@ -131,9 +131,17 @@ const processWebhook = async (payload: any): Promise<void> => {
           (item: any) => item.wa_id === message.from
         );
         const mediaId = getMediaId(message);
-        const mediaPayload = mediaId
-          ? await downloadCloudApiMedia(whatsapp.id, mediaId)
-          : undefined;
+        let mediaPayload;
+        if (mediaId) {
+          try {
+            mediaPayload = await downloadCloudApiMedia(whatsapp.id, mediaId);
+          } catch (err) {
+            logger.warn(
+              { err, mediaId, messageId: message.id },
+              "Failed to download WhatsApp media; saving message without media"
+            );
+          }
+        }
         const messagePayload: MessagePayload = {
           id: message.id,
           body: getMessageBody(message),

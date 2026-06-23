@@ -21,7 +21,9 @@ const FindOrCreateTicketService = async (
   });
 
   if (ticket) {
-    await ticket.update({ unreadMessages });
+    await ticket.update({
+      unreadMessages: ticket.unreadMessages + unreadMessages
+    });
   }
 
   if (!ticket && groupContact) {
@@ -37,7 +39,7 @@ const FindOrCreateTicketService = async (
       await ticket.update({
         status: "pending",
         userId: null,
-        unreadMessages
+        unreadMessages: ticket.unreadMessages + unreadMessages
       });
     }
   }
@@ -58,7 +60,7 @@ const FindOrCreateTicketService = async (
       await ticket.update({
         status: "pending",
         userId: null,
-        unreadMessages
+        unreadMessages: ticket.unreadMessages + unreadMessages
       });
     }
   }

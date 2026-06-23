@@ -4,6 +4,7 @@ import { verify } from "jsonwebtoken";
 import AppError from "../errors/AppError";
 import { logger } from "../utils/logger";
 import authConfig from "../config/auth";
+import { isAllowedOrigin } from "../config/allowedOrigins";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import ShowUserService from "../services/UserServices/ShowUserService";
 import EnsureTicketReadAccessService from "../services/TicketServices/EnsureTicketReadAccessService";
@@ -18,17 +19,21 @@ interface SocketTokenPayload {
 let io: SocketIO;
 
 export const initIO = (httpServer: Server): SocketIO => {
-  const allowedOrigins = (
-    process.env.FRONTEND_URL || "http://localhost:3000"
-  )
-    .split(",")
-    .map(origin => origin.trim())
-    .filter(Boolean);
-
   io = new SocketIO(httpServer, {
     cors: {
-      origin: allowedOrigins,
-      credentials: true
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+          callback(null, origin || true);
+          return;
+        }
+        callback(new Error("ERR_CORS_ORIGIN_NOT_ALLOWED"));
+      },
+      credentials: true,
+      allowedHeaders: [
+        "Authorization",
+        "Content-Type",
+        "ngrok-skip-browser-warning"
+      ]
     }
   });
 
@@ -92,7 +97,7 @@ export const initIO = (httpServer: Server): SocketIO => {
         socket.join(`role:agent:queue:${queueId}`);
       });
     }
-    logger.info("Client Connected");
+    logger.debug("Client Connected");
     socket.on("joinChatBox", async (ticketId: string) => {
       try {
         const ticket = await ShowTicketService(ticketId);
@@ -119,7 +124,7 @@ export const initIO = (httpServer: Server): SocketIO => {
     });
 
     socket.on("disconnect", () => {
-      logger.info("Client disconnected");
+      logger.debug("Client disconnected");
     });
 
     return socket;

@@ -445,6 +445,12 @@ const messages = {
           "WhatsApp Cloud API aún no está configurada en el servidor.",
         ERR_CLOUD_API_REQUEST_FAILED:
           "Meta rechazó la solicitud de WhatsApp Cloud API. Verifique token, permisos y Phone Number ID.",
+        ERR_CLOUD_API_PHONE_NOT_REGISTERED:
+          "El número no está registrado en WhatsApp Cloud API. Regístrelo una vez en Meta for Developers (POST /{phone-number-id}/register) antes de enviar mensajes.",
+        ERR_CLOUD_API_PHONE_NUMBER_ID_INVALID:
+          "El Phone Number ID no es válido para este token. En Meta for Developers use el ID del número (WhatsApp > Inicio rápido de la API), no el ID de la cuenta comercial ni el de la app.",
+        ERR_CLOUD_API_TOKEN_INVALID:
+          "El token de acceso de Meta es inválido o expiró. Genere uno nuevo en Meta for Developers.",
         ERR_CLOUD_API_MEDIA_UPLOAD_FAILED:
           "No fue posible subir el archivo a WhatsApp Cloud API.",
         ERR_CLOUD_API_DELETE_NOT_SUPPORTED:

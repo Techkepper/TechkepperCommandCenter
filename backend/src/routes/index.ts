@@ -14,10 +14,12 @@ import apiRoutes from "./apiRoutes";
 import dashboardRoutes from "./dashboardRoutes";
 import reportRoutes from "./reportRoutes";
 import ecosystemRoutes from "./ecosystemRoutes";
+import clientLogRoutes from "./clientLogRoutes";
 
 const routes = Router();
 
 routes.use(userRoutes);
+routes.use(clientLogRoutes);
 routes.use("/auth", authRoutes);
 routes.use(settingRoutes);
 routes.use(contactRoutes);

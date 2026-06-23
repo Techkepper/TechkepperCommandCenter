@@ -94,10 +94,13 @@ export const remove = async (
 ): Promise<Response> => {
   const { whatsappId } = req.params;
 
-  await DeleteWhatsAppService(whatsappId);
+  const replacementDefaultWhatsapp = await DeleteWhatsAppService(whatsappId);
   whatsappProvider.removeSession(+whatsappId);
 
   EmitWhatsapp("delete", undefined, +whatsappId);
+  if (replacementDefaultWhatsapp) {
+    EmitWhatsapp("update", replacementDefaultWhatsapp);
+  }
 
   return res.status(200).json({ message: "Whatsapp deleted." });
 };

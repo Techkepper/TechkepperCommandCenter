@@ -18,6 +18,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Button } from "@material-ui/core";
+import api from "../../services/api";
 
 const useStyles = makeStyles((theme) => ({
   ticketsWrapper: {
@@ -101,6 +102,10 @@ const TicketsManager = () => {
   useEffect(() => {
     if (user.profile.toUpperCase() === "ADMIN") {
       setShowAllTickets(true);
+      api
+        .get("/queue")
+        .then(({ data }) => setSelectedQueueIds(data.map((queue) => queue.id)))
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -271,6 +276,7 @@ const TicketsManager = () => {
           />
           <TicketsList
             status="pending"
+            showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}

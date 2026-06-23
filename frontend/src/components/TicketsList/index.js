@@ -183,13 +183,24 @@ const reducer = (state, action) => {
 
 	useEffect(() => {
 		const socket = openSocket();
+		const isAdmin = user?.profile === "admin";
 
-		const shouldUpdateTicket = ticket => !searchParam &&
-			(!ticket.userId || ticket.userId === user?.id || showAll) &&
-			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1);
+		const hasQueueAccess = ticket =>
+			!ticket.queueId ||
+			selectedQueueIds.indexOf(ticket.queueId) > -1 ||
+			showAll ||
+			isAdmin;
+
+		const shouldUpdateTicket = ticket =>
+			!searchParam &&
+			(!ticket.userId || ticket.userId === user?.id || showAll || isAdmin) &&
+			hasQueueAccess(ticket);
 
 		const notBelongsToUserQueues = ticket =>
-			ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
+			!isAdmin &&
+			!showAll &&
+			ticket.queueId &&
+			selectedQueueIds.indexOf(ticket.queueId) === -1;
 
 		socket.on("connect", () => {
 			if (status) {
