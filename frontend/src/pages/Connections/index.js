@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext } from "react";
+import React, { useState, useCallback, useContext, useEffect } from "react";
 import { toast } from "react-toastify";
 import { format, parseISO } from "date-fns";
 
@@ -96,7 +96,7 @@ const CustomToolTip = ({ title, content, children }) => {
 const Connections = () => {
 	const classes = useStyles();
 
-	const { whatsApps, loading } = useContext(WhatsAppsContext);
+	const { whatsApps, loading, reloadWhatsApps } = useContext(WhatsAppsContext);
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
 	const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
 	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -118,6 +118,10 @@ const Connections = () => {
 		DISCONNECTED: "Desconectada",
 		ERROR: "Error",
 	};
+
+	useEffect(() => {
+		reloadWhatsApps({ showToast: false }).catch(() => {});
+	}, [reloadWhatsApps]);
 
 	const handleVerifyConnection = async whatsApp => {
 		try {
@@ -343,7 +347,12 @@ const Connections = () => {
 												{renderActionButtons(whatsApp)}
 											</TableCell>
 											<TableCell align="center">
-												{format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")}
+												{whatsApp.updatedAt
+													? format(
+															parseISO(whatsApp.updatedAt),
+															"dd/MM/yy HH:mm"
+													  )
+													: "—"}
 											</TableCell>
 											<TableCell align="center">
 												{whatsApp.isDefault && (

@@ -6,6 +6,8 @@ services:
     build:
       context: ./backend
       dockerfile: ./Dockerfile
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -22,6 +24,7 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-false}
       BACKEND_URL: ${BACKEND_URL:-http://localhost}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
       PROXY_PORT: ${PROXY_PORT:-8080}
       WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-cloudapi}
       META_WHATSAPP_ACCESS_TOKEN: ${META_WHATSAPP_ACCESS_TOKEN}
@@ -53,8 +56,8 @@ services:
       dockerfile: ./Dockerfile
     environment:
       URL_BACKEND: backend:3000
-      VITE_BACKEND_URL: ${BACKEND_PUBLIC_URL:-http://localhost:8080}
-      FRONTEND_SERVER_NAME: ${FRONTEND_SERVER_NAME-localhost}
+      VITE_BACKEND_URL: ${VITE_BACKEND_URL:-}
+      FRONTEND_SERVER_NAME: ${FRONTEND_SERVER_NAME:-localhost}
     ports:
       - "${FRONTEND_PORT:-3000}:80"
       - "${FRONTEND_SSL_PORT:-3001}:443"

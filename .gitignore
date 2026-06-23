@@ -6,3 +6,5 @@ ssl/
 .wwebjs_auth
 .wwebjs_cache
 .idea
+.DS_Store
+.codegraph/daemon.pid

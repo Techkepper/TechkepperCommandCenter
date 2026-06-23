@@ -9,7 +9,8 @@ const ListWhatsAppsService = async (): Promise<Whatsapp[]> => {
         as: "queues",
         attributes: ["id", "name", "color", "greetingMessage"]
       }
-    ]
+    ],
+    order: [["name", "ASC"]]
   });
 
   return whatsapps;

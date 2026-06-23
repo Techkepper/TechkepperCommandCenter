@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Box,
   Chip,
@@ -24,6 +24,7 @@ import {
 } from "@material-ui/icons";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 
 const useStyles = makeStyles((theme) => ({
   container: { paddingTop: theme.spacing(4), paddingBottom: theme.spacing(5) },
@@ -73,6 +74,7 @@ const MetricCard = ({ title, value, icon }) => {
 
 const Dashboard = () => {
   const classes = useStyles();
+  const { whatsApps, loading } = useContext(WhatsAppsContext);
   const [data, setData] = useState({
     totals: {},
     connections: [],
@@ -88,7 +90,12 @@ const Dashboard = () => {
   }, []);
 
   const maxQueue = Math.max(...data.queues.map((queue) => queue.total), 1);
-  const connection = data.connections[0];
+  const connections =
+    whatsApps && whatsApps.length > 0 ? whatsApps : data.connections;
+  const connection =
+    connections.find((item) => item.status === "CONNECTED") ||
+    connections.find((item) => item.isDefault) ||
+    connections[0];
   const connectionLabels = {
     CONNECTED: "Conectada",
     OPENING: "Conectando",
@@ -99,6 +106,8 @@ const Dashboard = () => {
   };
   const connectionStatus = connection
     ? connectionLabels[connection.status] || "Estado desconocido"
+    : loading
+    ? "Cargando"
     : "Sin configurar";
 
   return (
@@ -121,6 +130,8 @@ const Dashboard = () => {
           label={
             connection
               ? `${connection.name}: ${connectionStatus}`
+              : loading
+              ? "Cargando conexión"
               : "Sin conexión configurada"
           }
           color={connection?.status === "CONNECTED" ? "primary" : "default"}

@@ -44,10 +44,11 @@ export const getCloudApiConfig = (sessionId: number): CloudApiConfig => ({
 });
 
 const requireConfig = (sessionId: number): CloudApiConfig => {
-  const config = activeSessions.get(sessionId) || getCloudApiConfig(sessionId);
+  const config = getCloudApiConfig(sessionId);
   if (!config.accessToken || !config.apiVersion || !config.phoneNumberId) {
     throw new AppError("ERR_CLOUD_API_NOT_CONFIGURED", 503);
   }
+  activeSessions.set(sessionId, config);
   return config;
 };
 
@@ -128,18 +129,42 @@ const graphRequest = async <T>(
   }
 
   if (response.statusCode < 200 || response.statusCode >= 300) {
-    logger.error(
-      {
-        statusCode: response.statusCode,
-        graphErrorCode: parsed?.error?.code,
-        graphErrorType: parsed?.error?.type
-      },
-      "WhatsApp Cloud API request failed"
-    );
-    throw new AppError("ERR_CLOUD_API_REQUEST_FAILED", 502);
+    throw mapGraphError(parsed, response.statusCode);
   }
 
   return parsed as T;
+};
+
+const mapGraphError = (parsed: any, httpStatus: number): AppError => {
+  const code = parsed?.error?.code;
+  const graphMessage = parsed?.error?.message || "";
+
+  logger.error(
+    {
+      statusCode: httpStatus,
+      graphErrorCode: code,
+      graphErrorType: parsed?.error?.type,
+      graphErrorMessage: graphMessage
+    },
+    "WhatsApp Cloud API request failed"
+  );
+
+  if (code === 133010) {
+    return new AppError("ERR_CLOUD_API_PHONE_NOT_REGISTERED", 502);
+  }
+  if (code === 190) {
+    return new AppError("ERR_CLOUD_API_TOKEN_INVALID", 502);
+  }
+  if (
+    code === 100 &&
+    /does not exist|missing permissions|Unsupported get request/i.test(
+      graphMessage
+    )
+  ) {
+    return new AppError("ERR_CLOUD_API_PHONE_NUMBER_ID_INVALID", 502);
+  }
+
+  return new AppError("ERR_CLOUD_API_REQUEST_FAILED", 502);
 };
 
 const normalizeRecipient = (value: string): string => {
@@ -182,6 +207,7 @@ const persistOutgoingMessage = async (
 };
 
 const init = async (whatsapp: Whatsapp): Promise<void> => {
+  activeSessions.delete(whatsapp.id);
   const config = getCloudApiConfig(whatsapp.id);
   const webhookVerifyToken = process.env.META_WHATSAPP_VERIFY_TOKEN || "";
   const appSecret = process.env.META_WHATSAPP_APP_SECRET || "";
@@ -196,6 +222,15 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     EmitWhatsappSession(whatsapp);
     return;
   }
+
+  logger.info(
+    {
+      sessionId: whatsapp.id,
+      phoneNumberId: config.phoneNumberId,
+      apiVersion: config.apiVersion
+    },
+    "Initializing WhatsApp Cloud API session"
+  );
 
   await graphRequest(
     config,
@@ -391,7 +426,18 @@ export const findCloudApiWhatsappByPhoneNumberId = async (
   const match = whatsapps.find(
     whatsapp => getCloudApiConfig(whatsapp.id).phoneNumberId === phoneNumberId
   );
-  return match || null;
+  if (match) return match;
+
+  const globalPhoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
+  if (phoneNumberId && phoneNumberId === globalPhoneNumberId) {
+    return (
+      whatsapps.find(whatsapp => whatsapp.isDefault) ||
+      whatsapps[0] ||
+      null
+    );
+  }
+
+  return null;
 };
 
 const isAllowedMediaHost = (hostname: string): boolean =>
