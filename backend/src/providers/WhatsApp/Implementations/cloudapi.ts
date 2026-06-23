@@ -173,6 +173,16 @@ const normalizeRecipient = (value: string): string => {
   return normalized;
 };
 
+const MIN_TYPING_API_VERSION = 22;
+
+const parseGraphApiVersion = (version: string): number => {
+  const match = version.match(/^v?(\d+)/i);
+  return match ? Number(match[1]) : 0;
+};
+
+const isWhatsappCloudMessageId = (messageId: string): boolean =>
+  messageId.startsWith("wamid.");
+
 const persistOutgoingMessage = async (
   sessionId: number,
   message: ProviderMessage,
@@ -412,23 +422,58 @@ const getContacts = async (): Promise<ProviderContact[]> => [];
 const sendSeen = async (): Promise<void> => undefined;
 const sendTyping = async (
   sessionId: number,
-  messageId: string
+  messageId: string,
+  to?: string
 ): Promise<void> => {
   const config = requireConfig(sessionId);
-  if (!messageId) return;
+  if (!isWhatsappCloudMessageId(messageId)) {
+    logger.warn(
+      { sessionId, messageId },
+      "Skipping WhatsApp typing indicator for invalid message id"
+    );
+    return;
+  }
 
-  await graphRequest<{ success: boolean }>(
+  if (parseGraphApiVersion(config.apiVersion) < MIN_TYPING_API_VERSION) {
+    logger.warn(
+      { sessionId, apiVersion: config.apiVersion },
+      "WhatsApp typing indicator requires Graph API v22.0 or newer"
+    );
+    return;
+  }
+
+  const payload: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    status: "read",
+    message_id: messageId,
+    typing_indicator: {
+      type: "text"
+    }
+  };
+
+  if (to) {
+    payload.recipient_type = "individual";
+    payload.to = normalizeRecipient(to);
+  }
+
+  const response = await graphRequest<{ success?: boolean }>(
     config,
     `${config.phoneNumberId}/messages`,
     "POST",
-    {
-      messaging_product: "whatsapp",
-      status: "read",
-      message_id: messageId,
-      typing_indicator: {
-        type: "text"
-      }
-    }
+    payload
+  );
+
+  if (!response?.success) {
+    logger.warn(
+      { sessionId, messageId, to, response },
+      "WhatsApp typing indicator returned an unexpected response"
+    );
+    return;
+  }
+
+  logger.info(
+    { sessionId, messageId, to, phoneNumberId: config.phoneNumberId },
+    "WhatsApp typing indicator sent"
   );
 };
 const fetchChatMessages = async (): Promise<ProviderMessage[]> => [];

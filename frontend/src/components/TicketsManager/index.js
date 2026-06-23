@@ -5,7 +5,6 @@ import SearchIcon from "@material-ui/icons/Search";
 import InputBase from "@material-ui/core/InputBase";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
-import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
@@ -149,8 +148,29 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.primary, 
     backgroundColor: theme.palette.background.default,
   },
-  badge: {
-    right: "-10px",
+  tabLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: theme.spacing(0.75),
+  },
+  tabCount: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 20,
+    height: 20,
+    padding: "0 6px",
+    borderRadius: 10,
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    lineHeight: 1,
+    color: "#fff",
+  },
+  tabCountPrimary: {
+    backgroundColor: theme.palette.primary.main,
+  },
+  tabCountSecondary: {
+    backgroundColor: theme.palette.secondary.main,
   },
   show: {
     display: "block",
@@ -382,25 +402,31 @@ const TicketsManager = () => {
         >
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={openCount}
-                color="primary"
-              >
+              <span className={classes.tabLabel}>
                 {i18n.t("ticketsList.assignedHeader")}
-              </Badge>
+                {openCount > 0 && (
+                  <span
+                    className={`${classes.tabCount} ${classes.tabCountPrimary}`}
+                  >
+                    {openCount}
+                  </span>
+                )}
+              </span>
             }
             value={"open"}
           />
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={pendingCount}
-                color="secondary"
-              >
+              <span className={classes.tabLabel}>
                 {i18n.t("ticketsList.pendingHeader")}
-              </Badge>
+                {pendingCount > 0 && (
+                  <span
+                    className={`${classes.tabCount} ${classes.tabCountSecondary}`}
+                  >
+                    {pendingCount}
+                  </span>
+                )}
+              </span>
             }
             value={"pending"}
           />

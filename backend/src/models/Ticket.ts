@@ -37,6 +37,9 @@ class Ticket extends Model<Ticket> {
   @Column
   lastMessage: string;
 
+  @Column(DataType.STRING)
+  lastCustomerMessageId: string | null;
+
   @Default(false)
   @Column
   isGroup: boolean;

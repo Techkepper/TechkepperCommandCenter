@@ -12,7 +12,6 @@ import ListItemAvatar from "@material-ui/core/ListItemAvatar";
 import Typography from "@material-ui/core/Typography";
 import Avatar from "@material-ui/core/Avatar";
 import Divider from "@material-ui/core/Divider";
-import Badge from "@material-ui/core/Badge";
 
 import { i18n } from "../../translate/i18n";
 
@@ -59,32 +58,60 @@ const useStyles = makeStyles(() => ({
 	contactNameWrapper: {
 		display: "flex",
 		justifyContent: "space-between",
+		alignItems: "flex-start",
+		gap: 8,
+	},
+
+	metaRight: {
+		display: "flex",
+		flexDirection: "column",
+		alignItems: "flex-end",
+		gap: 4,
+		flexShrink: 0,
+		marginLeft: "auto",
+	},
+
+	metaTop: {
+		display: "inline-flex",
+		alignItems: "center",
+		gap: 6,
 	},
 
 	lastMessageTime: {
-		justifySelf: "flex-end",
+		whiteSpace: "nowrap",
 	},
 
-	closedBadge: {
+	closedTag: {
 		alignSelf: "center",
-		justifySelf: "flex-end",
-		marginRight: 32,
-		marginLeft: "auto",
+		flexShrink: 0,
+		padding: "2px 8px",
+		borderRadius: 10,
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		color: "#fff",
+		backgroundColor: "#1976d2",
 	},
 
 	contactLastMessage: {
-		paddingRight: 20,
+		paddingRight: 0,
+		flex: 1,
+		minWidth: 0,
 	},
 
-	newMessagesCount: {
-		alignSelf: "center",
-		marginRight: 8,
-		marginLeft: "auto",
-	},
-
-	badgeStyle: {
-		color: "white",
+	unreadCount: {
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		minWidth: 20,
+		height: 20,
+		padding: "0 6px",
+		borderRadius: 10,
+		fontSize: "0.75rem",
+		fontWeight: 600,
+		lineHeight: 1,
+		color: "#fff",
 		backgroundColor: green[500],
+		flexShrink: 0,
 	},
 
 	acceptButton: {
@@ -102,18 +129,16 @@ const useStyles = makeStyles(() => ({
 	},
 
 	userTag: {
-		position: "absolute",
-		marginRight: 5,
-		right: 5,
-		bottom: 5,
+		maxWidth: 140,
+		overflow: "hidden",
+		textOverflow: "ellipsis",
+		whiteSpace: "nowrap",
 		background: "#2576D2",
 		color: "#ffffff",
 		border: "1px solid #CCC",
-		padding: 1,
-		paddingLeft: 5,
-		paddingRight: 5,
+		padding: "1px 8px",
 		borderRadius: 10,
-		fontSize: "0.9em"
+		fontSize: "0.75rem",
 	},
 }));
 
@@ -201,29 +226,39 @@ const TicketListItem = ({ ticket }) => {
 								{ticket.contact.name}
 							</Typography>
 							{ticket.status === "closed" && (
-								<Badge
-									className={classes.closedBadge}
-									badgeContent={"closed"}
-									color="primary"
-								/>
+								<span className={classes.closedTag}>closed</span>
 							)}
-							{ticket.lastMessage && (
-								<Typography
-									className={classes.lastMessageTime}
-									component="span"
-									variant="body2"
-									color="textSecondary"
-								>
-									{isSameDay(parseISO(ticket.updatedAt), new Date()) ? (
-										<>{format(parseISO(ticket.updatedAt), "HH:mm")}</>
-									) : (
-										<>{format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}</>
+							<span className={classes.metaRight}>
+								<span className={classes.metaTop}>
+									{ticket.lastMessage && (
+										<Typography
+											className={classes.lastMessageTime}
+											component="span"
+											variant="body2"
+											color="textSecondary"
+										>
+											{isSameDay(parseISO(ticket.updatedAt), new Date()) ? (
+												<>{format(parseISO(ticket.updatedAt), "HH:mm")}</>
+											) : (
+												<>{format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}</>
+											)}
+										</Typography>
 									)}
-								</Typography>
-							)}
-							{ticket.whatsappId && (
-								<div className={classes.userTag} title={i18n.t("ticketsList.connectionTitle")}>{ticket.whatsapp?.name}</div>
-							)}
+									{ticket.unreadMessages > 0 && (
+										<span className={classes.unreadCount}>
+											{ticket.unreadMessages}
+										</span>
+									)}
+								</span>
+								{ticket.whatsappId && (
+									<div
+										className={classes.userTag}
+										title={i18n.t("ticketsList.connectionTitle")}
+									>
+										{ticket.whatsapp?.name}
+									</div>
+								)}
+							</span>
 						</span>
 					}
 					secondary={
@@ -241,14 +276,6 @@ const TicketListItem = ({ ticket }) => {
 									<br />
 								)}
 							</Typography>
-
-							<Badge
-								className={classes.newMessagesCount}
-								badgeContent={ticket.unreadMessages}
-								classes={{
-									badge: classes.badgeStyle,
-								}}
-							/>
 						</span>
 					}
 				/>

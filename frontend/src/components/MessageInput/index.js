@@ -30,6 +30,7 @@ import ClickAwayListener from "@material-ui/core/ClickAwayListener";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
+import { logClientError } from "../../services/clientLogger";
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -248,6 +249,8 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
   const [typeBar, setTypeBar] = useState(false);
   const inputRef = useRef();
   const lastTypingAtRef = useRef(0);
+  const TYPING_THROTTLE_MS = 20000;
+  const typingRequestRef = useRef(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -261,6 +264,7 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
   }, [replyingMessage]);
 
   useEffect(() => {
+    lastTypingAtRef.current = 0;
     inputRef.current.focus();
     return () => {
       setInputMessage("");
@@ -270,21 +274,56 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
     };
   }, [ticketId, setReplyingMessage]);
 
-  const notifyTyping = value => {
-    if (!canSendMessage || !value.trim()) return;
+  const notifyTyping = ({ requireInput = false, value = "" } = {}) => {
+    if (!canSendMessage) return;
+    if (requireInput && !value.trim()) return;
 
     const now = Date.now();
-    if (now - lastTypingAtRef.current < 8000) return;
+    if (now - lastTypingAtRef.current < TYPING_THROTTLE_MS) return;
 
     lastTypingAtRef.current = now;
-    api.post(`/messages/${ticketId}/typing`).catch(() => undefined);
+
+    if (typingRequestRef.current) {
+      typingRequestRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    typingRequestRef.current = controller;
+
+    api
+      .post(`/messages/${ticketId}/typing`, null, {
+        signal: controller.signal,
+      })
+      .catch(error => {
+        if (error?.code === "ERR_CANCELED") return;
+
+        logClientError({
+          message: "Failed to notify WhatsApp typing indicator",
+          error,
+          status: error?.response?.status,
+          method: "POST",
+          requestUrl: `/messages/${ticketId}/typing`,
+          responseError:
+            error?.response?.data?.error || error?.response?.data?.message,
+          level: "warn",
+        });
+      })
+      .finally(() => {
+        if (typingRequestRef.current === controller) {
+          typingRequestRef.current = null;
+        }
+      });
   };
 
   const handleChangeInput = e => {
     const value = e.target.value;
     setInputMessage(value);
     handleLoadQuickAnswer(value);
-    notifyTyping(value);
+    notifyTyping({ requireInput: true, value });
+  };
+
+  const handleFocusInput = () => {
+    notifyTyping();
   };
 
   const handleQuickAnswersClick = value => {
@@ -648,6 +687,7 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
               maxRows={5}
               value={inputMessage}
               onChange={handleChangeInput}
+              onFocus={handleFocusInput}
               disabled={recording || loading || !canSendMessage}
               onPaste={e => {
                 canSendMessage && handleInputPaste(e);

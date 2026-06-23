@@ -15,12 +15,17 @@ import TransferTicketModal from "../TransferTicketModal";
 
 const useStyles = makeStyles(theme => ({
 	actionButtons: {
-		marginRight: 6,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "flex-end",
+		flexWrap: "wrap",
+		gap: theme.spacing(0.75),
+		marginRight: theme.spacing(1),
+		marginLeft: "auto",
 		flex: "none",
 		alignSelf: "center",
-		marginLeft: "auto",
 		"& > *": {
-			margin: theme.spacing(1),
+			margin: 0,
 		},
 	},
 }));
@@ -70,6 +75,8 @@ const TicketActionButtons = ({ ticket }) => {
 					loading={loading}
 					startIcon={<Replay />}
 					size="small"
+					variant="outlined"
+					color="primary"
 					onClick={() => handleUpdateTicketStatus("open", user?.id)}
 				>
 					{i18n.t("messagesList.header.buttons.reopen")}
@@ -81,6 +88,8 @@ const TicketActionButtons = ({ ticket }) => {
 						loading={loading}
 						startIcon={<Replay />}
 						size="small"
+						variant="outlined"
+						color="primary"
 						onClick={() => handleUpdateTicketStatus("pending", null)}
 					>
 						{i18n.t("messagesList.header.buttons.return")}

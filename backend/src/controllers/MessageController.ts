@@ -3,16 +3,17 @@ import { Request, Response } from "express";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
 import Message from "../models/Message";
+import { logger } from "../utils/logger";
 
 import ListMessagesService from "../services/MessageServices/ListMessagesService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
+import SendWhatsAppTypingService from "../services/WbotServices/SendWhatsAppTypingService";
 import EnsureTicketAccessService from "../services/TicketServices/EnsureTicketAccessService";
 import EnsureTicketReadAccessService from "../services/TicketServices/EnsureTicketReadAccessService";
 import AppError from "../errors/AppError";
-import { whatsappProvider } from "../providers/WhatsApp";
 
 type IndexQuery = {
   pageNumber: string;
@@ -102,13 +103,18 @@ export const typing = async (
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
-  const lastInboundMessage = await Message.findOne({
-    where: { ticketId, fromMe: false },
-    order: [["createdAt", "DESC"]]
-  });
-
-  if (lastInboundMessage) {
-    await whatsappProvider.sendTyping(ticket.whatsappId, lastInboundMessage.id);
+  try {
+    await SendWhatsAppTypingService(ticket);
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        ticketId,
+        whatsappId: ticket.whatsappId,
+        messageId: ticket.lastCustomerMessageId
+      },
+      "Failed to send WhatsApp typing indicator"
+    );
   }
 
   return res.sendStatus(204);

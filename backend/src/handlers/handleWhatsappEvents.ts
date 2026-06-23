@@ -302,7 +302,14 @@ export const handleMessage = async (
       lastMessageText = processedMessage.body || mediaPayload?.filename || "";
     }
 
-    await activeTicket.update({ lastMessage: lastMessageText });
+    const ticketUpdates: Record<string, string> = {
+      lastMessage: lastMessageText
+    };
+    if (!processedMessage.fromMe && processedMessage.id.startsWith("wamid.")) {
+      ticketUpdates.lastCustomerMessageId = processedMessage.id;
+    }
+
+    await activeTicket.update(ticketUpdates);
 
     await CreateMessageService({ messageData });
 

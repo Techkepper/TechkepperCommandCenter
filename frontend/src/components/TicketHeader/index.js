@@ -20,7 +20,10 @@ const useStyles = makeStyles((theme) => ({
     "& .MuiCardHeader-subheader": {
       color: theme.palette.text.secondary,
     },
-    "& .MuiButton-root, & .MuiIconButton-root": {
+    "& .MuiButton-text, & .MuiButton-outlined": {
+      color: theme.palette.text.primary,
+    },
+    "& .MuiIconButton-root": {
       color: theme.palette.text.primary,
     },
     [theme.breakpoints.down("sm")]: {
