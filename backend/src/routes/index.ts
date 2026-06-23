@@ -15,6 +15,7 @@ import dashboardRoutes from "./dashboardRoutes";
 import reportRoutes from "./reportRoutes";
 import ecosystemRoutes from "./ecosystemRoutes";
 import clientLogRoutes from "./clientLogRoutes";
+import documentRoutes from "./documentRoutes";
 
 const routes = Router();
 
@@ -33,5 +34,6 @@ routes.use("/api/messages", apiRoutes);
 routes.use(dashboardRoutes);
 routes.use(reportRoutes);
 routes.use(ecosystemRoutes);
+routes.use(documentRoutes);
 
 export default routes;

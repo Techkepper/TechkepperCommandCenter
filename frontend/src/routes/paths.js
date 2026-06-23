@@ -4,6 +4,7 @@ export const ROUTES = {
   tickets: "/tickets",
   connections: "/connections",
   contacts: "/contacts",
+  smartDocuments: "/smart-documents",
   users: "/users",
   quickAnswers: "/quick-answers",
   settings: "/settings",

@@ -118,7 +118,10 @@ app.use(async (err: Error, req: Request, res: Response, _: NextFunction) => {
     });
   }
 
-  if (err.message === "ERR_UNSUPPORTED_MEDIA_TYPE") {
+  if (
+    err.message === "ERR_UNSUPPORTED_MEDIA_TYPE" ||
+    err.message === "ERR_UNSUPPORTED_DOCUMENT_TYPE"
+  ) {
     return res.status(415).json({ error: err.message });
   }
 

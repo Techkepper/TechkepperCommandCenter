@@ -10,6 +10,7 @@ import Connections from "../pages/Connections/";
 import Settings from "../pages/Settings/";
 import Users from "../pages/Users";
 import Contacts from "../pages/Contacts/";
+import SmartDocuments from "../pages/SmartDocuments";
 import QuickAnswers from "../pages/QuickAnswers/";
 import Queues from "../pages/Queues/";
 import { AuthProvider } from "../context/Auth/AuthContext";
@@ -54,6 +55,12 @@ const AuthenticatedRoutes = () => (
           exact
           path={ROUTES.contacts}
           component={Contacts}
+          isPrivate
+        />
+        <Route
+          exact
+          path={ROUTES.smartDocuments}
+          component={SmartDocuments}
           isPrivate
         />
         <Route

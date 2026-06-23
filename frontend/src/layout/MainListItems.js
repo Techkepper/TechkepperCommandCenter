@@ -17,6 +17,7 @@ import ContactPhoneOutlinedIcon from "@material-ui/icons/ContactPhoneOutlined";
 import AccountTreeOutlinedIcon from "@material-ui/icons/AccountTreeOutlined";
 import QuestionAnswerOutlinedIcon from "@material-ui/icons/QuestionAnswerOutlined";
 import AssessmentOutlinedIcon from "@material-ui/icons/AssessmentOutlined";
+import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -99,6 +100,12 @@ const MainListItems = ({ drawerClose }) => {
         to={ROUTES.contacts}
         primary={i18n.t("mainDrawer.listItems.contacts")}
         icon={<ContactPhoneOutlinedIcon />}
+        onNavigate={drawerClose}
+      />
+      <ListItemLink
+        to={ROUTES.smartDocuments}
+        primary="Documentos inteligentes"
+        icon={<DescriptionOutlinedIcon />}
         onNavigate={drawerClose}
       />
       <ListItemLink

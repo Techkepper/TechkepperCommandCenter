@@ -12,6 +12,7 @@ import UserQueue from "../models/UserQueue";
 import QuickAnswer from "../models/QuickAnswer";
 import Ecosystem from "../models/Ecosystem";
 import TicketAssignmentEvent from "../models/TicketAssignmentEvent";
+import SmartDocument from "../models/SmartDocument";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -32,7 +33,8 @@ const models = [
   UserQueue,
   QuickAnswer,
   Ecosystem,
-  TicketAssignmentEvent
+  TicketAssignmentEvent,
+  SmartDocument
 ];
 
 sequelize.addModels(models);

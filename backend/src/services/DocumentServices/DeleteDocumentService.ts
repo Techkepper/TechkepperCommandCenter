@@ -1,0 +1,31 @@
+import SmartDocument from "../../models/SmartDocument";
+import AppError from "../../errors/AppError";
+import { removeDocumentFile } from "./documentStorage";
+import ShowDocumentService from "./ShowDocumentService";
+
+interface Request {
+  documentId: string | number;
+  userId: string;
+  userProfile: string;
+}
+
+const DeleteDocumentService = async ({
+  documentId,
+  userId,
+  userProfile
+}: Request): Promise<void> => {
+  const document = await ShowDocumentService({
+    documentId,
+    userId,
+    userProfile
+  });
+
+  if (userProfile !== "admin" && document.uploadedById !== Number(userId)) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  await removeDocumentFile(document.storagePath);
+  await SmartDocument.destroy({ where: { id: document.id } });
+};
+
+export default DeleteDocumentService;
