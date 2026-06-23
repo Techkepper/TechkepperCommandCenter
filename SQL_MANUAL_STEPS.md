@@ -150,3 +150,104 @@ DROP TABLE IF EXISTS `SmartDocumentTemplateVersions`;
 DROP TABLE IF EXISTS `SmartDocumentTemplates`;
 DROP TABLE IF EXISTS `SmartDocuments`;
 ```
+
+## 6. Modulo Clientes comerciales
+
+La tabla `BusinessClients` es independiente de `Contacts`. No reemplaza ni
+modifica los contactos creados por WhatsApp.
+
+```sql
+CREATE TABLE IF NOT EXISTS `BusinessClients` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `type` ENUM('physical', 'legal') NOT NULL,
+  `displayName` VARCHAR(255) NOT NULL,
+  `legalName` VARCHAR(255) NULL,
+  `tradeName` VARCHAR(255) NULL,
+  `identificationType` VARCHAR(80) NOT NULL,
+  `identificationNumber` VARCHAR(80) NOT NULL,
+  `normalizedIdentificationNumber` VARCHAR(80) NOT NULL,
+  `legalRepresentativeName` VARCHAR(255) NULL,
+  `legalRepresentativeId` VARCHAR(80) NULL,
+  `email` VARCHAR(255) NULL,
+  `phone` VARCHAR(80) NULL,
+  `address` VARCHAR(500) NULL,
+  `country` VARCHAR(120) NULL,
+  `province` VARCHAR(120) NULL,
+  `canton` VARCHAR(120) NULL,
+  `district` VARCHAR(120) NULL,
+  `notes` TEXT NULL,
+  `queueId` INT NULL,
+  `createdById` INT NOT NULL,
+  `isActive` TINYINT(1) NOT NULL DEFAULT 1,
+  `createdAt` DATETIME NOT NULL,
+  `updatedAt` DATETIME NOT NULL,
+  `deletedAt` DATETIME NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_business_clients_identification`
+    (`normalizedIdentificationNumber`),
+  INDEX `idx_business_clients_display_name` (`displayName`),
+  INDEX `idx_business_clients_queue` (`queueId`),
+  INDEX `idx_business_clients_active` (`isActive`),
+  INDEX `idx_business_clients_created_by` (`createdById`),
+  CONSTRAINT `fk_business_clients_queue`
+    FOREIGN KEY (`queueId`) REFERENCES `Queues` (`id`)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT `fk_business_clients_created_by`
+    FOREIGN KEY (`createdById`) REFERENCES `Users` (`id`)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+Validacion manual:
+
+```sql
+SHOW TABLES LIKE 'BusinessClients';
+DESCRIBE `BusinessClients`;
+SHOW INDEX FROM `BusinessClients`;
+```
+
+La aplicacion no elimina fisicamente clientes. La desactivacion utiliza
+`isActive = 0`; `deletedAt` queda reservado para mantenimiento controlado.
+
+Reversion manual, unicamente si confirma que no existe informacion necesaria:
+
+```sql
+DROP TABLE IF EXISTS `BusinessClients`;
+```
+
+## 7. Asociacion manual entre clientes y documentos
+
+Esta tabla vincula un documento con un cliente comercial sin modificar
+`SmartDocuments` ni `Contacts`. Un documento puede pertenecer como maximo a un
+cliente comercial.
+
+```sql
+CREATE TABLE IF NOT EXISTS `BusinessClientDocuments` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `businessClientId` INT NOT NULL,
+  `documentId` INT NOT NULL,
+  `linkedById` INT NOT NULL,
+  `createdAt` DATETIME NOT NULL,
+  `updatedAt` DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_business_client_documents_document` (`documentId`),
+  INDEX `idx_business_client_documents_client` (`businessClientId`),
+  INDEX `idx_business_client_documents_linked_by` (`linkedById`),
+  CONSTRAINT `fk_business_client_documents_client`
+    FOREIGN KEY (`businessClientId`) REFERENCES `BusinessClients` (`id`)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT `fk_business_client_documents_document`
+    FOREIGN KEY (`documentId`) REFERENCES `SmartDocuments` (`id`)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT `fk_business_client_documents_linked_by`
+    FOREIGN KEY (`linkedById`) REFERENCES `Users` (`id`)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+Validacion manual:
+
+```sql
+SHOW TABLES LIKE 'BusinessClientDocuments';
+DESCRIBE `BusinessClientDocuments`;
+```

@@ -15,6 +15,8 @@ import TicketAssignmentEvent from "../models/TicketAssignmentEvent";
 import SmartDocument from "../models/SmartDocument";
 import SmartDocumentTemplate from "../models/SmartDocumentTemplate";
 import SmartDocumentTemplateVersion from "../models/SmartDocumentTemplateVersion";
+import BusinessClient from "../models/BusinessClient";
+import BusinessClientDocument from "../models/BusinessClientDocument";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -38,7 +40,9 @@ const models = [
   TicketAssignmentEvent,
   SmartDocument,
   SmartDocumentTemplate,
-  SmartDocumentTemplateVersion
+  SmartDocumentTemplateVersion,
+  BusinessClient,
+  BusinessClientDocument
 ];
 
 sequelize.addModels(models);

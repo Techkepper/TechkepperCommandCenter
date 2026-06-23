@@ -4,6 +4,8 @@ import multer from "multer";
 import isAuth from "../middleware/isAuth";
 import * as DocumentController from "../controllers/DocumentController";
 import * as DocumentTemplateController from "../controllers/DocumentTemplateController";
+import * as BusinessClientDocumentController from "../controllers/BusinessClientDocumentController";
+import requireRole from "../middleware/requireRole";
 import {
   getDocumentExtension,
   maxDocumentSize
@@ -28,6 +30,22 @@ const upload = multer({
 });
 
 documentRoutes.get("/documents", isAuth, DocumentController.index);
+documentRoutes.get(
+  "/document-business-client-links",
+  isAuth,
+  BusinessClientDocumentController.links
+);
+documentRoutes.get(
+  "/business-clients/:clientId/documents",
+  isAuth,
+  BusinessClientDocumentController.clientDocuments
+);
+documentRoutes.put(
+  "/documents/:documentId/business-client",
+  isAuth,
+  requireRole("admin", "supervisor"),
+  BusinessClientDocumentController.updateLink
+);
 
 documentRoutes.get(
   "/document-templates",

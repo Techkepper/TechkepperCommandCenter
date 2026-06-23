@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Button,
   Chip,
@@ -6,10 +6,14 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   IconButton,
   InputAdornment,
+  InputLabel,
   makeStyles,
+  MenuItem,
   Paper,
+  Select,
   Tab,
   Tabs,
   Table,
@@ -35,6 +39,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -48,7 +53,8 @@ const useStyles = makeStyles((theme) => ({
   },
   uploadPanel: {
     display: "grid",
-    gridTemplateColumns: "minmax(180px, 1.2fr) minmax(180px, 1fr) auto",
+    gridTemplateColumns:
+      "minmax(180px, 1.2fr) minmax(160px, 0.8fr) minmax(180px, 1fr) auto",
     gap: theme.spacing(1.5),
     alignItems: "center",
     padding: theme.spacing(2),
@@ -102,6 +108,9 @@ const getActiveVersion = (template) => template.versions?.[0] || null;
 
 const SmartDocuments = () => {
   const classes = useStyles();
+  const { user } = useContext(AuthContext);
+  const canManageClientLinks =
+    user.profile === "admin" || user.profile === "supervisor";
   const [activeTab, setActiveTab] = useState(0);
   const [documents, setDocuments] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -127,6 +136,19 @@ const SmartDocuments = () => {
   const [generationTitle, setGenerationTitle] = useState("");
   const [generationData, setGenerationData] = useState("{}");
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [businessClients, setBusinessClients] = useState([]);
+  const [selectedBusinessClientId, setSelectedBusinessClientId] = useState("");
+  const [associationInstalled, setAssociationInstalled] = useState(true);
+
+  useEffect(() => {
+    if (!canManageClientLinks) return;
+    api
+      .get("/business-clients", {
+        params: { status: "active", pageNumber: 1 },
+      })
+      .then(({ data }) => setBusinessClients(data.clients))
+      .catch(toastError);
+  }, [canManageClientLinks]);
 
   useEffect(() => {
     setDocuments([]);
@@ -150,10 +172,28 @@ const SmartDocuments = () => {
           params: { searchParam, pageNumber },
         });
         if (!mounted) return;
+        const documentIds = data.documents.map((document) => document.id);
+        const linksResponse = documentIds.length
+          ? await api.get("/document-business-client-links", {
+              params: { documentIds: documentIds.join(",") },
+            })
+          : { data: { installed: true, links: [] } };
+        if (!mounted) return;
+        setAssociationInstalled(linksResponse.data.installed);
+        const clientByDocumentId = new Map(
+          linksResponse.data.links.map((link) => [
+            Number(link.documentId),
+            link.businessClient,
+          ])
+        );
+        const documentsWithClient = data.documents.map((document) => ({
+          ...document,
+          businessClient: clientByDocumentId.get(Number(document.id)) || null,
+        }));
         setInstallRequired(false);
         setDocuments((current) => {
           const merged = [...current];
-          data.documents.forEach((document) => {
+          documentsWithClient.forEach((document) => {
             const index = merged.findIndex((item) => item.id === document.id);
             if (index >= 0) {
               merged[index] = document;
@@ -240,14 +280,33 @@ const SmartDocuments = () => {
       const { data } = await api.post("/documents", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      let savedDocument = data;
+      if (selectedBusinessClientId) {
+        const linkResponse = await api.put(
+          `/documents/${data.id}/business-client`,
+          { businessClientId: selectedBusinessClientId }
+        );
+        setAssociationInstalled(linkResponse.data.installed);
+        if (linkResponse.data.installed) {
+          savedDocument = {
+            ...data,
+            businessClient: linkResponse.data.link?.businessClient || null,
+          };
+        } else {
+          toast.warn(
+            "Documento guardado, pero la asociación con clientes requiere instalación."
+          );
+        }
+      }
       setInstallRequired(false);
       setDocuments((current) => [
-        data,
-        ...current.filter((item) => item.id !== data.id),
+        savedDocument,
+        ...current.filter((item) => item.id !== savedDocument.id),
       ]);
       setTitle("");
       setCategory("");
       setFile(null);
+      setSelectedBusinessClientId("");
       toast.success("Documento guardado correctamente.");
     } catch (err) {
       if (getErrorCode(err) === "ERR_SMART_DOCUMENTS_NOT_INSTALLED") {
@@ -513,6 +572,26 @@ const SmartDocuments = () => {
               value={category}
               onChange={(event) => setCategory(event.target.value)}
             />
+            {canManageClientLinks && (
+              <FormControl variant="outlined" size="small">
+                <InputLabel>Cliente comercial</InputLabel>
+                <Select
+                  value={selectedBusinessClientId}
+                  onChange={(event) =>
+                    setSelectedBusinessClientId(event.target.value)
+                  }
+                  label="Cliente comercial"
+                  disabled={!associationInstalled}
+                >
+                  <MenuItem value="">Sin cliente asociado</MenuItem>
+                  {businessClients.map((client) => (
+                    <MenuItem key={client.id} value={client.id}>
+                      {client.displayName}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <div>
               <input
                 accept=".pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp"
@@ -557,6 +636,7 @@ const SmartDocuments = () => {
                 <TableRow>
                   <TableCell>Documento</TableCell>
                   <TableCell>Categoría</TableCell>
+                  <TableCell>Cliente</TableCell>
                   <TableCell>Subido por</TableCell>
                   <TableCell>Tamaño</TableCell>
                   <TableCell>Fecha</TableCell>
@@ -580,6 +660,9 @@ const SmartDocuments = () => {
                       ) : (
                         "General"
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {document.businessClient?.displayName || "Sin asociar"}
                     </TableCell>
                     <TableCell>{document.uploadedBy?.name || "-"}</TableCell>
                     <TableCell>{formatSize(document.size)}</TableCell>
@@ -607,7 +690,7 @@ const SmartDocuments = () => {
                 ))}
                 {!loading && documents.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6}>
+                      <TableCell colSpan={7}>
                       <div className={classes.emptyState}>
                         <Typography color="textSecondary">
                           No hay documentos para mostrar.
@@ -616,7 +699,7 @@ const SmartDocuments = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {loading && <TableRowSkeleton columns={6} />}
+                {loading && <TableRowSkeleton columns={7} />}
               </TableBody>
             </Table>
           </Paper>
