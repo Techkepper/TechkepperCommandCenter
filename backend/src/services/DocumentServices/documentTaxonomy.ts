@@ -86,6 +86,7 @@ const contractTypes = {
 } as const;
 
 export type EcosystemContractType = keyof typeof contractTypes;
+export type DocumentRecipientKind = "client" | "collaborator" | "flexible";
 
 export const documentTypesByPurpose: Record<
   DocumentPurpose,
@@ -184,3 +185,19 @@ export const getContractEcosystemName = (
   isEcosystemContractType(documentType)
     ? contractTypes[documentType].ecosystem
     : null;
+
+export const getDocumentRecipientKind = (
+  documentType?: string | null
+): DocumentRecipientKind => {
+  if (
+    isEcosystemContractType(documentType) ||
+    documentType === "nda_mutual" ||
+    documentType === "nda_unilateral"
+  ) {
+    return "client";
+  }
+  if (documentType === "freelance_sales_contract") {
+    return "collaborator";
+  }
+  return "flexible";
+};

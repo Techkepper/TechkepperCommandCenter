@@ -2,9 +2,10 @@ import AppError from "../../errors/AppError";
 import Ecosystem from "../../models/Ecosystem";
 import Queue from "../../models/Queue";
 import SmartDocument from "../../models/SmartDocument";
-import { saveDocumentBuffer } from "./documentStorage";
+import { removeDocumentFile, saveDocumentBuffer } from "./documentStorage";
 import { ensureDocumentWriteAccess } from "./documentPermissions";
 import { isDocumentPurpose } from "./documentTaxonomy";
+import { normalizeOptionalDocumentId } from "./documentIds";
 
 interface Request {
   file?: Express.Multer.File;
@@ -20,19 +21,6 @@ interface Request {
   userId: string;
   userProfile: string;
 }
-
-const normalizeOptionalNumber = (value?: unknown): number | null => {
-  if (
-    value === undefined ||
-    value === null ||
-    value === "" ||
-    Number.isNaN(Number(value))
-  ) {
-    return null;
-  }
-  const normalized = Number(value);
-  return normalized > 0 ? normalized : null;
-};
 
 const CreateDocumentService = async ({
   file,
@@ -57,9 +45,22 @@ const CreateDocumentService = async ({
   }
 
   const normalizedPurpose = isDocumentPurpose(purpose) ? purpose : "other";
-  const normalizedQueueId = normalizeOptionalNumber(queueId);
-  const normalizedTicketId = normalizeOptionalNumber(ticketId);
-  const normalizedEcosystemId = normalizeOptionalNumber(ecosystemId);
+  const normalizedQueueId = normalizeOptionalDocumentId(
+    queueId,
+    "El departamento seleccionado"
+  );
+  const normalizedTicketId = normalizeOptionalDocumentId(
+    ticketId,
+    "La conversación seleccionada"
+  );
+  const normalizedEcosystemId = normalizeOptionalDocumentId(
+    ecosystemId,
+    "El ecosistema seleccionado"
+  );
+  const normalizedContactId = normalizeOptionalDocumentId(
+    contactId,
+    "El contacto seleccionado"
+  );
   if (normalizedQueueId) {
     const queue = await Queue.findByPk(normalizedQueueId, {
       attributes: ["id"]
@@ -100,19 +101,24 @@ const CreateDocumentService = async ({
     purpose: normalizedPurpose,
     tags: tags?.trim() || null,
     uploadedById: Number(userId),
-    contactId: normalizeOptionalNumber(contactId),
+    contactId: normalizedContactId,
     ticketId: normalizedTicketId,
     queueId: normalizedQueueId,
     ecosystemId: normalizedEcosystemId
   };
 
-  const document = await SmartDocument.create(
-    documentData as unknown as SmartDocument
-  );
+  try {
+    const document = await SmartDocument.create(
+      documentData as unknown as SmartDocument
+    );
 
-  return document.reload({
-    include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
-  });
+    return document.reload({
+      include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
+    });
+  } catch (err) {
+    await removeDocumentFile(storagePath);
+    throw err;
+  }
 };
 
 export default CreateDocumentService;

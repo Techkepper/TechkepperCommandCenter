@@ -32,6 +32,7 @@ import GetAppOutlinedIcon from "@material-ui/icons/GetAppOutlined";
 import PlayArrowOutlinedIcon from "@material-ui/icons/PlayArrowOutlined";
 import SearchIcon from "@material-ui/icons/Search";
 import { toast } from "react-toastify";
+import { useHistory } from "react-router-dom";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -125,6 +126,27 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.primary.main,
     marginBottom: theme.spacing(0.5),
   },
+  generationSummary: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: theme.spacing(1.5),
+    marginTop: theme.spacing(2),
+    [theme.breakpoints.down("sm")]: {
+      gridTemplateColumns: "1fr",
+    },
+  },
+  generationSummaryCard: {
+    padding: theme.spacing(1.5),
+    border: "1px solid rgba(95, 175, 58, 0.24)",
+    borderRadius: 8,
+    background: "rgba(95, 175, 58, 0.04)",
+  },
+  generationResultActions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(2),
+  },
 }));
 
 const formatSize = (size) => {
@@ -137,6 +159,33 @@ const getErrorCode = (err) =>
   err.response?.data?.error || err.response?.data?.message;
 
 const getActiveVersion = (template) => template.versions?.[0] || null;
+
+const knownVisualDocumentTypes = [
+  "web_contract",
+  "secure_contract",
+  "growth_contract",
+  "automate_contract",
+  "nda_mutual",
+  "nda_unilateral",
+  "freelance_sales_contract",
+];
+
+const getRequiredRecipientMode = (documentType) => {
+  if (
+    [
+      "web_contract",
+      "secure_contract",
+      "growth_contract",
+      "automate_contract",
+      "nda_mutual",
+      "nda_unilateral",
+    ].includes(documentType)
+  ) {
+    return "client";
+  }
+  if (documentType === "freelance_sales_contract") return "collaborator";
+  return null;
+};
 
 const documentPurposes = [
   { value: "", label: "Todos" },
@@ -546,7 +595,10 @@ const groupGenerationVariables = (variables, documentType) => {
     .filter((group) => group.variables.length);
 
   if (remaining.size) {
-    groups.push({ title: "Otros datos", variables: Array.from(remaining) });
+    groups.push({
+      title: "Variables adicionales",
+      variables: Array.from(remaining),
+    });
   }
   return groups;
 };
@@ -599,6 +651,7 @@ const variablePlaceholder = (variable, documentType) => {
 
 const SmartDocuments = () => {
   const classes = useStyles();
+  const history = useHistory();
   const { user } = useContext(AuthContext);
   const canCreateDocuments =
     user.profile === "admin" || user.profile === "supervisor";
@@ -651,6 +704,8 @@ const SmartDocuments = () => {
   const [generationCollaboratorId, setGenerationCollaboratorId] = useState("");
   const [recipientMode, setRecipientMode] = useState("client");
   const [technicalMode, setTechnicalMode] = useState(false);
+  const [generationStage, setGenerationStage] = useState("form");
+  const [generatedDocument, setGeneratedDocument] = useState(null);
   const [ecosystems, setEcosystems] = useState([]);
   const [businessClients, setBusinessClients] = useState([]);
   const [collaborators, setCollaborators] = useState([]);
@@ -659,8 +714,15 @@ const SmartDocuments = () => {
   const generationBusinessClient = businessClients.find(
     (client) => client.id === Number(generationBusinessClientId)
   );
-  const isFreelanceSalesContract =
-    selectedTemplate?.documentType === "freelance_sales_contract";
+  const requiredRecipientMode = getRequiredRecipientMode(
+    selectedTemplate?.documentType
+  );
+  const selectedGenerationClient = businessClients.find(
+    (client) => client.id === Number(generationBusinessClientId)
+  );
+  const selectedGenerationCollaborator = collaborators.find(
+    (collaborator) => collaborator.id === Number(generationCollaboratorId)
+  );
 
   useEffect(() => {
     api
@@ -1018,14 +1080,15 @@ const SmartDocuments = () => {
     setGenerationData(JSON.stringify(initialData, null, 2));
     setGenerationBusinessClientId("");
     setGenerationCollaboratorId("");
+    const requiredMode = getRequiredRecipientMode(template.documentType);
     setRecipientMode(
-      template.documentType === "freelance_sales_contract"
-        ? "collaborator"
-        : template.requiresClient
-        ? "client"
-        : "manual"
+      requiredMode || (template.requiresClient ? "client" : "manual")
     );
-    setTechnicalMode(false);
+    setTechnicalMode(
+      !knownVisualDocumentTypes.includes(template.documentType)
+    );
+    setGenerationStage("form");
+    setGeneratedDocument(null);
     setGenerateDialogOpen(true);
   };
 
@@ -1044,6 +1107,8 @@ const SmartDocuments = () => {
       setGenerationCollaboratorId("");
       setRecipientMode("client");
       setTechnicalMode(false);
+      setGenerationStage("form");
+      setGeneratedDocument(null);
       setGenerateDialogOpen(true);
     } catch (error) {
       toastError(error);
@@ -1114,16 +1179,44 @@ const SmartDocuments = () => {
     });
   };
 
-  const handleGenerateDocument = async () => {
-    let parsedData;
+  const parseGenerationData = () => {
+    if (!technicalMode) return generationValues;
     try {
-      parsedData = technicalMode
-        ? JSON.parse(generationData)
-        : generationValues;
+      return JSON.parse(generationData);
     } catch {
-      toast.warn("Revise el JSON de variables antes de generar.");
+      toast.warn("Revise el JSON de variables antes de continuar.");
+      return null;
+    }
+  };
+
+  const getMissingGenerationVariables = (data) =>
+    getRequiredTypeVariables(selectedTemplate?.documentType).filter(
+      (variable) =>
+        data?.[variable] === undefined ||
+        data?.[variable] === null ||
+        String(data[variable]).trim() === ""
+    );
+
+  const handleReviewGeneration = () => {
+    const parsedData = parseGenerationData();
+    if (!parsedData) return;
+    if (requiredRecipientMode === "client" && !generationBusinessClientId) {
+      toast.warn("Seleccione un cliente para este documento.");
       return;
     }
+    if (
+      requiredRecipientMode === "collaborator" &&
+      !generationCollaboratorId
+    ) {
+      toast.warn("Seleccione un colaborador para este documento.");
+      return;
+    }
+    setGenerationStage("summary");
+  };
+
+  const handleGenerateDocument = async () => {
+    const parsedData = parseGenerationData();
+    if (!parsedData) return;
 
     setSaving(true);
     try {
@@ -1137,20 +1230,17 @@ const SmartDocuments = () => {
           recipientMode,
         }
       );
-      const selectedClient = businessClients.find(
-        (client) => client.id === Number(generationBusinessClientId)
-      );
       const generatedDocument = {
         ...data,
-        businessClient: selectedClient || null,
+        businessClient: selectedGenerationClient || null,
+        collaborator: selectedGenerationCollaborator || null,
       };
       setDocuments((current) => [
         generatedDocument,
         ...current.filter((item) => item.id !== generatedDocument.id),
       ]);
-      setGenerateDialogOpen(false);
-      setSelectedTemplate(null);
-      setActiveTab(0);
+      setGeneratedDocument(generatedDocument);
+      setGenerationStage("success");
       toast.success("Documento generado correctamente.");
     } catch (err) {
       toastError(err);
@@ -1258,12 +1348,22 @@ const SmartDocuments = () => {
 
       <Dialog
         open={generateDialogOpen}
-        onClose={() => setGenerateDialogOpen(false)}
+        onClose={() => {
+          if (!saving) setGenerateDialogOpen(false);
+        }}
         fullWidth
         maxWidth="md"
       >
-        <DialogTitle>Generar documento</DialogTitle>
+        <DialogTitle>
+          {generationStage === "summary"
+            ? "Revisar documento"
+            : generationStage === "success"
+            ? "Documento generado"
+            : "Generar documento"}
+        </DialogTitle>
         <DialogContent>
+          {generationStage === "form" && (
+            <>
           <Typography color="textSecondary" gutterBottom>
             Seleccione el propósito y el machote. El formulario solicitará
             únicamente las variables que necesita ese documento.
@@ -1321,7 +1421,7 @@ const SmartDocuments = () => {
                   {selectedTemplate.missingExpectedVariables.join(", ")}.
                 </Typography>
               )}
-              {!isFreelanceSalesContract && (
+              {!requiredRecipientMode && (
                 <FormControl variant="outlined" margin="dense" fullWidth>
                   <InputLabel>Destinatario</InputLabel>
                   <Select
@@ -1344,7 +1444,7 @@ const SmartDocuments = () => {
                   </Select>
                 </FormControl>
               )}
-              {recipientMode === "client" && !isFreelanceSalesContract && (
+              {recipientMode === "client" && (
                 <FormControl variant="outlined" margin="dense" fullWidth>
                   <InputLabel>Cliente</InputLabel>
                   <Select
@@ -1502,18 +1602,31 @@ const SmartDocuments = () => {
               )
             )}
           {selectedTemplate && technicalMode && (
-            <TextField
-              label="Variables JSON"
-              variant="outlined"
-              margin="dense"
-              fullWidth
-              multiline
-              rows={10}
-              value={generationData}
-              onChange={(event) => setGenerationData(event.target.value)}
-            />
+            <>
+              {!knownVisualDocumentTypes.includes(
+                selectedTemplate.documentType
+              ) && (
+                <Typography color="textSecondary" variant="body2">
+                  Esta plantilla no tiene un tipo visual conocido. Complete las
+                  variables mediante el modo técnico JSON.
+                </Typography>
+              )}
+              <TextField
+                label="Variables JSON"
+                variant="outlined"
+                margin="dense"
+                fullWidth
+                multiline
+                rows={10}
+                value={generationData}
+                onChange={(event) => setGenerationData(event.target.value)}
+              />
+            </>
           )}
-          {selectedTemplate && (
+          {selectedTemplate &&
+            knownVisualDocumentTypes.includes(
+              selectedTemplate.documentType
+            ) && (
             <FormControlLabel
               control={
                 <Switch
@@ -1532,25 +1645,173 @@ const SmartDocuments = () => {
               label="Modo técnico JSON"
             />
           )}
+            </>
+          )}
+          {generationStage === "summary" && selectedTemplate && (
+            <>
+              <Typography color="textSecondary">
+                Confirme la información antes de generar el archivo definitivo.
+              </Typography>
+              <div className={classes.generationSummary}>
+                <div className={classes.generationSummaryCard}>
+                  <Typography variant="caption" color="textSecondary">
+                    Tipo documental
+                  </Typography>
+                  <Typography>
+                    {documentTypes.find(
+                      (item) => item.value === selectedTemplate.documentType
+                    )?.label || "Otro / modo técnico"}
+                  </Typography>
+                </div>
+                <div className={classes.generationSummaryCard}>
+                  <Typography variant="caption" color="textSecondary">
+                    Plantilla
+                  </Typography>
+                  <Typography>{selectedTemplate.name}</Typography>
+                </div>
+                <div className={classes.generationSummaryCard}>
+                  <Typography variant="caption" color="textSecondary">
+                    Destinatario
+                  </Typography>
+                  <Typography>
+                    {selectedGenerationClient?.displayName ||
+                      selectedGenerationCollaborator?.fullName ||
+                      (recipientMode === "generic"
+                        ? "Para quien corresponda"
+                        : "Datos manuales")}
+                  </Typography>
+                </div>
+                <div className={classes.generationSummaryCard}>
+                  <Typography variant="caption" color="textSecondary">
+                    Formatos disponibles
+                  </Typography>
+                  <Typography>DOCX y PDF</Typography>
+                </div>
+                <div className={classes.generationSummaryCard}>
+                  <Typography variant="caption" color="textSecondary">
+                    Variables completas
+                  </Typography>
+                  <Typography>
+                    {
+                      Object.values(parseGenerationData() || {}).filter(
+                        (value) => String(value ?? "").trim() !== ""
+                      ).length
+                    }
+                  </Typography>
+                </div>
+                <div className={classes.generationSummaryCard}>
+                  <Typography variant="caption" color="textSecondary">
+                    Variables faltantes
+                  </Typography>
+                  <div className={classes.variableList}>
+                    {getMissingGenerationVariables(
+                      parseGenerationData() || {}
+                    ).length ? (
+                      getMissingGenerationVariables(
+                        parseGenerationData() || {}
+                      ).map((variable) => (
+                        <Chip
+                          key={variable}
+                          color="secondary"
+                          size="small"
+                          label={variableLabel(
+                            variable,
+                            selectedTemplate.documentType,
+                            recipientMode
+                          )}
+                        />
+                      ))
+                    ) : (
+                      <Typography>Sin campos pendientes</Typography>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+          {generationStage === "success" && generatedDocument && (
+            <>
+              <Typography>
+                El documento se generó y quedó asociado correctamente.
+              </Typography>
+              <div className={classes.generationResultActions}>
+                {canCreateDocuments && (
+                  <Button
+                    color="primary"
+                    variant="outlined"
+                    onClick={() => handleDownload(generatedDocument, "docx")}
+                  >
+                    Descargar DOCX
+                  </Button>
+                )}
+                <Button
+                  color="primary"
+                  variant="contained"
+                  onClick={() => handleDownload(generatedDocument, "pdf")}
+                >
+                  Descargar PDF
+                </Button>
+                <Button
+                  onClick={() => {
+                    setGenerateDialogOpen(false);
+                    setActiveTab(0);
+                  }}
+                >
+                  Ver en Documentos
+                </Button>
+                {generatedDocument.businessClient && (
+                  <Button onClick={() => history.push("/business-clients")}>
+                    Ver cliente relacionado
+                  </Button>
+                )}
+                {generatedDocument.collaborator && (
+                  <Button onClick={() => history.push("/collaborators")}>
+                    Ver colaborador relacionado
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setGenerateDialogOpen(false)}>Cancelar</Button>
-          <Button
-            color="primary"
-            variant="contained"
-            disabled={
-              saving ||
-              !selectedTemplate ||
-              (recipientMode === "client" &&
-                selectedTemplate?.requiresClient &&
-                !generationBusinessClientId) ||
-              (recipientMode === "collaborator" &&
-                !generationCollaboratorId)
-            }
-            onClick={handleGenerateDocument}
-          >
-            Generar
-          </Button>
+          {generationStage === "form" && (
+            <>
+              <Button onClick={() => setGenerateDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                color="primary"
+                variant="contained"
+                disabled={saving || !selectedTemplate}
+                onClick={handleReviewGeneration}
+              >
+                Revisar
+              </Button>
+            </>
+          )}
+          {generationStage === "summary" && (
+            <>
+              <Button onClick={() => setGenerationStage("form")}>
+                Volver
+              </Button>
+              <Button
+                color="primary"
+                variant="contained"
+                disabled={
+                  saving ||
+                  getMissingGenerationVariables(
+                    parseGenerationData() || {}
+                  ).length > 0
+                }
+                onClick={handleGenerateDocument}
+              >
+                {saving ? "Generando..." : "Confirmar y generar"}
+              </Button>
+            </>
+          )}
+          {generationStage === "success" && (
+            <Button onClick={() => setGenerateDialogOpen(false)}>Cerrar</Button>
+          )}
         </DialogActions>
       </Dialog>
 

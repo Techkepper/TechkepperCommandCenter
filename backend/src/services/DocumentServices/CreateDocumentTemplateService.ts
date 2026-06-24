@@ -3,10 +3,11 @@ import Ecosystem from "../../models/Ecosystem";
 import Queue from "../../models/Queue";
 import SmartDocumentTemplate from "../../models/SmartDocumentTemplate";
 import SmartDocumentTemplateVersion from "../../models/SmartDocumentTemplateVersion";
-import { saveDocumentBuffer } from "./documentStorage";
+import { removeDocumentFile, saveDocumentBuffer } from "./documentStorage";
 import { ensureDocumentWriteAccess } from "./documentPermissions";
 import { extractTemplateVariablesFromBuffer } from "./docxTemplateEngine";
 import { serializeJsonList } from "./templateSerialization";
+import { normalizeOptionalDocumentId } from "./documentIds";
 import {
   getRequiredVariablesByDocumentType,
   isDocumentPurpose,
@@ -28,19 +29,6 @@ interface Request {
   userId: string;
   userProfile: string;
 }
-
-const normalizeOptionalNumber = (value?: unknown): number | null => {
-  if (
-    value === undefined ||
-    value === null ||
-    value === "" ||
-    Number.isNaN(Number(value))
-  ) {
-    return null;
-  }
-  const normalized = Number(value);
-  return normalized > 0 ? normalized : null;
-};
 
 const CreateDocumentTemplateService = async ({
   file,
@@ -78,8 +66,13 @@ const CreateDocumentTemplateService = async ({
     normalizedPurpose
   );
   const normalizedEcosystemId =
-    normalizedPurpose === "nda" ? null : normalizeOptionalNumber(ecosystemId);
-  const normalizedQueueId = normalizeOptionalNumber(queueId);
+    normalizedPurpose === "nda"
+      ? null
+      : normalizeOptionalDocumentId(ecosystemId, "El ecosistema seleccionado");
+  const normalizedQueueId = normalizeOptionalDocumentId(
+    queueId,
+    "El departamento seleccionado"
+  );
   if (normalizedQueueId) {
     const queue = await Queue.findByPk(normalizedQueueId, {
       attributes: ["id"]
@@ -118,33 +111,45 @@ const CreateDocumentTemplateService = async ({
     "templates"
   );
 
-  const template = await SmartDocumentTemplate.create({
-    name: name?.trim() || file.originalname.replace(/\.docx$/i, ""),
-    description: description?.trim() || null,
-    category: category?.trim() || null,
-    documentType: normalizedDocumentType,
-    purpose: normalizedPurpose,
-    requiresClient,
-    allowGenericRecipient,
-    createdById: Number(userId),
-    queueId: normalizedQueueId,
-    ecosystemId: normalizedEcosystemId,
-    isActive: true
-  } as unknown as SmartDocumentTemplate);
+  let template: SmartDocumentTemplate | null = null;
+  try {
+    template = await SmartDocumentTemplate.create({
+      name: name?.trim() || file.originalname.replace(/\.docx$/i, ""),
+      description: description?.trim() || null,
+      category: category?.trim() || null,
+      documentType: normalizedDocumentType,
+      purpose: normalizedPurpose,
+      requiresClient,
+      allowGenericRecipient,
+      createdById: Number(userId),
+      queueId: normalizedQueueId,
+      ecosystemId: normalizedEcosystemId,
+      isActive: true
+    } as unknown as SmartDocumentTemplate);
 
-  await SmartDocumentTemplateVersion.create({
-    templateId: template.id,
-    version: 1,
-    originalName: file.originalname,
-    storedName,
-    storagePath,
-    mimeType: file.mimetype,
-    size: file.size,
-    detectedVariables: serializeJsonList(detectedVariables),
-    requiredVariables: serializeJsonList(normalizedRequiredVariables),
-    isActive: true,
-    uploadedById: Number(userId)
-  } as unknown as SmartDocumentTemplateVersion);
+    await SmartDocumentTemplateVersion.create({
+      templateId: template.id,
+      version: 1,
+      originalName: file.originalname,
+      storedName,
+      storagePath,
+      mimeType: file.mimetype,
+      size: file.size,
+      detectedVariables: serializeJsonList(detectedVariables),
+      requiredVariables: serializeJsonList(normalizedRequiredVariables),
+      isActive: true,
+      uploadedById: Number(userId)
+    } as unknown as SmartDocumentTemplateVersion);
+  } catch (err) {
+    if (template) {
+      await SmartDocumentTemplate.destroy({
+        where: { id: template.id },
+        force: true
+      });
+    }
+    await removeDocumentFile(storagePath);
+    throw err;
+  }
 
   return SmartDocumentTemplate.findByPk(template.id, {
     include: [

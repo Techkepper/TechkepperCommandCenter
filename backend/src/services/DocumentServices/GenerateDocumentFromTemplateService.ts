@@ -2,18 +2,26 @@ import path from "path";
 
 import AppError from "../../errors/AppError";
 import BusinessClient from "../../models/BusinessClient";
+import BusinessClientDocument from "../../models/BusinessClientDocument";
+import CollaboratorDocument from "../../models/CollaboratorDocument";
 import SmartDocument from "../../models/SmartDocument";
 import { showCollaborator } from "../CollaboratorServices";
 import {
   extractTemplateVariablesFromBuffer,
   renderDocxTemplate
 } from "./docxTemplateEngine";
-import { resolveDocumentPath, saveDocumentBuffer } from "./documentStorage";
+import {
+  removeDocumentFile,
+  resolveDocumentPath,
+  saveDocumentBuffer
+} from "./documentStorage";
 import ShowDocumentTemplateService from "./ShowDocumentTemplateService";
 import { parseJsonList } from "./templateSerialization";
 import { setDocumentBusinessClient } from "./BusinessClientDocumentService";
 import { setDocumentCollaborator } from "./CollaboratorDocumentService";
+import { normalizeOptionalDocumentId } from "./documentIds";
 import {
+  getDocumentRecipientKind,
   getRequiredVariablesByDocumentType,
   isDocumentPurpose,
   normalizeDocumentType
@@ -42,8 +50,8 @@ const applyPhysicalClientVariables = (
   const clientName = client.displayName || client.legalName || "";
   return {
     ...data,
-    CLIENTE_RAZON_SOCIAL: clientName,
-    CLIENTE_CEDULA: client.identificationNumber || "",
+    CLIENTE_RAZON_SOCIAL: data.CLIENTE_RAZON_SOCIAL || clientName,
+    CLIENTE_CEDULA: data.CLIENTE_CEDULA || client.identificationNumber || "",
     CLIENTE_REPRESENTANTE: clientName,
     CLIENTE_CEDULA_REPRESENTANTE: client.identificationNumber || "",
     CLIENTE_CARGO_REPRESENTANTE: "En nombre propio",
@@ -63,11 +71,12 @@ const applyCollaboratorVariables = (
   }
 ): Record<string, unknown> => ({
   ...data,
-  FREELANCE_NOMBRE: collaborator.fullName,
-  FREELANCE_CEDULA: collaborator.identificationNumber,
-  FREELANCE_DENOMINACION: collaborator.contractualDenomination,
-  CLIENTE_RAZON_SOCIAL: collaborator.fullName,
-  CLIENTE_CEDULA: collaborator.identificationNumber,
+  FREELANCE_NOMBRE: data.FREELANCE_NOMBRE || collaborator.fullName,
+  FREELANCE_CEDULA: data.FREELANCE_CEDULA || collaborator.identificationNumber,
+  FREELANCE_DENOMINACION:
+    data.FREELANCE_DENOMINACION || collaborator.contractualDenomination,
+  CLIENTE_RAZON_SOCIAL: data.CLIENTE_RAZON_SOCIAL || collaborator.fullName,
+  CLIENTE_CEDULA: data.CLIENTE_CEDULA || collaborator.identificationNumber,
   CLIENTE_REPRESENTANTE: collaborator.fullName,
   CLIENTE_CEDULA_REPRESENTANTE: collaborator.identificationNumber,
   CLIENTE_CARGO_REPRESENTANTE: "En nombre propio",
@@ -129,42 +138,34 @@ const GenerateDocumentFromTemplateService = async ({
   const isFreelanceSalesContract =
     normalizedDocumentType === "freelance_sales_contract";
 
-  const normalizedClientId =
-    businessClientId === undefined ||
-    businessClientId === null ||
-    businessClientId === "" ||
-    businessClientId === 0 ||
-    businessClientId === "0"
-      ? null
-      : Number(businessClientId);
-  const normalizedCollaboratorId =
-    collaboratorId === undefined ||
-    collaboratorId === null ||
-    collaboratorId === "" ||
-    collaboratorId === 0 ||
-    collaboratorId === "0"
-      ? null
-      : Number(collaboratorId);
-  if (
-    normalizedClientId !== null &&
-    (!Number.isInteger(normalizedClientId) || normalizedClientId <= 0)
-  ) {
-    throw new AppError("El cliente seleccionado no es válido.", 400);
-  }
-  if (
-    normalizedCollaboratorId !== null &&
-    (!Number.isInteger(normalizedCollaboratorId) ||
-      normalizedCollaboratorId <= 0)
-  ) {
-    throw new AppError("El colaborador seleccionado no es válido.", 400);
-  }
+  const normalizedClientId = normalizeOptionalDocumentId(
+    businessClientId,
+    "El cliente seleccionado"
+  );
+  const normalizedCollaboratorId = normalizeOptionalDocumentId(
+    collaboratorId,
+    "El colaborador seleccionado"
+  );
   if (normalizedClientId !== null && normalizedCollaboratorId !== null) {
     throw new AppError(
       "Seleccione un cliente o un colaborador, no ambos.",
       400
     );
   }
-  if (isFreelanceSalesContract && normalizedCollaboratorId === null) {
+  const recipientKind = getDocumentRecipientKind(normalizedDocumentType);
+  if (
+    recipientKind === "client" &&
+    (normalizedClientId === null || normalizedCollaboratorId !== null)
+  ) {
+    throw new AppError(
+      "Este tipo documental requiere seleccionar un cliente.",
+      400
+    );
+  }
+  if (
+    recipientKind === "collaborator" &&
+    (normalizedCollaboratorId === null || normalizedClientId !== null)
+  ) {
     throw new AppError(
       "Este contrato requiere seleccionar un colaborador.",
       400
@@ -172,7 +173,7 @@ const GenerateDocumentFromTemplateService = async ({
   }
   if (
     template.requiresClient &&
-    !isFreelanceSalesContract &&
+    recipientKind === "flexible" &&
     normalizedClientId === null &&
     normalizedCollaboratorId === null &&
     !(template.allowGenericRecipient && recipientMode === "generic")
@@ -287,45 +288,64 @@ const GenerateDocumentFromTemplateService = async ({
     "generated"
   );
   const originalName = buildGeneratedName(template.name, title);
+  let document: SmartDocument | null = null;
+  try {
+    document = await SmartDocument.create({
+      title: title?.trim() || template.name,
+      description: `Generado desde plantilla: ${template.name}`,
+      originalName: path.basename(originalName),
+      storedName,
+      storagePath,
+      mimeType: docxMimeType,
+      size: outputBuffer.length,
+      category: template.category,
+      purpose: template.purpose,
+      tags: `plantilla:${template.id};version:${activeVersion.version}`,
+      uploadedById: Number(userId),
+      contactId: null,
+      ticketId: null,
+      queueId: template.queueId,
+      ecosystemId: template.ecosystemId
+    } as unknown as SmartDocument);
 
-  const document = await SmartDocument.create({
-    title: title?.trim() || template.name,
-    description: `Generado desde plantilla: ${template.name}`,
-    originalName: path.basename(originalName),
-    storedName,
-    storagePath,
-    mimeType: docxMimeType,
-    size: outputBuffer.length,
-    category: template.category,
-    purpose: template.purpose,
-    tags: `plantilla:${template.id};version:${activeVersion.version}`,
-    uploadedById: Number(userId),
-    contactId: null,
-    ticketId: null,
-    queueId: template.queueId,
-    ecosystemId: template.ecosystemId
-  } as unknown as SmartDocument);
-
-  const reloadedDocument = await document.reload({
-    include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
-  });
-
-  if (normalizedClientId !== null) {
-    await setDocumentBusinessClient({
-      documentId: reloadedDocument.id,
-      businessClientId: normalizedClientId,
-      actor: { id: userId, profile: userProfile }
+    const reloadedDocument = await document.reload({
+      include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
     });
-  }
-  if (normalizedCollaboratorId !== null) {
-    await setDocumentCollaborator({
-      documentId: reloadedDocument.id,
-      collaboratorId: normalizedCollaboratorId,
-      userId
-    });
-  }
 
-  return reloadedDocument;
+    if (normalizedClientId !== null) {
+      await setDocumentBusinessClient({
+        documentId: reloadedDocument.id,
+        businessClientId: normalizedClientId,
+        actor: { id: userId, profile: userProfile }
+      });
+    }
+    if (normalizedCollaboratorId !== null) {
+      await setDocumentCollaborator({
+        documentId: reloadedDocument.id,
+        collaboratorId: normalizedCollaboratorId,
+        userId
+      });
+    }
+
+    return reloadedDocument;
+  } catch (err) {
+    if (document) {
+      await BusinessClientDocument.destroy({
+        where: { documentId: document.id },
+        force: true
+      });
+      await CollaboratorDocument.destroy({
+        where: { documentId: document.id },
+        force: true
+      });
+      await SmartDocument.destroy({
+        where: { id: document.id },
+        force: true
+      });
+    }
+    await removeDocumentFile(storagePath);
+    throw err;
+  }
 };
 
 export default GenerateDocumentFromTemplateService;
