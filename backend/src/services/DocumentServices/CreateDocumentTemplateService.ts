@@ -1,16 +1,27 @@
 import AppError from "../../errors/AppError";
+import Ecosystem from "../../models/Ecosystem";
+import Queue from "../../models/Queue";
 import SmartDocumentTemplate from "../../models/SmartDocumentTemplate";
 import SmartDocumentTemplateVersion from "../../models/SmartDocumentTemplateVersion";
 import { saveDocumentBuffer } from "./documentStorage";
 import { ensureDocumentWriteAccess } from "./documentPermissions";
 import { extractTemplateVariablesFromBuffer } from "./docxTemplateEngine";
 import { serializeJsonList } from "./templateSerialization";
+import {
+  getRequiredVariablesByDocumentType,
+  isDocumentPurpose,
+  normalizeDocumentType
+} from "./documentTaxonomy";
 
 interface Request {
   file?: Express.Multer.File;
   name?: string;
   description?: string;
   category?: string;
+  documentType?: string;
+  purpose?: string;
+  requiresClient?: boolean;
+  allowGenericRecipient?: boolean;
   queueId?: number | null;
   ecosystemId?: number | null;
   requiredVariables?: string[];
@@ -18,11 +29,17 @@ interface Request {
   userProfile: string;
 }
 
-const normalizeOptionalNumber = (value?: number | null): number | null => {
-  if (value === undefined || value === null || Number.isNaN(Number(value))) {
+const normalizeOptionalNumber = (value?: unknown): number | null => {
+  if (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    Number.isNaN(Number(value))
+  ) {
     return null;
   }
-  return Number(value);
+  const normalized = Number(value);
+  return normalized > 0 ? normalized : null;
 };
 
 const CreateDocumentTemplateService = async ({
@@ -30,12 +47,20 @@ const CreateDocumentTemplateService = async ({
   name,
   description,
   category,
+  documentType,
+  purpose,
+  requiresClient = false,
+  allowGenericRecipient = false,
   queueId,
   ecosystemId,
   requiredVariables,
   userId,
   userProfile
 }: Request): Promise<SmartDocumentTemplate> => {
+  if (userProfile !== "admin") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
   if (!file) {
     throw new AppError("ERR_DOCUMENT_TEMPLATE_FILE_REQUIRED", 400);
   }
@@ -47,17 +72,46 @@ const CreateDocumentTemplateService = async ({
     throw new AppError("ERR_DOCUMENT_TEMPLATE_MUST_BE_DOCX", 415);
   }
 
+  const normalizedPurpose = isDocumentPurpose(purpose) ? purpose : "other";
+  const normalizedDocumentType = normalizeDocumentType(
+    documentType,
+    normalizedPurpose
+  );
+  const normalizedEcosystemId =
+    normalizedPurpose === "nda" ? null : normalizeOptionalNumber(ecosystemId);
   const normalizedQueueId = normalizeOptionalNumber(queueId);
+  if (normalizedQueueId) {
+    const queue = await Queue.findByPk(normalizedQueueId, {
+      attributes: ["id"]
+    });
+    if (!queue) {
+      throw new AppError("El departamento seleccionado no existe.", 400);
+    }
+  }
+  if (normalizedEcosystemId) {
+    const ecosystem = await Ecosystem.findByPk(normalizedEcosystemId, {
+      attributes: ["id"]
+    });
+    if (!ecosystem) {
+      throw new AppError("El ecosistema seleccionado no existe.", 400);
+    }
+  }
   await ensureDocumentWriteAccess(
     { queueId: normalizedQueueId },
     { id: userId, profile: userProfile }
   );
 
   const detectedVariables = extractTemplateVariablesFromBuffer(file.buffer);
-  const normalizedRequiredVariables =
+  const configuredRequiredVariables =
     requiredVariables && requiredVariables.length
       ? requiredVariables
       : detectedVariables;
+  const typeRequiredVariables = getRequiredVariablesByDocumentType(
+    normalizedDocumentType
+  );
+  const normalizedRequiredVariables = Array.from(
+    new Set([...typeRequiredVariables, ...configuredRequiredVariables])
+  );
   const { storedName, storagePath } = await saveDocumentBuffer(
     file.buffer,
     file.mimetype,
@@ -68,9 +122,13 @@ const CreateDocumentTemplateService = async ({
     name: name?.trim() || file.originalname.replace(/\.docx$/i, ""),
     description: description?.trim() || null,
     category: category?.trim() || null,
+    documentType: normalizedDocumentType,
+    purpose: normalizedPurpose,
+    requiresClient,
+    allowGenericRecipient,
     createdById: Number(userId),
     queueId: normalizedQueueId,
-    ecosystemId: normalizeOptionalNumber(ecosystemId),
+    ecosystemId: normalizedEcosystemId,
     isActive: true
   } as unknown as SmartDocumentTemplate);
 

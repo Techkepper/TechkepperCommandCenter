@@ -17,6 +17,8 @@ import SmartDocumentTemplate from "../models/SmartDocumentTemplate";
 import SmartDocumentTemplateVersion from "../models/SmartDocumentTemplateVersion";
 import BusinessClient from "../models/BusinessClient";
 import BusinessClientDocument from "../models/BusinessClientDocument";
+import Collaborator from "../models/Collaborator";
+import CollaboratorDocument from "../models/CollaboratorDocument";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -42,7 +44,9 @@ const models = [
   SmartDocumentTemplate,
   SmartDocumentTemplateVersion,
   BusinessClient,
-  BusinessClientDocument
+  BusinessClientDocument,
+  Collaborator,
+  CollaboratorDocument
 ];
 
 sequelize.addModels(models);

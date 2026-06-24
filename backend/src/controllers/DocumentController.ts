@@ -7,10 +7,12 @@ import CreateDocumentService from "../services/DocumentServices/CreateDocumentSe
 import ShowDocumentService from "../services/DocumentServices/ShowDocumentService";
 import DeleteDocumentService from "../services/DocumentServices/DeleteDocumentService";
 import { resolveDocumentPath } from "../services/DocumentServices/documentStorage";
+import ConvertDocumentToPdfService from "../services/DocumentServices/ConvertDocumentToPdfService";
 
 type IndexQuery = {
   searchParam?: string;
   pageNumber?: string;
+  purpose?: string;
 };
 
 const rethrowDocumentDbError = (err: Error): never => {
@@ -31,12 +33,13 @@ const sanitizeDownloadName = (name: string): string =>
   path.basename(name).replace(/[^\w.\- ()]/g, "_");
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { searchParam, pageNumber, purpose } = req.query as IndexQuery;
 
   try {
     const result = await ListDocumentsService({
       searchParam,
       pageNumber,
+      purpose,
       userId: req.user.id,
       userProfile: req.user.profile
     });
@@ -54,6 +57,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       title: req.body.title,
       description: req.body.description,
       category: req.body.category,
+      purpose: req.body.purpose,
       tags: req.body.tags,
       contactId: req.body.contactId,
       ticketId: req.body.ticketId,
@@ -90,8 +94,18 @@ export const download = async (
   res: Response
 ): Promise<Response | void> => {
   const { documentId } = req.params;
+  const requestedFormat = String(req.query.format || "original").toLowerCase();
+  const canDownloadOriginal =
+    req.user.profile === "admin" || req.user.profile === "supervisor";
 
   try {
+    if (!canDownloadOriginal && requestedFormat !== "pdf") {
+      throw new AppError(
+        "Su perfil solo puede descargar documentos en formato PDF.",
+        403
+      );
+    }
+
     const document = await ShowDocumentService({
       documentId,
       userId: req.user.id,
@@ -100,6 +114,40 @@ export const download = async (
     const filePath = resolveDocumentPath(document.storagePath);
 
     res.setHeader("X-Content-Type-Options", "nosniff");
+
+    if (requestedFormat === "pdf") {
+      const pdf = await ConvertDocumentToPdfService({
+        sourcePath: filePath,
+        mimeType: document.mimeType
+      });
+      const pdfName = `${path.basename(
+        document.originalName,
+        path.extname(document.originalName)
+      )}.pdf`;
+
+      res.type("application/pdf");
+      res.attachment(sanitizeDownloadName(pdfName));
+      return res.send(pdf);
+    }
+
+    if (requestedFormat !== "original" && requestedFormat !== "docx") {
+      throw new AppError(
+        "El formato de descarga solicitado no es válido.",
+        400
+      );
+    }
+
+    if (
+      requestedFormat === "docx" &&
+      document.mimeType !==
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      throw new AppError(
+        "Este documento no está disponible en formato DOCX.",
+        400
+      );
+    }
+
     return res.download(filePath, sanitizeDownloadName(document.originalName));
   } catch (err) {
     return rethrowDocumentDbError(err);

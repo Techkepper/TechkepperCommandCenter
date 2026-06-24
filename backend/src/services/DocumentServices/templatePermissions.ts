@@ -32,6 +32,7 @@ export const buildTemplateWhere = async (
   const accessWhere = {
     [Op.or]: [
       { createdById: Number(user.id) },
+      { queueId: null },
       ...(queueIds.length ? [{ queueId: { [Op.in]: queueIds } }] : [])
     ]
   };
@@ -45,6 +46,7 @@ export const ensureTemplateAccess = async (
 ): Promise<void> => {
   if (user.profile === "admin") return;
   if (template.createdById === Number(user.id)) return;
+  if (!template.queueId) return;
 
   const queueIds = await getUserQueueIds(user.id);
   if (template.queueId && queueIds.includes(Number(template.queueId))) return;

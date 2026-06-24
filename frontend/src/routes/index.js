@@ -11,6 +11,7 @@ import Settings from "../pages/Settings/";
 import Users from "../pages/Users";
 import Contacts from "../pages/Contacts/";
 import BusinessClients from "../pages/BusinessClients";
+import Collaborators from "../pages/Collaborators";
 import SmartDocuments from "../pages/SmartDocuments";
 import QuickAnswers from "../pages/QuickAnswers/";
 import Queues from "../pages/Queues/";
@@ -62,6 +63,12 @@ const AuthenticatedRoutes = () => (
           exact
           path={ROUTES.businessClients}
           component={BusinessClients}
+          isPrivate
+        />
+        <Route
+          exact
+          path={ROUTES.collaborators}
+          component={Collaborators}
           isPrivate
         />
         <Route

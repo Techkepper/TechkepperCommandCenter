@@ -17,6 +17,7 @@ import ecosystemRoutes from "./ecosystemRoutes";
 import clientLogRoutes from "./clientLogRoutes";
 import documentRoutes from "./documentRoutes";
 import businessClientRoutes from "./businessClientRoutes";
+import collaboratorRoutes from "./collaboratorRoutes";
 
 const routes = Router();
 
@@ -37,5 +38,6 @@ routes.use(reportRoutes);
 routes.use(ecosystemRoutes);
 routes.use(documentRoutes);
 routes.use(businessClientRoutes);
+routes.use(collaboratorRoutes);
 
 export default routes;

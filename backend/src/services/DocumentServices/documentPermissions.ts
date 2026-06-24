@@ -40,6 +40,7 @@ export const buildDocumentWhere = async (
   const accessWhere = {
     [Op.or]: [
       { uploadedById: Number(user.id) },
+      { queueId: null, ticketId: null },
       ...(queueIds.length ? [{ queueId: { [Op.in]: queueIds } }] : [])
     ]
   };
@@ -53,6 +54,7 @@ export const ensureDocumentAccess = async (
 ): Promise<void> => {
   if (user.profile === "admin") return;
   if (document.uploadedById === Number(user.id)) return;
+  if (!document.queueId && !document.ticketId) return;
 
   const queueIds = await getUserQueueIds(user.id);
   if (document.queueId && queueIds.includes(Number(document.queueId))) return;

@@ -14,6 +14,10 @@ const DeleteDocumentService = async ({
   userId,
   userProfile
 }: Request): Promise<void> => {
+  if (userProfile !== "admin" && userProfile !== "supervisor") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
   const document = await ShowDocumentService({
     documentId,
     userId,

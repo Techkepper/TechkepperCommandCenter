@@ -81,6 +81,12 @@ class SmartDocument extends Model<SmartDocument> {
   category: string | null;
 
   @Column({
+    type: DataType.STRING(80),
+    allowNull: true
+  })
+  purpose: string | null;
+
+  @Column({
     type: DataType.TEXT,
     allowNull: true
   })

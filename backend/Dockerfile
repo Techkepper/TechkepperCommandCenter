@@ -2,6 +2,8 @@ FROM node:20-bookworm as build-deps
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+      fonts-liberation \
+      libreoffice-writer \
       wget \
     && rm -rf /var/lib/apt/lists/*
 

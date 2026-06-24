@@ -251,3 +251,77 @@ Validacion manual:
 SHOW TABLES LIKE 'BusinessClientDocuments';
 DESCRIBE `BusinessClientDocuments`;
 ```
+
+## 8. Clasificacion de documentos y plantillas por uso
+
+Este ajuste permite organizar documentos y machotes por proposito, tipo de
+documento y ecosistema. Es aditivo y conserva los registros existentes.
+
+```sql
+ALTER TABLE `SmartDocuments`
+  ADD COLUMN IF NOT EXISTS `purpose` VARCHAR(80) NULL AFTER `category`;
+
+ALTER TABLE `SmartDocumentTemplates`
+  ADD COLUMN IF NOT EXISTS `documentType` VARCHAR(120) NULL AFTER `category`,
+  ADD COLUMN IF NOT EXISTS `purpose` VARCHAR(80) NULL AFTER `documentType`,
+  ADD COLUMN IF NOT EXISTS `requiresClient` TINYINT(1) NOT NULL DEFAULT 0
+    AFTER `purpose`,
+  ADD COLUMN IF NOT EXISTS `allowGenericRecipient` TINYINT(1) NOT NULL DEFAULT 0
+    AFTER `requiresClient`;
+
+UPDATE `SmartDocuments`
+SET `purpose` = 'other'
+WHERE `purpose` IS NULL OR `purpose` = '';
+
+UPDATE `SmartDocumentTemplates`
+SET
+  `purpose` = COALESCE(NULLIF(`purpose`, ''), 'other'),
+  `documentType` = COALESCE(NULLIF(`documentType`, ''), 'other');
+
+CREATE INDEX IF NOT EXISTS `idx_smart_documents_purpose`
+  ON `SmartDocuments` (`purpose`);
+
+CREATE INDEX IF NOT EXISTS `idx_smart_document_templates_purpose`
+  ON `SmartDocumentTemplates` (`purpose`);
+
+CREATE INDEX IF NOT EXISTS `idx_smart_document_templates_document_type`
+  ON `SmartDocumentTemplates` (`documentType`);
+```
+
+Validacion manual:
+
+```sql
+SHOW COLUMNS FROM `SmartDocuments` LIKE 'purpose';
+SHOW COLUMNS FROM `SmartDocumentTemplates`
+  WHERE `Field` IN (
+    'documentType',
+    'purpose',
+    'requiresClient',
+    'allowGenericRecipient'
+  );
+SHOW INDEX FROM `SmartDocuments`
+  WHERE `Key_name` = 'idx_smart_documents_purpose';
+SHOW INDEX FROM `SmartDocumentTemplates`
+  WHERE `Key_name` IN (
+    'idx_smart_document_templates_purpose',
+    'idx_smart_document_templates_document_type'
+  );
+```
+
+## 9. Cargo del representante legal
+
+Este campo permite autocompletar `CLIENTE_CARGO_REPRESENTANTE` al generar
+contratos y NDA desde un cliente jurídico.
+
+```sql
+ALTER TABLE `BusinessClients`
+  ADD COLUMN IF NOT EXISTS `legalRepresentativePosition` VARCHAR(255) NULL
+  AFTER `legalRepresentativeId`;
+```
+
+Validacion manual:
+
+```sql
+SHOW COLUMNS FROM `BusinessClients`
+  LIKE 'legalRepresentativePosition';
+```

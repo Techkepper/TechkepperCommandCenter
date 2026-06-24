@@ -143,6 +143,7 @@ const detailFields = [
   ["Nombre comercial", (client) => client.tradeName],
   ["Representante legal", (client) => client.legalRepresentativeName],
   ["Identificación representante", (client) => client.legalRepresentativeId],
+  ["Cargo del representante", (client) => client.legalRepresentativePosition],
   ["Correo", (client) => client.email],
   ["Teléfono", (client) => client.phone],
   ["Departamento", (client) => client.queue?.name || "Global"],

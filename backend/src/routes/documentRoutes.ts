@@ -50,12 +50,14 @@ documentRoutes.put(
 documentRoutes.get(
   "/document-templates",
   isAuth,
+  requireRole("admin", "supervisor"),
   DocumentTemplateController.index
 );
 
 documentRoutes.post(
   "/document-templates",
   isAuth,
+  requireRole("admin"),
   upload.single("file"),
   DocumentTemplateController.store
 );
@@ -63,18 +65,28 @@ documentRoutes.post(
 documentRoutes.get(
   "/document-templates/:templateId",
   isAuth,
+  requireRole("admin", "supervisor"),
   DocumentTemplateController.show
+);
+
+documentRoutes.delete(
+  "/document-templates/:templateId",
+  isAuth,
+  requireRole("admin"),
+  DocumentTemplateController.remove
 );
 
 documentRoutes.post(
   "/document-templates/:templateId/generate",
   isAuth,
+  requireRole("admin", "supervisor"),
   DocumentTemplateController.generate
 );
 
 documentRoutes.post(
   "/documents",
   isAuth,
+  requireRole("admin", "supervisor"),
   upload.single("file"),
   DocumentController.store
 );
@@ -90,6 +102,7 @@ documentRoutes.get(
 documentRoutes.delete(
   "/documents/:documentId",
   isAuth,
+  requireRole("admin", "supervisor"),
   DocumentController.remove
 );
 

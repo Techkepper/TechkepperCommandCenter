@@ -51,6 +51,32 @@ class SmartDocumentTemplate extends Model<SmartDocumentTemplate> {
   })
   category: string | null;
 
+  @Column({
+    type: DataType.STRING(120),
+    allowNull: true
+  })
+  documentType: string | null;
+
+  @Column({
+    type: DataType.STRING(80),
+    allowNull: true
+  })
+  purpose: string | null;
+
+  @Default(false)
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false
+  })
+  requiresClient: boolean;
+
+  @Default(false)
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false
+  })
+  allowGenericRecipient: boolean;
+
   @Default(true)
   @Column({
     type: DataType.BOOLEAN,

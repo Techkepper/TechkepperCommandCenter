@@ -1,13 +1,17 @@
 import AppError from "../../errors/AppError";
+import Ecosystem from "../../models/Ecosystem";
+import Queue from "../../models/Queue";
 import SmartDocument from "../../models/SmartDocument";
 import { saveDocumentBuffer } from "./documentStorage";
 import { ensureDocumentWriteAccess } from "./documentPermissions";
+import { isDocumentPurpose } from "./documentTaxonomy";
 
 interface Request {
   file?: Express.Multer.File;
   title?: string;
   description?: string;
   category?: string;
+  purpose?: string;
   tags?: string;
   contactId?: number | null;
   ticketId?: number | null;
@@ -17,11 +21,17 @@ interface Request {
   userProfile: string;
 }
 
-const normalizeOptionalNumber = (value?: number | null): number | null => {
-  if (value === undefined || value === null || Number.isNaN(Number(value))) {
+const normalizeOptionalNumber = (value?: unknown): number | null => {
+  if (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    Number.isNaN(Number(value))
+  ) {
     return null;
   }
-  return Number(value);
+  const normalized = Number(value);
+  return normalized > 0 ? normalized : null;
 };
 
 const CreateDocumentService = async ({
@@ -29,6 +39,7 @@ const CreateDocumentService = async ({
   title,
   description,
   category,
+  purpose,
   tags,
   contactId,
   ticketId,
@@ -37,12 +48,34 @@ const CreateDocumentService = async ({
   userId,
   userProfile
 }: Request): Promise<SmartDocument> => {
+  if (userProfile !== "admin" && userProfile !== "supervisor") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
   if (!file) {
     throw new AppError("ERR_DOCUMENT_FILE_REQUIRED", 400);
   }
 
+  const normalizedPurpose = isDocumentPurpose(purpose) ? purpose : "other";
   const normalizedQueueId = normalizeOptionalNumber(queueId);
   const normalizedTicketId = normalizeOptionalNumber(ticketId);
+  const normalizedEcosystemId = normalizeOptionalNumber(ecosystemId);
+  if (normalizedQueueId) {
+    const queue = await Queue.findByPk(normalizedQueueId, {
+      attributes: ["id"]
+    });
+    if (!queue) {
+      throw new AppError("El departamento seleccionado no existe.", 400);
+    }
+  }
+  if (normalizedEcosystemId) {
+    const ecosystem = await Ecosystem.findByPk(normalizedEcosystemId, {
+      attributes: ["id"]
+    });
+    if (!ecosystem) {
+      throw new AppError("El ecosistema seleccionado no existe.", 400);
+    }
+  }
 
   await ensureDocumentWriteAccess(
     { queueId: normalizedQueueId, ticketId: normalizedTicketId },
@@ -64,12 +97,13 @@ const CreateDocumentService = async ({
     mimeType: file.mimetype,
     size: file.size,
     category: category?.trim() || null,
+    purpose: normalizedPurpose,
     tags: tags?.trim() || null,
     uploadedById: Number(userId),
     contactId: normalizeOptionalNumber(contactId),
     ticketId: normalizedTicketId,
     queueId: normalizedQueueId,
-    ecosystemId: normalizeOptionalNumber(ecosystemId)
+    ecosystemId: normalizedEcosystemId
   };
 
   const document = await SmartDocument.create(

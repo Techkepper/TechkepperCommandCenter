@@ -5,6 +5,7 @@ export const ROUTES = {
   connections: "/connections",
   contacts: "/contacts",
   businessClients: "/business-clients",
+  collaborators: "/collaborators",
   smartDocuments: "/smart-documents",
   users: "/users",
   quickAnswers: "/quick-answers",

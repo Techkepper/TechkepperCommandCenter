@@ -9,6 +9,7 @@ export interface BusinessClientData {
   identificationNumber: string;
   legalRepresentativeName?: string | null;
   legalRepresentativeId?: string | null;
+  legalRepresentativePosition?: string | null;
   email?: string | null;
   phone?: string | null;
   address?: string | null;

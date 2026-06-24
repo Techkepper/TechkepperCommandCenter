@@ -46,6 +46,7 @@ const emptyClient = {
   identificationNumber: "",
   legalRepresentativeName: "",
   legalRepresentativeId: "",
+  legalRepresentativePosition: "",
   email: "",
   phone: "",
   address: "",
@@ -312,7 +313,7 @@ const BusinessClientModal = ({
                         Representación legal
                       </Typography>
                       <Grid container spacing={2}>
-                        <Grid item xs={12} sm={7}>
+                        <Grid item xs={12} sm={5}>
                           <Field
                             as={TextField}
                             name="legalRepresentativeName"
@@ -322,11 +323,21 @@ const BusinessClientModal = ({
                             fullWidth
                           />
                         </Grid>
-                        <Grid item xs={12} sm={5}>
+                        <Grid item xs={12} sm={4}>
                           <Field
                             as={TextField}
                             name="legalRepresentativeId"
                             label="Identificación del representante"
+                            variant="outlined"
+                            margin="dense"
+                            fullWidth
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <Field
+                            as={TextField}
+                            name="legalRepresentativePosition"
+                            label="Cargo del representante"
                             variant="outlined"
                             margin="dense"
                             fullWidth

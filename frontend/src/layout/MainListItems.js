@@ -19,6 +19,7 @@ import QuestionAnswerOutlinedIcon from "@material-ui/icons/QuestionAnswerOutline
 import AssessmentOutlinedIcon from "@material-ui/icons/AssessmentOutlined";
 import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 import BusinessCenterOutlinedIcon from "@material-ui/icons/BusinessCenterOutlined";
+import WorkOutlineOutlinedIcon from "@material-ui/icons/WorkOutlineOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -107,6 +108,12 @@ const MainListItems = ({ drawerClose }) => {
         to={ROUTES.businessClients}
         primary="Clientes"
         icon={<BusinessCenterOutlinedIcon />}
+        onNavigate={drawerClose}
+      />
+      <ListItemLink
+        to={ROUTES.collaborators}
+        primary="Colaboradores"
+        icon={<WorkOutlineOutlinedIcon />}
         onNavigate={drawerClose}
       />
       <ListItemLink

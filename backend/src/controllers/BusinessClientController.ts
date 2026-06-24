@@ -26,6 +26,7 @@ const businessClientSchema = Yup.object().shape({
   identificationNumber: Yup.string().trim().max(80).required(),
   legalRepresentativeName: Yup.string().trim().max(255).nullable(),
   legalRepresentativeId: Yup.string().trim().max(80).nullable(),
+  legalRepresentativePosition: Yup.string().trim().max(255).nullable(),
   email: Yup.string().trim().email().max(255).nullable(),
   phone: Yup.string().trim().max(80).nullable(),
   address: Yup.string().trim().max(500).nullable(),

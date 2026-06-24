@@ -31,6 +31,7 @@ export const normalizeBusinessClientData = (
   ),
   legalRepresentativeName: nullableText(data.legalRepresentativeName),
   legalRepresentativeId: nullableText(data.legalRepresentativeId),
+  legalRepresentativePosition: nullableText(data.legalRepresentativePosition),
   email: nullableText(data.email)?.toLowerCase() || null,
   phone: nullableText(data.phone),
   address: nullableText(data.address),
