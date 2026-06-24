@@ -10,7 +10,8 @@ import {
   AutoIncrement,
   ForeignKey,
   BelongsTo,
-  DataType
+  DataType,
+  HasMany
 } from "sequelize-typescript";
 
 import User from "./User";
@@ -18,6 +19,7 @@ import Contact from "./Contact";
 import Ticket from "./Ticket";
 import Queue from "./Queue";
 import Ecosystem from "./Ecosystem";
+import SmartDocumentEvent from "./SmartDocumentEvent";
 
 @Table({
   tableName: "SmartDocuments",
@@ -87,6 +89,13 @@ class SmartDocument extends Model<SmartDocument> {
   purpose: string | null;
 
   @Column({
+    type: DataType.STRING(50),
+    allowNull: false,
+    defaultValue: "generated"
+  })
+  status: string;
+
+  @Column({
     type: DataType.TEXT,
     allowNull: true
   })
@@ -141,6 +150,9 @@ class SmartDocument extends Model<SmartDocument> {
 
   @BelongsTo(() => Ecosystem)
   ecosystem: Ecosystem | null;
+
+  @HasMany(() => SmartDocumentEvent)
+  events: SmartDocumentEvent[];
 
   @CreatedAt
   @Column({

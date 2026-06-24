@@ -94,6 +94,19 @@ documentRoutes.post(
 documentRoutes.get("/documents/:documentId", isAuth, DocumentController.show);
 
 documentRoutes.get(
+  "/documents/:documentId/events",
+  isAuth,
+  DocumentController.events
+);
+
+documentRoutes.patch(
+  "/documents/:documentId/status",
+  isAuth,
+  requireRole("admin", "supervisor"),
+  DocumentController.updateStatus
+);
+
+documentRoutes.get(
   "/documents/:documentId/download",
   isAuth,
   DocumentController.download

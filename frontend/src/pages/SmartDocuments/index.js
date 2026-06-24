@@ -29,8 +29,10 @@ import {
 import CloudUploadOutlinedIcon from "@material-ui/icons/CloudUploadOutlined";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import GetAppOutlinedIcon from "@material-ui/icons/GetAppOutlined";
+import HistoryOutlinedIcon from "@material-ui/icons/HistoryOutlined";
 import PlayArrowOutlinedIcon from "@material-ui/icons/PlayArrowOutlined";
 import SearchIcon from "@material-ui/icons/Search";
+import SwapHorizOutlinedIcon from "@material-ui/icons/SwapHorizOutlined";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 
@@ -159,6 +161,40 @@ const getErrorCode = (err) =>
   err.response?.data?.error || err.response?.data?.message;
 
 const getActiveVersion = (template) => template.versions?.[0] || null;
+
+const documentStatusOptions = [
+  { value: "draft", label: "Borrador", color: "#8C9AA8" },
+  { value: "generated", label: "Generado", color: "#63B246" },
+  { value: "in_review", label: "En revisión", color: "#D9A441" },
+  { value: "sent", label: "Enviado", color: "#4E9FD1" },
+  { value: "approved", label: "Aprobado", color: "#45A66B" },
+  { value: "rejected", label: "Rechazado", color: "#D0605D" },
+  { value: "archived", label: "Archivado", color: "#707B86" },
+  {
+    value: "pending_signature",
+    label: "Pendiente de firma",
+    color: "#9B75D1",
+  },
+];
+
+const documentEventLabels = {
+  created: "Creado",
+  generated: "Generado",
+  uploaded: "Subido",
+  downloaded_docx: "DOCX descargado",
+  downloaded_pdf: "PDF descargado",
+  status_changed: "Estado actualizado",
+  associated_client: "Cliente asociado",
+  associated_collaborator: "Colaborador asociado",
+  deleted: "Eliminado",
+  restored: "Restaurado",
+  archived: "Archivado",
+  comment_added: "Comentario agregado",
+};
+
+const getDocumentStatus = (status) =>
+  documentStatusOptions.find((option) => option.value === status) ||
+  documentStatusOptions.find((option) => option.value === "generated");
 
 const knownVisualDocumentTypes = [
   "web_contract",
@@ -672,6 +708,7 @@ const SmartDocuments = () => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [documentPurposeFilter, setDocumentPurposeFilter] = useState("");
+  const [documentStatusFilter, setDocumentStatusFilter] = useState("");
   const [uploadPurpose, setUploadPurpose] = useState("other");
   const [file, setFile] = useState(null);
   const [templateName, setTemplateName] = useState("");
@@ -711,6 +748,12 @@ const SmartDocuments = () => {
   const [collaborators, setCollaborators] = useState([]);
   const [selectedBusinessClientId, setSelectedBusinessClientId] = useState("");
   const [associationInstalled, setAssociationInstalled] = useState(true);
+  const [statusDocument, setStatusDocument] = useState(null);
+  const [nextDocumentStatus, setNextDocumentStatus] = useState("");
+  const [statusComment, setStatusComment] = useState("");
+  const [historyDocument, setHistoryDocument] = useState(null);
+  const [documentEvents, setDocumentEvents] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const generationBusinessClient = businessClients.find(
     (client) => client.id === Number(generationBusinessClientId)
   );
@@ -758,7 +801,7 @@ const SmartDocuments = () => {
   useEffect(() => {
     setDocuments([]);
     setPageNumber(1);
-  }, [searchParam, documentPurposeFilter]);
+  }, [searchParam, documentPurposeFilter, documentStatusFilter]);
 
   useEffect(() => {
     setTemplates([]);
@@ -778,6 +821,7 @@ const SmartDocuments = () => {
             searchParam,
             pageNumber,
             purpose: documentPurposeFilter || undefined,
+            status: documentStatusFilter || undefined,
           },
         });
         if (!mounted) return;
@@ -828,7 +872,13 @@ const SmartDocuments = () => {
       mounted = false;
       clearTimeout(delay);
     };
-  }, [activeTab, searchParam, pageNumber, documentPurposeFilter]);
+  }, [
+    activeTab,
+    searchParam,
+    pageNumber,
+    documentPurposeFilter,
+    documentStatusFilter,
+  ]);
 
   useEffect(() => {
     if (activeTab !== 1) return undefined;
@@ -1048,6 +1098,47 @@ const SmartDocuments = () => {
     } finally {
       setDeletingTemplate(null);
       setTemplateConfirmOpen(false);
+    }
+  };
+
+  const openStatusDialog = (document) => {
+    setStatusDocument(document);
+    setNextDocumentStatus(document.status || "generated");
+    setStatusComment("");
+  };
+
+  const handleStatusChange = async () => {
+    try {
+      const { data } = await api.patch(
+        `/documents/${statusDocument.id}/status`,
+        { status: nextDocumentStatus, comment: statusComment }
+      );
+      setDocuments((current) =>
+        current.map((document) =>
+          document.id === data.id
+            ? { ...document, status: data.status }
+            : document
+        )
+      );
+      setStatusDocument(null);
+      toast.success("Estado documental actualizado correctamente.");
+    } catch (error) {
+      toastError(error);
+    }
+  };
+
+  const openDocumentHistory = async (document) => {
+    setHistoryDocument(document);
+    setDocumentEvents([]);
+    setHistoryLoading(true);
+    try {
+      const { data } = await api.get(`/documents/${document.id}/events`);
+      setDocumentEvents(data.events || []);
+    } catch (error) {
+      toastError(error);
+      setHistoryDocument(null);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -1276,6 +1367,110 @@ const SmartDocuments = () => {
         Esta acción quitará el documento del módulo y eliminará el archivo
         almacenado.
       </ConfirmationModal>
+
+      <Dialog
+        open={Boolean(statusDocument)}
+        onClose={() => setStatusDocument(null)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Cambiar estado documental</DialogTitle>
+        <DialogContent>
+          <FormControl variant="outlined" margin="dense" fullWidth>
+            <InputLabel>Nuevo estado</InputLabel>
+            <Select
+              value={nextDocumentStatus}
+              onChange={(event) => setNextDocumentStatus(event.target.value)}
+              label="Nuevo estado"
+            >
+              {documentStatusOptions
+                .filter(
+                  (option) =>
+                    user.profile === "admin" ||
+                    option.value !== "pending_signature"
+                )
+                .map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Comentario opcional"
+            variant="outlined"
+            margin="dense"
+            fullWidth
+            multiline
+            rows={3}
+            value={statusComment}
+            onChange={(event) => setStatusComment(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStatusDocument(null)}>Cancelar</Button>
+          <Button
+            color="primary"
+            variant="contained"
+            disabled={
+              !nextDocumentStatus ||
+              nextDocumentStatus === (statusDocument?.status || "generated")
+            }
+            onClick={handleStatusChange}
+          >
+            Guardar estado
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(historyDocument)}
+        onClose={() => setHistoryDocument(null)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          Historial · {historyDocument?.title || "Documento"}
+        </DialogTitle>
+        <DialogContent dividers>
+          {historyLoading && (
+            <Typography color="textSecondary">Cargando historial...</Typography>
+          )}
+          {!historyLoading && documentEvents.length === 0 && (
+            <Typography color="textSecondary">
+              Este documento todavía no tiene eventos registrados.
+            </Typography>
+          )}
+          {documentEvents.map((event) => (
+            <div className={classes.generationSection} key={event.id}>
+              <Typography variant="subtitle2">
+                {documentEventLabels[event.eventType] || event.eventType}
+              </Typography>
+              <Typography variant="caption" color="textSecondary">
+                {new Date(event.createdAt).toLocaleString()} ·{" "}
+                {event.user?.name || "Sistema"}
+              </Typography>
+              {(event.previousStatus || event.newStatus) && (
+                <Typography variant="body2">
+                  {event.previousStatus
+                    ? getDocumentStatus(event.previousStatus).label
+                    : "Sin estado previo"}
+                  {" → "}
+                  {event.newStatus
+                    ? getDocumentStatus(event.newStatus).label
+                    : "Sin cambio de estado"}
+                </Typography>
+              )}
+              {event.comment && (
+                <Typography variant="body2">{event.comment}</Typography>
+              )}
+            </div>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHistoryDocument(null)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(downloadingDocument)}
@@ -1837,6 +2032,25 @@ const SmartDocuments = () => {
               ),
             }}
           />
+          {activeTab === 0 && (
+            <FormControl variant="outlined" size="small">
+              <InputLabel>Estado</InputLabel>
+              <Select
+                value={documentStatusFilter}
+                onChange={(event) =>
+                  setDocumentStatusFilter(event.target.value)
+                }
+                label="Estado"
+              >
+                <MenuItem value="">Todos los estados</MenuItem>
+                {documentStatusOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
           {canCreateDocuments && (
             <Button
               color="primary"
@@ -1989,6 +2203,7 @@ const SmartDocuments = () => {
                   <TableCell>Documento</TableCell>
                   <TableCell>Categoría</TableCell>
                   <TableCell>Uso</TableCell>
+                  <TableCell>Estado</TableCell>
                   <TableCell>Cliente</TableCell>
                   <TableCell>Subido por</TableCell>
                   <TableCell>Tamaño</TableCell>
@@ -2016,6 +2231,17 @@ const SmartDocuments = () => {
                     </TableCell>
                     <TableCell>{purposeLabel(document.purpose)}</TableCell>
                     <TableCell>
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={getDocumentStatus(document.status).label}
+                        style={{
+                          color: getDocumentStatus(document.status).color,
+                          borderColor: getDocumentStatus(document.status).color,
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
                       {document.businessClient?.displayName || "Sin asociar"}
                     </TableCell>
                     <TableCell>{document.uploadedBy?.name || "-"}</TableCell>
@@ -2024,6 +2250,22 @@ const SmartDocuments = () => {
                       {new Date(document.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        title="Ver historial"
+                        onClick={() => openDocumentHistory(document)}
+                      >
+                        <HistoryOutlinedIcon />
+                      </IconButton>
+                      {canCreateDocuments && (
+                        <IconButton
+                          size="small"
+                          title="Cambiar estado"
+                          onClick={() => openStatusDialog(document)}
+                        >
+                          <SwapHorizOutlinedIcon />
+                        </IconButton>
+                      )}
                       {(canCreateDocuments ||
                         [
                           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -2055,7 +2297,7 @@ const SmartDocuments = () => {
                 ))}
                 {!loading && documents.length === 0 && (
                   <TableRow>
-                      <TableCell colSpan={8}>
+                      <TableCell colSpan={9}>
                       <div className={classes.emptyState}>
                         <Typography color="textSecondary">
                           No hay documentos para mostrar.
@@ -2064,7 +2306,7 @@ const SmartDocuments = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {loading && <TableRowSkeleton columns={8} />}
+                {loading && <TableRowSkeleton columns={9} />}
               </TableBody>
             </Table>
           </Paper>

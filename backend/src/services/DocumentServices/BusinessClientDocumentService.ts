@@ -12,6 +12,10 @@ import {
   ensureDocumentAccess,
   ensureDocumentWriteAccess
 } from "./documentPermissions";
+import {
+  normalizeDocumentStatus,
+  recordDocumentEvent
+} from "./DocumentLifecycleService";
 
 interface Actor {
   id: string;
@@ -151,6 +155,13 @@ export const setDocumentBusinessClient = async ({
           attributes: ["id", "displayName", "type", "isActive"]
         }
       ]
+    });
+    await recordDocumentEvent({
+      documentId,
+      userId: actor.id,
+      eventType: "associated_client",
+      newStatus: normalizeDocumentStatus(document.status),
+      metadata: { businessClientId }
     });
     return { installed: true, link };
   } catch (err) {

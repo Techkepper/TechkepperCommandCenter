@@ -2,6 +2,10 @@ import SmartDocument from "../../models/SmartDocument";
 import AppError from "../../errors/AppError";
 import { removeDocumentFile } from "./documentStorage";
 import ShowDocumentService from "./ShowDocumentService";
+import {
+  normalizeDocumentStatus,
+  recordDocumentEvent
+} from "./DocumentLifecycleService";
 
 interface Request {
   documentId: string | number;
@@ -28,6 +32,13 @@ const DeleteDocumentService = async ({
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
+  await recordDocumentEvent({
+    documentId: document.id,
+    userId,
+    eventType: "deleted",
+    previousStatus: normalizeDocumentStatus(document.status),
+    metadata: { title: document.title }
+  });
   await removeDocumentFile(document.storagePath);
   await SmartDocument.destroy({ where: { id: document.id } });
 };

@@ -6,6 +6,7 @@ import { removeDocumentFile, saveDocumentBuffer } from "./documentStorage";
 import { ensureDocumentWriteAccess } from "./documentPermissions";
 import { isDocumentPurpose } from "./documentTaxonomy";
 import { normalizeOptionalDocumentId } from "./documentIds";
+import { recordDocumentEvent } from "./DocumentLifecycleService";
 
 interface Request {
   file?: Express.Multer.File;
@@ -107,15 +108,28 @@ const CreateDocumentService = async ({
     ecosystemId: normalizedEcosystemId
   };
 
+  let document: SmartDocument | null = null;
+
   try {
-    const document = await SmartDocument.create(
+    document = await SmartDocument.create(
       documentData as unknown as SmartDocument
     );
 
-    return document.reload({
+    const reloadedDocument = await document.reload({
       include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
     });
+    await recordDocumentEvent({
+      documentId: reloadedDocument.id,
+      userId,
+      eventType: "uploaded",
+      newStatus: "generated",
+      metadata: { originalName: reloadedDocument.originalName }
+    });
+    return reloadedDocument;
   } catch (err) {
+    if (document) {
+      await document.destroy({ force: true });
+    }
     await removeDocumentFile(storagePath);
     throw err;
   }

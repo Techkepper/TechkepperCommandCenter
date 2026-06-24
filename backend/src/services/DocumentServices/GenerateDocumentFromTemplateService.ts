@@ -20,6 +20,7 @@ import { parseJsonList } from "./templateSerialization";
 import { setDocumentBusinessClient } from "./BusinessClientDocumentService";
 import { setDocumentCollaborator } from "./CollaboratorDocumentService";
 import { normalizeOptionalDocumentId } from "./documentIds";
+import { recordDocumentEvent } from "./DocumentLifecycleService";
 import {
   getDocumentRecipientKind,
   getRequiredVariablesByDocumentType,
@@ -300,6 +301,7 @@ const GenerateDocumentFromTemplateService = async ({
       size: outputBuffer.length,
       category: template.category,
       purpose: template.purpose,
+      status: "generated",
       tags: `plantilla:${template.id};version:${activeVersion.version}`,
       uploadedById: Number(userId),
       contactId: null,
@@ -326,6 +328,16 @@ const GenerateDocumentFromTemplateService = async ({
         userId
       });
     }
+    await recordDocumentEvent({
+      documentId: reloadedDocument.id,
+      userId,
+      eventType: "generated",
+      newStatus: "generated",
+      metadata: {
+        templateId: template.id,
+        templateVersionId: activeVersion.id
+      }
+    });
 
     return reloadedDocument;
   } catch (err) {

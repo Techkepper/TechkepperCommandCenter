@@ -19,6 +19,7 @@ import BusinessClient from "../models/BusinessClient";
 import BusinessClientDocument from "../models/BusinessClientDocument";
 import Collaborator from "../models/Collaborator";
 import CollaboratorDocument from "../models/CollaboratorDocument";
+import SmartDocumentEvent from "../models/SmartDocumentEvent";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -46,7 +47,8 @@ const models = [
   BusinessClient,
   BusinessClientDocument,
   Collaborator,
-  CollaboratorDocument
+  CollaboratorDocument,
+  SmartDocumentEvent
 ];
 
 sequelize.addModels(models);

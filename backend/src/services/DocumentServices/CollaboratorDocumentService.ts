@@ -1,4 +1,5 @@
 import CollaboratorDocument from "../../models/CollaboratorDocument";
+import { recordDocumentEvent } from "./DocumentLifecycleService";
 
 export const setDocumentCollaborator = async ({
   documentId,
@@ -14,4 +15,10 @@ export const setDocumentCollaborator = async ({
     collaboratorId,
     linkedById: Number(userId)
   } as unknown as CollaboratorDocument);
+  await recordDocumentEvent({
+    documentId,
+    userId,
+    eventType: "associated_collaborator",
+    metadata: { collaboratorId }
+  });
 };

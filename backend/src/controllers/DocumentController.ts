@@ -8,11 +8,18 @@ import ShowDocumentService from "../services/DocumentServices/ShowDocumentServic
 import DeleteDocumentService from "../services/DocumentServices/DeleteDocumentService";
 import { resolveDocumentPath } from "../services/DocumentServices/documentStorage";
 import ConvertDocumentToPdfService from "../services/DocumentServices/ConvertDocumentToPdfService";
+import {
+  listDocumentEvents,
+  normalizeDocumentStatus,
+  recordDocumentEvent,
+  updateDocumentStatus
+} from "../services/DocumentServices/DocumentLifecycleService";
 
 type IndexQuery = {
   searchParam?: string;
   pageNumber?: string;
   purpose?: string;
+  status?: string;
 };
 
 const rethrowDocumentDbError = (err: Error): never => {
@@ -33,13 +40,14 @@ const sanitizeDownloadName = (name: string): string =>
   path.basename(name).replace(/[^\w.\- ()]/g, "_");
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber, purpose } = req.query as IndexQuery;
+  const { searchParam, pageNumber, purpose, status } = req.query as IndexQuery;
 
   try {
     const result = await ListDocumentsService({
       searchParam,
       pageNumber,
       purpose,
+      status,
       userId: req.user.id,
       userProfile: req.user.profile
     });
@@ -127,6 +135,12 @@ export const download = async (
 
       res.type("application/pdf");
       res.attachment(sanitizeDownloadName(pdfName));
+      await recordDocumentEvent({
+        documentId: document.id,
+        userId: req.user.id,
+        eventType: "downloaded_pdf",
+        newStatus: normalizeDocumentStatus(document.status)
+      });
       return res.send(pdf);
     }
 
@@ -148,7 +162,47 @@ export const download = async (
       );
     }
 
+    await recordDocumentEvent({
+      documentId: document.id,
+      userId: req.user.id,
+      eventType: "downloaded_docx",
+      newStatus: normalizeDocumentStatus(document.status)
+    });
     return res.download(filePath, sanitizeDownloadName(document.originalName));
+  } catch (err) {
+    return rethrowDocumentDbError(err);
+  }
+};
+
+export const events = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    const history = await listDocumentEvents({
+      documentId: req.params.documentId,
+      userId: req.user.id,
+      userProfile: req.user.profile
+    });
+    return res.json({ events: history });
+  } catch (err) {
+    return rethrowDocumentDbError(err);
+  }
+};
+
+export const updateStatus = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    const document = await updateDocumentStatus({
+      documentId: req.params.documentId,
+      newStatus: req.body.status,
+      comment: req.body.comment,
+      userId: req.user.id,
+      userProfile: req.user.profile
+    });
+    return res.json(document);
   } catch (err) {
     return rethrowDocumentDbError(err);
   }
