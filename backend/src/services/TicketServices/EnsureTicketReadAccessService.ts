@@ -8,6 +8,7 @@ import ShowUserService from "../UserServices/ShowUserService";
 interface TicketReadAccess {
   actor: User;
   readOnly: boolean;
+  canReply: boolean;
 }
 
 const EnsureTicketReadAccessService = async (
@@ -17,23 +18,28 @@ const EnsureTicketReadAccessService = async (
 ): Promise<TicketReadAccess> => {
   const actor = await ShowUserService(actorId);
 
-  if (actorProfile === "admin") {
-    return { actor, readOnly: false };
-  }
-
   const queueIds = actor.queues?.map(queue => queue.id) || [];
   const queueAllowed = !ticket.queueId || queueIds.includes(ticket.queueId);
+  const isAssigned = Number(ticket.userId) === Number(actor.id);
+  const canReply = ticket.status === "open" && isAssigned;
 
-  if (actorProfile === "supervisor" && queueAllowed) {
-    return { actor, readOnly: false };
+  if (actorProfile === "admin") {
+    return { actor, readOnly: false, canReply };
   }
 
-  const isAssigned = Number(ticket.userId) === Number(actor.id);
+  if (actorProfile === "supervisor" && queueAllowed) {
+    return { actor, readOnly: false, canReply };
+  }
+
   const isAvailable =
     ticket.status === "pending" && !ticket.userId && queueAllowed;
 
-  if (isAssigned || isAvailable) {
-    return { actor, readOnly: false };
+  if (isAssigned) {
+    return { actor, readOnly: false, canReply };
+  }
+
+  if (isAvailable) {
+    return { actor, readOnly: false, canReply: false };
   }
 
   if (ticket.status === "closed" && queueAllowed) {
@@ -46,7 +52,7 @@ const EnsureTicketReadAccessService = async (
     });
 
     if (historicalAssignment) {
-      return { actor, readOnly: true };
+      return { actor, readOnly: true, canReply: false };
     }
   }
 

@@ -20,6 +20,7 @@ import Brightness4Icon from "@material-ui/icons/Brightness4";
 
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
+import DocumentNotificationListener from "../components/DocumentNotificationListener";
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
@@ -189,6 +190,7 @@ const LoggedInLayout = ({ children }) => {
 
   return (
     <div className={classes.root}>
+      {user.id && <DocumentNotificationListener />}
       <Drawer
         variant={drawerVariant}
         className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}

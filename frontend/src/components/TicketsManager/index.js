@@ -5,7 +5,6 @@ import SearchIcon from "@material-ui/icons/Search";
 import InputBase from "@material-ui/core/InputBase";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
-import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
@@ -17,7 +16,7 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
-import { Button } from "@material-ui/core";
+import { Button, FormControl, MenuItem, Select } from "@material-ui/core";
 import api from "../../services/api";
 
 const useStyles = makeStyles((theme) => ({
@@ -47,18 +46,94 @@ const useStyles = makeStyles((theme) => ({
   },
   ticketOptionsBox: {
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: theme.spacing(1.25),
     background: theme.palette.background.paper,
-    padding: theme.spacing(1),
+    padding: theme.spacing(1, 1.25),
+    overflow: "visible",
+    [theme.breakpoints.down("sm")]: {
+      alignItems: "stretch",
+      gap: theme.spacing(1),
+    },
+  },
+  primaryActions: {
+    display: "flex",
+    alignItems: "center",
+    flex: "0 0 auto",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    minWidth: 0,
+    [theme.breakpoints.down("xs")]: {
+      width: "100%",
+    },
+  },
+  newTicketButton: {
+    flexShrink: 0,
+    minWidth: 176,
+    whiteSpace: "nowrap",
+    [theme.breakpoints.down("xs")]: {
+      flex: "1 1 100%",
+      minWidth: 0,
+    },
+  },
+  showAllControl: {
+    flexShrink: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    whiteSpace: "nowrap",
+  },
+  filtersBox: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    flex: "1 1 320px",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    minWidth: 0,
+    marginLeft: "auto",
+    [theme.breakpoints.down("sm")]: {
+      justifyContent: "flex-start",
+      marginLeft: 0,
+      width: "100%",
+    },
+  },
+  queueSelectWrapper: {
+    flex: "1 1 190px",
+    minWidth: 190,
+    maxWidth: 260,
+    [theme.breakpoints.down("xs")]: {
+      maxWidth: "100%",
+    },
+  },
+  ecosystemSelect: {
+    flex: "1 1 190px",
+    minWidth: 190,
+    maxWidth: 260,
+    marginTop: 0,
+    [theme.breakpoints.down("xs")]: {
+      maxWidth: "100%",
+    },
+  },
+  filterSelect: {
+    width: "100%",
   },
   serachInputWrapper: {
-    flex: 1,
+    flex: "1 1 280px",
+    minWidth: 220,
+    maxWidth: 520,
     background: theme.palette.background.default,
     display: "flex",
+    alignItems: "center",
     borderRadius: 40,
+    border: `1px solid ${theme.palette.divider}`,
+    minHeight: 40,
     padding: 4,
-    marginRight: theme.spacing(1),
+    [theme.breakpoints.down("xs")]: {
+      flexBasis: "100%",
+      maxWidth: "100%",
+      minWidth: 0,
+    },
   },
   searchIcon: {
     color: "grey",
@@ -73,8 +148,29 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.primary, 
     backgroundColor: theme.palette.background.default,
   },
-  badge: {
-    right: "-10px",
+  tabLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: theme.spacing(0.75),
+  },
+  tabCount: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 20,
+    height: 20,
+    padding: "0 6px",
+    borderRadius: 10,
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    lineHeight: 1,
+    color: "#fff",
+  },
+  tabCountPrimary: {
+    backgroundColor: theme.palette.primary.main,
+  },
+  tabCountSecondary: {
+    backgroundColor: theme.palette.secondary.main,
   },
   show: {
     display: "block",
@@ -86,34 +182,65 @@ const useStyles = makeStyles((theme) => ({
 
 const TicketsManager = () => {
   const classes = useStyles();
+  const { user } = useContext(AuthContext);
+  const isAdmin = user?.profile?.toUpperCase() === "ADMIN";
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
   const [tabOpen, setTabOpen] = useState("open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
-  const [showAllTickets, setShowAllTickets] = useState(false);
+  const [showAllTickets, setShowAllTickets] = useState(Boolean(isAdmin));
   const searchInputRef = useRef();
   const searchTimeoutRef = useRef();
-  const { user } = useContext(AuthContext);
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
-  const userQueueIds = user.queues.map((q) => q.id);
-  const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
+  const [availableQueues, setAvailableQueues] = useState(user?.queues || []);
+  const [ecosystems, setEcosystems] = useState([]);
+  const [selectedQueueIds, setSelectedQueueIds] = useState([]);
+  const [selectedEcosystemId, setSelectedEcosystemId] = useState("");
 
   useEffect(() => {
-    if (user.profile.toUpperCase() === "ADMIN") {
-      setShowAllTickets(true);
-      api
-        .get("/queue")
-        .then(({ data }) => setSelectedQueueIds(data.map((queue) => queue.id)))
-        .catch(() => {});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let isMounted = true;
+
+    const loadFilters = async () => {
+      try {
+        const [{ data: queues }, { data: ecosystemOptions }] = await Promise.all([
+          api.get("/queue"),
+          api.get("/ecosystems"),
+        ]);
+
+        if (!isMounted) return;
+
+        setAvailableQueues(queues);
+        setEcosystems(ecosystemOptions);
+        setSelectedQueueIds(prev =>
+          prev.filter(queueId => queues.some(queue => queue.id === queueId))
+        );
+        setSelectedEcosystemId(prev =>
+          prev && ecosystemOptions.some(ecosystem => ecosystem.id === Number(prev))
+            ? prev
+            : ""
+        );
+      } catch (err) {
+        if (isMounted) {
+          setAvailableQueues(user?.queues || []);
+        }
+      }
+    };
+
+    loadFilters();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.queues]);
+
+  useEffect(() => {
+    setShowAllTickets(Boolean(isAdmin));
+  }, [isAdmin]);
 
   useEffect(() => {
     if (tab === "search") {
-      searchInputRef.current.focus();
-      setSearchParam("");
+      searchInputRef.current?.focus();
     }
   }, [tab]);
 
@@ -191,14 +318,16 @@ const TicketsManager = () => {
               inputRef={searchInputRef}
               placeholder={i18n.t("tickets.search.placeholder")}
               type="search"
+              defaultValue={searchParam}
               onChange={handleSearch}
             />
           </div>
         ) : (
-          <>
+          <div className={classes.primaryActions}>
             <Button
               variant="outlined"
               color="primary"
+              className={classes.newTicketButton}
               onClick={() => setNewTicketModalOpen(true)}
             >
               {i18n.t("ticketsManager.buttons.newTicket")}
@@ -208,6 +337,7 @@ const TicketsManager = () => {
               perform="tickets-manager:showall"
               yes={() => (
                 <FormControlLabel
+                  className={classes.showAllControl}
                   label={i18n.t("tickets.buttons.showAll")}
                   labelPlacement="start"
                   control={
@@ -224,14 +354,43 @@ const TicketsManager = () => {
                 />
               )}
             />
-          </>
+          </div>
         )}
-        <TicketsQueueSelect
-          style={{ marginLeft: 6 }}
-          selectedQueueIds={selectedQueueIds}
-          userQueues={user?.queues}
-          onChange={(values) => setSelectedQueueIds(values)}
-        />
+        <div className={classes.filtersBox}>
+          <TicketsQueueSelect
+            className={classes.queueSelectWrapper}
+            selectedQueueIds={selectedQueueIds}
+            queues={availableQueues}
+            userQueues={user?.queues}
+            onChange={(values) => setSelectedQueueIds(values)}
+          />
+          <FormControl
+            variant="outlined"
+            margin="dense"
+            className={classes.ecosystemSelect}
+          >
+            <Select
+              className={classes.filterSelect}
+              displayEmpty
+              value={selectedEcosystemId}
+              onChange={(event) => setSelectedEcosystemId(event.target.value)}
+              renderValue={(value) => {
+                if (!value) return i18n.t("tickets.ecosystemFilter.all");
+                const ecosystem = ecosystems.find(item => item.id === Number(value));
+                return ecosystem?.name || i18n.t("tickets.ecosystemFilter.placeholder");
+              }}
+            >
+              <MenuItem value="">
+                {i18n.t("tickets.ecosystemFilter.all")}
+              </MenuItem>
+              {ecosystems.map(ecosystem => (
+                <MenuItem key={ecosystem.id} value={ecosystem.id}>
+                  {ecosystem.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </div>
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
         <Tabs
@@ -243,25 +402,31 @@ const TicketsManager = () => {
         >
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={openCount}
-                color="primary"
-              >
+              <span className={classes.tabLabel}>
                 {i18n.t("ticketsList.assignedHeader")}
-              </Badge>
+                {openCount > 0 && (
+                  <span
+                    className={`${classes.tabCount} ${classes.tabCountPrimary}`}
+                  >
+                    {openCount}
+                  </span>
+                )}
+              </span>
             }
             value={"open"}
           />
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={pendingCount}
-                color="secondary"
-              >
+              <span className={classes.tabLabel}>
                 {i18n.t("ticketsList.pendingHeader")}
-              </Badge>
+                {pendingCount > 0 && (
+                  <span
+                    className={`${classes.tabCount} ${classes.tabCountSecondary}`}
+                  >
+                    {pendingCount}
+                  </span>
+                )}
+              </span>
             }
             value={"pending"}
           />
@@ -271,6 +436,7 @@ const TicketsManager = () => {
             status="open"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
+            ecosystemId={selectedEcosystemId}
             updateCount={(val) => setOpenCount(val)}
             style={applyPanelStyle("open")}
           />
@@ -278,6 +444,7 @@ const TicketsManager = () => {
             status="pending"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
+            ecosystemId={selectedEcosystemId}
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}
           />
@@ -288,6 +455,7 @@ const TicketsManager = () => {
           status="closed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          ecosystemId={selectedEcosystemId}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
@@ -295,6 +463,7 @@ const TicketsManager = () => {
           searchParam={searchParam}
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          ecosystemId={selectedEcosystemId}
         />
       </TabPanel>
     </Paper>

@@ -5,9 +5,20 @@ import DeleteQueueService from "../services/QueueService/DeleteQueueService";
 import ListQueuesService from "../services/QueueService/ListQueuesService";
 import ShowQueueService from "../services/QueueService/ShowQueueService";
 import UpdateQueueService from "../services/QueueService/UpdateQueueService";
+import ShowUserService from "../services/UserServices/ShowUserService";
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const queues = await ListQueuesService(req.user.profile === "admin");
+  if (req.user.profile === "admin") {
+    const queues = await ListQueuesService(true);
+    return res.status(200).json(queues);
+  }
+
+  const [activeQueues, actor] = await Promise.all([
+    ListQueuesService(false),
+    ShowUserService(req.user.id)
+  ]);
+  const actorQueueIds = actor.queues?.map(queue => queue.id) || [];
+  const queues = activeQueues.filter(queue => actorQueueIds.includes(queue.id));
 
   return res.status(200).json(queues);
 };

@@ -104,6 +104,38 @@ const requestBuffer = (
     request.end();
   });
 
+function mapGraphError(parsed: any, httpStatus: number): AppError {
+  const code = parsed?.error?.code;
+  const graphMessage = parsed?.error?.message || "";
+
+  logger.error(
+    {
+      statusCode: httpStatus,
+      graphErrorCode: code,
+      graphErrorType: parsed?.error?.type,
+      graphErrorMessage: graphMessage
+    },
+    "WhatsApp Cloud API request failed"
+  );
+
+  if (code === 133010) {
+    return new AppError("ERR_CLOUD_API_PHONE_NOT_REGISTERED", 502);
+  }
+  if (code === 190) {
+    return new AppError("ERR_CLOUD_API_TOKEN_INVALID", 502);
+  }
+  if (
+    code === 100 &&
+    /does not exist|missing permissions|Unsupported get request/i.test(
+      graphMessage
+    )
+  ) {
+    return new AppError("ERR_CLOUD_API_PHONE_NUMBER_ID_INVALID", 502);
+  }
+
+  return new AppError("ERR_CLOUD_API_REQUEST_FAILED", 502);
+}
+
 const graphRequest = async <T>(
   config: CloudApiConfig,
   path: string,
@@ -135,43 +167,21 @@ const graphRequest = async <T>(
   return parsed as T;
 };
 
-const mapGraphError = (parsed: any, httpStatus: number): AppError => {
-  const code = parsed?.error?.code;
-  const graphMessage = parsed?.error?.message || "";
-
-  logger.error(
-    {
-      statusCode: httpStatus,
-      graphErrorCode: code,
-      graphErrorType: parsed?.error?.type,
-      graphErrorMessage: graphMessage
-    },
-    "WhatsApp Cloud API request failed"
-  );
-
-  if (code === 133010) {
-    return new AppError("ERR_CLOUD_API_PHONE_NOT_REGISTERED", 502);
-  }
-  if (code === 190) {
-    return new AppError("ERR_CLOUD_API_TOKEN_INVALID", 502);
-  }
-  if (
-    code === 100 &&
-    /does not exist|missing permissions|Unsupported get request/i.test(
-      graphMessage
-    )
-  ) {
-    return new AppError("ERR_CLOUD_API_PHONE_NUMBER_ID_INVALID", 502);
-  }
-
-  return new AppError("ERR_CLOUD_API_REQUEST_FAILED", 502);
-};
-
 const normalizeRecipient = (value: string): string => {
   const normalized = value.split("@")[0].replace(/\D/g, "");
   if (!normalized) throw new AppError("ERR_INVALID_CONTACT_NUMBER", 400);
   return normalized;
 };
+
+const MIN_TYPING_API_VERSION = 22;
+
+const parseGraphApiVersion = (version: string): number => {
+  const match = version.match(/^v?(\d+)/i);
+  return match ? Number(match[1]) : 0;
+};
+
+const isWhatsappCloudMessageId = (messageId: string): boolean =>
+  messageId.startsWith("wamid.");
 
 const persistOutgoingMessage = async (
   sessionId: number,
@@ -292,7 +302,9 @@ const sendMessage = async (
     to: recipient,
     ack: 1
   };
-  await persistOutgoingMessage(sessionId, message);
+  if (!options?.skipPersist) {
+    await persistOutgoingMessage(sessionId, message);
+  }
   return message;
 };
 
@@ -320,11 +332,7 @@ const uploadMedia = async (
     Buffer.concat([prefix, data, suffix])
   );
   const parsed = JSON.parse(response.body.toString("utf8") || "{}");
-  if (
-    response.statusCode < 200 ||
-    response.statusCode >= 300 ||
-    !parsed.id
-  ) {
+  if (response.statusCode < 200 || response.statusCode >= 300 || !parsed.id) {
     throw new AppError("ERR_CLOUD_API_MEDIA_UPLOAD_FAILED", 502);
   }
   return parsed.id;
@@ -412,6 +420,62 @@ const checkNumber = async (
 const getProfilePicUrl = async (): Promise<string> => "";
 const getContacts = async (): Promise<ProviderContact[]> => [];
 const sendSeen = async (): Promise<void> => undefined;
+const sendTyping = async (
+  sessionId: number,
+  messageId: string,
+  to?: string
+): Promise<void> => {
+  const config = requireConfig(sessionId);
+  if (!isWhatsappCloudMessageId(messageId)) {
+    logger.warn(
+      { sessionId, messageId },
+      "Skipping WhatsApp typing indicator for invalid message id"
+    );
+    return;
+  }
+
+  if (parseGraphApiVersion(config.apiVersion) < MIN_TYPING_API_VERSION) {
+    logger.warn(
+      { sessionId, apiVersion: config.apiVersion },
+      "WhatsApp typing indicator requires Graph API v22.0 or newer"
+    );
+    return;
+  }
+
+  const payload: Record<string, unknown> = {
+    messaging_product: "whatsapp",
+    status: "read",
+    message_id: messageId,
+    typing_indicator: {
+      type: "text"
+    }
+  };
+
+  if (to) {
+    payload.recipient_type = "individual";
+    payload.to = normalizeRecipient(to);
+  }
+
+  const response = await graphRequest<{ success?: boolean }>(
+    config,
+    `${config.phoneNumberId}/messages`,
+    "POST",
+    payload
+  );
+
+  if (!response?.success) {
+    logger.warn(
+      { sessionId, messageId, to, response },
+      "WhatsApp typing indicator returned an unexpected response"
+    );
+    return;
+  }
+
+  logger.info(
+    { sessionId, messageId, to, phoneNumberId: config.phoneNumberId },
+    "WhatsApp typing indicator sent"
+  );
+};
 const fetchChatMessages = async (): Promise<ProviderMessage[]> => [];
 
 export const findCloudApiWhatsappByPhoneNumberId = async (
@@ -431,9 +495,7 @@ export const findCloudApiWhatsappByPhoneNumberId = async (
   const globalPhoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID || "";
   if (phoneNumberId && phoneNumberId === globalPhoneNumberId) {
     return (
-      whatsapps.find(whatsapp => whatsapp.isDefault) ||
-      whatsapps[0] ||
-      null
+      whatsapps.find(whatsapp => whatsapp.isDefault) || whatsapps[0] || null
     );
   }
 
@@ -456,7 +518,10 @@ export const downloadCloudApiMedia = async (
     mime_type: string;
   }>(config, mediaId);
   const mediaUrl = new URL(metadata.url);
-  if (mediaUrl.protocol !== "https:" || !isAllowedMediaHost(mediaUrl.hostname)) {
+  if (
+    mediaUrl.protocol !== "https:" ||
+    !isAllowedMediaHost(mediaUrl.hostname)
+  ) {
     throw new AppError("ERR_CLOUD_API_INVALID_MEDIA_URL", 502);
   }
 
@@ -484,5 +549,6 @@ export const CloudApiProvider: WhatsappProvider = {
   getProfilePicUrl,
   getContacts,
   sendSeen,
+  sendTyping,
   fetchChatMessages
 };

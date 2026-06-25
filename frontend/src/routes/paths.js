@@ -4,6 +4,10 @@ export const ROUTES = {
   tickets: "/tickets",
   connections: "/connections",
   contacts: "/contacts",
+  businessClients: "/business-clients",
+  collaborators: "/collaborators",
+  smartDocuments: "/smart-documents",
+  commercialProposals: "/commercial-proposals",
   users: "/users",
   quickAnswers: "/quick-answers",
   settings: "/settings",
@@ -12,6 +16,4 @@ export const ROUTES = {
 };
 
 export const getHomePath = (profile) =>
-  profile === "agent" || profile === "user"
-    ? ROUTES.tickets
-    : ROUTES.dashboard;
+  profile === "agent" || profile === "user" ? ROUTES.tickets : ROUTES.dashboard;

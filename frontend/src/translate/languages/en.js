@@ -220,6 +220,8 @@ const messages = {
       },
       ticketsQueueSelect: {
         placeholder: "Queues",
+        all: "All",
+        selected: "{{count}} queues",
       },
       tickets: {
         toasts: {
@@ -238,6 +240,10 @@ const messages = {
         },
         buttons: {
           showAll: "All",
+        },
+        ecosystemFilter: {
+          all: "All ecosystems",
+          placeholder: "Ecosystem",
         },
       },
       transferTicketModal: {
@@ -261,6 +267,7 @@ const messages = {
         connectionTitle: "Connection that is currently being used.",
         buttons: {
           accept: "Accept",
+          assign: "Assign",
         },
       },
       newTicketModal: {
@@ -375,12 +382,15 @@ const messages = {
             resolve: "Resolve",
             reopen: "Reopen",
             accept: "Accept",
+            assign: "Assign",
           },
         },
       },
       messagesInput: {
         placeholderOpen: "Type a message or press ''/'' to use the registered quick responses",
         placeholderClosed: "Reopen or accept this ticket to send a message.",
+        placeholderObserver:
+          "Observer mode: assign the conversation before replying.",
         signMessage: "Sign",
       },
       contactDrawer: {
@@ -455,6 +465,8 @@ const messages = {
         ERR_USER_CREATION_DISABLED:
           "User creation was disabled by administrator.",
         ERR_NO_PERMISSION: "You don't have permission to access this resource.",
+        ERR_TICKET_ALREADY_ASSIGNED:
+          "This conversation has already been assigned to another owner.",
         ERR_DUPLICATED_CONTACT: "A contact with this number already exists.",
         ERR_NO_SETTING_FOUND: "No setting found with this ID.",
         ERR_NO_CONTACT_FOUND: "No contact found with this ID.",

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Box, Chip, Collapse, IconButton, Paper, Typography } from "@material-ui/core";
 import { ExpandLess, ExpandMore, HistoryOutlined } from "@material-ui/icons";
 import { makeStyles } from "@material-ui/core/styles";
+import clsx from "clsx";
 import api from "../../services/api";
 import openSocket from "../../services/socket-io";
 
@@ -10,15 +11,36 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 0,
     borderLeft: 0,
     borderRight: 0,
+    borderTop: 0,
+    borderBottom: `1px solid ${theme.palette.divider}`,
     padding: theme.spacing(0.75, 2),
-    background:
-      theme.palette.type === "dark"
-        ? "rgba(142,230,63,.05)"
-        : "rgba(95,175,58,.05)",
+    backgroundColor: theme.palette.background.default,
+    color: theme.palette.text.primary,
   },
   event: {
     padding: theme.spacing(1, 0),
     borderTop: `1px solid ${theme.palette.divider}`,
+  },
+  statusChip: {
+    height: 24,
+    fontWeight: 600,
+    color: theme.palette.text.secondary,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.05)"
+        : "rgba(0, 0, 0, 0.04)",
+    border: `1px solid ${theme.palette.divider}`,
+  },
+  statusChipSent: {
+    color: theme.palette.primary.main,
+    borderColor:
+      theme.palette.type === "dark"
+        ? "rgba(142, 230, 63, 0.28)"
+        : "rgba(95, 175, 58, 0.28)",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(142, 230, 63, 0.08)"
+        : "rgba(95, 175, 58, 0.08)",
   },
 }));
 
@@ -67,7 +89,7 @@ const AssignmentAudit = ({ ticketId }) => {
   return (
     <Paper variant="outlined" className={classes.root}>
       <Box display="flex" alignItems="center">
-        <HistoryOutlined fontSize="small" color="primary" />
+        <HistoryOutlined fontSize="small" color="action" />
         <Box ml={1} flex={1}>
           <Typography variant="caption">
             Última asignación: {actionText(events[0])}
@@ -75,8 +97,9 @@ const AssignmentAudit = ({ ticketId }) => {
         </Box>
         <Chip
           size="small"
-          variant="outlined"
-          color={events[0].autoMessageStatus === "sent" ? "primary" : "default"}
+          className={clsx(classes.statusChip, {
+            [classes.statusChipSent]: events[0].autoMessageStatus === "sent",
+          })}
           label={`Aviso: ${
             noticeStatus[events[0].autoMessageStatus] || "sin estado"
           }`}

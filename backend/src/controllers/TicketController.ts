@@ -4,9 +4,6 @@ import DeleteTicketService from "../services/TicketServices/DeleteTicketService"
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
-import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
-import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
-import formatBody from "../helpers/Mustache";
 import EnsureTicketAccessService from "../services/TicketServices/EnsureTicketAccessService";
 import AppError from "../errors/AppError";
 import TicketAssignmentEvent from "../models/TicketAssignmentEvent";
@@ -102,7 +99,8 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
 
   return res.status(200).json({
     ...contact.get({ plain: true }),
-    readOnly: access.readOnly
+    readOnly: access.readOnly,
+    canReply: access.canReply
   });
 };
 
@@ -152,21 +150,9 @@ export const update = async (
   const { ticket } = await UpdateTicketService({
     ticketData,
     ticketId,
-    performedByUserId: req.user.id
+    performedByUserId: req.user.id,
+    performedByProfile: req.user.profile
   });
-
-  if (ticket.status === "closed") {
-    const whatsapp = await ShowWhatsAppService(ticket.whatsappId);
-
-    const { farewellMessage } = whatsapp;
-
-    if (farewellMessage) {
-      await SendWhatsAppMessage({
-        body: formatBody(farewellMessage, ticket.contact),
-        ticket
-      });
-    }
-  }
 
   return res.status(200).json(ticket);
 };

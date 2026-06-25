@@ -83,13 +83,19 @@ const ListTicketsService = async ({
     andConditions.push({ queueId: { [Op.in]: queueIds } });
   }
 
-  if (showAll !== "true" && userProfile !== "admin" && userProfile !== "supervisor") {
+  if (
+    showAll !== "true" &&
+    userProfile !== "admin" &&
+    userProfile !== "supervisor"
+  ) {
     andConditions.push({
-      [Op.or]: [{ userId: Number(userId) }, { status: "pending" }]
+      [Op.or]: [{ userId: Number(userId) }, { status: "pending", userId: null }]
     });
   }
 
-  if (status) {
+  if (status === "pending") {
+    andConditions.push({ status: "pending", userId: null });
+  } else if (status) {
     andConditions.push({ status });
   }
   if (agentId) {
@@ -145,10 +151,7 @@ const ListTicketsService = async ({
       required: false,
       duplicating: false,
       where: {
-        [Op.or]: [
-          { oldUserId: Number(userId) },
-          { newUserId: Number(userId) }
-        ]
+        [Op.or]: [{ oldUserId: Number(userId) }, { newUserId: Number(userId) }]
       }
     });
   }

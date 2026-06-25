@@ -222,6 +222,8 @@ const messages = {
       },
       ticketsQueueSelect: {
         placeholder: "Filas",
+        all: "Todas",
+        selected: "{{count}} filas",
       },
       tickets: {
         toasts: {
@@ -240,6 +242,10 @@ const messages = {
         },
         buttons: {
           showAll: "Todos",
+        },
+        ecosystemFilter: {
+          all: "Todos os ecossistemas",
+          placeholder: "Ecossistema",
         },
       },
       transferTicketModal: {
@@ -264,6 +270,7 @@ const messages = {
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         buttons: {
           accept: "Aceitar",
+          assign: "Atribuir",
         },
       },
       newTicketModal: {
@@ -379,6 +386,7 @@ const messages = {
             resolve: "Resolver",
             reopen: "Reabrir",
             accept: "Aceitar",
+            assign: "Atribuir",
           },
         },
       },
@@ -386,6 +394,8 @@ const messages = {
         placeholderOpen: "Digite uma mensagem ou tecle ''/'' para utilizar as respostas rápidas cadastrada",
         placeholderClosed:
           "Reabra ou aceite esse ticket para enviar uma mensagem.",
+        placeholderObserver:
+          "Modo observador: atribua a conversa antes de responder.",
         signMessage: "Assinar",
       },
       contactDrawer: {
@@ -460,6 +470,8 @@ const messages = {
           "A criação do usuário foi desabilitada pelo administrador.",
         ERR_NO_PERMISSION: "Você não tem permissão para acessar este recurso.",
         ERR_DUPLICATED_CONTACT: "Já existe um contato com este número.",
+        ERR_TICKET_ALREADY_ASSIGNED:
+          "Esta conversa já foi atribuída a outro responsável.",
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",
         ERR_NO_TICKET_FOUND: "Nenhum tíquete encontrado com este ID.",

@@ -3,14 +3,17 @@ import { Request, Response } from "express";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
 import Message from "../models/Message";
+import { logger } from "../utils/logger";
 
 import ListMessagesService from "../services/MessageServices/ListMessagesService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
+import SendWhatsAppTypingService from "../services/WbotServices/SendWhatsAppTypingService";
 import EnsureTicketAccessService from "../services/TicketServices/EnsureTicketAccessService";
 import EnsureTicketReadAccessService from "../services/TicketServices/EnsureTicketReadAccessService";
+import AppError from "../errors/AppError";
 
 type IndexQuery = {
   pageNumber: string;
@@ -37,14 +40,18 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     req.user.profile
   );
 
-  if (!access.readOnly) {
-    SetTicketMessagesAsRead(ticket);
+  if (access.canReply) {
+    await SetTicketMessagesAsRead(ticket);
   }
 
   return res.json({
     count,
     messages,
-    ticket: { ...ticket.get({ plain: true }), readOnly: access.readOnly },
+    ticket: {
+      ...ticket.get({ plain: true }),
+      readOnly: access.readOnly,
+      canReply: access.canReply
+    },
     hasMore
   });
 };
@@ -55,9 +62,16 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const medias = req.files as Express.Multer.File[];
 
   const ticket = await ShowTicketService(ticketId);
-  await EnsureTicketAccessService(ticket, req.user.id, req.user.profile);
+  const access = await EnsureTicketReadAccessService(
+    ticket,
+    req.user.id,
+    req.user.profile
+  );
+  if (!access.canReply) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
 
-  SetTicketMessagesAsRead(ticket);
+  await SetTicketMessagesAsRead(ticket);
 
   if (medias) {
     await Promise.all(
@@ -70,6 +84,40 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   return res.send();
+};
+
+export const typing = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { ticketId } = req.params;
+
+  const ticket = await ShowTicketService(ticketId);
+  const access = await EnsureTicketReadAccessService(
+    ticket,
+    req.user.id,
+    req.user.profile
+  );
+
+  if (!access.canReply) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  try {
+    await SendWhatsAppTypingService(ticket);
+  } catch (err) {
+    logger.warn(
+      {
+        err,
+        ticketId,
+        whatsappId: ticket.whatsappId,
+        messageId: ticket.lastCustomerMessageId
+      },
+      "Failed to send WhatsApp typing indicator"
+    );
+  }
+
+  return res.sendStatus(204);
 };
 
 export const remove = async (

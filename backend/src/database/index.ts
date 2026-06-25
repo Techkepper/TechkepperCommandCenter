@@ -12,6 +12,19 @@ import UserQueue from "../models/UserQueue";
 import QuickAnswer from "../models/QuickAnswer";
 import Ecosystem from "../models/Ecosystem";
 import TicketAssignmentEvent from "../models/TicketAssignmentEvent";
+import SmartDocument from "../models/SmartDocument";
+import SmartDocumentTemplate from "../models/SmartDocumentTemplate";
+import SmartDocumentTemplateVersion from "../models/SmartDocumentTemplateVersion";
+import BusinessClient from "../models/BusinessClient";
+import BusinessClientDocument from "../models/BusinessClientDocument";
+import Collaborator from "../models/Collaborator";
+import CollaboratorDocument from "../models/CollaboratorDocument";
+import SmartDocumentEvent from "../models/SmartDocumentEvent";
+import InternalNotification from "../models/InternalNotification";
+import CommercialProposal from "../models/CommercialProposal";
+import CommercialProposalItem from "../models/CommercialProposalItem";
+import CommercialProposalPaymentMilestone from "../models/CommercialProposalPaymentMilestone";
+import CommercialProposalEvent from "../models/CommercialProposalEvent";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -32,7 +45,20 @@ const models = [
   UserQueue,
   QuickAnswer,
   Ecosystem,
-  TicketAssignmentEvent
+  TicketAssignmentEvent,
+  SmartDocument,
+  SmartDocumentTemplate,
+  SmartDocumentTemplateVersion,
+  BusinessClient,
+  BusinessClientDocument,
+  Collaborator,
+  CollaboratorDocument,
+  SmartDocumentEvent,
+  InternalNotification,
+  CommercialProposal,
+  CommercialProposalItem,
+  CommercialProposalPaymentMilestone,
+  CommercialProposalEvent
 ];
 
 sequelize.addModels(models);

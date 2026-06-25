@@ -152,25 +152,35 @@ const reducer = (state, action) => {
 	}
 };
 
-	const TicketsList = (props) => {
-		const { status, searchParam, showAll, selectedQueueIds, updateCount, style } =
-			props;
+const ticketMatchesStatus = (ticket, status) => {
+	if (!status) return true;
+	if (status === "pending") {
+		return ticket.status === "pending" && !ticket.userId;
+	}
+	return ticket.status === status;
+};
+
+const TicketsList = (props) => {
+	const { status, searchParam, showAll, selectedQueueIds, ecosystemId, updateCount, style } =
+		props;
 	const classes = useStyles();
 	const [pageNumber, setPageNumber] = useState(1);
 	const [ticketsList, dispatch] = useReducer(reducer, []);
 	const { user } = useContext(AuthContext);
+	const queueFilterKey = JSON.stringify([...(selectedQueueIds || [])].sort());
 
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [status, searchParam, dispatch, showAll, selectedQueueIds]);
+	}, [status, searchParam, showAll, queueFilterKey, ecosystemId]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
 		searchParam,
 		status,
 		showAll,
-		queueIds: JSON.stringify(selectedQueueIds),
+		queueIds: queueFilterKey,
+		ecosystemId,
 	});
 
 	useEffect(() => {
@@ -179,28 +189,44 @@ const reducer = (state, action) => {
 			type: "LOAD_TICKETS",
 			payload: tickets,
 		});
-	}, [tickets]);
+	}, [tickets, status, searchParam]);
 
 	useEffect(() => {
 		const socket = openSocket();
 		const isAdmin = user?.profile === "admin";
+		const isSupervisor = user?.profile === "supervisor";
+		const selectedQueues = selectedQueueIds || [];
 
 		const hasQueueAccess = ticket =>
+			selectedQueues.length === 0 ||
 			!ticket.queueId ||
-			selectedQueueIds.indexOf(ticket.queueId) > -1 ||
+			selectedQueues.indexOf(ticket.queueId) > -1 ||
 			showAll ||
 			isAdmin;
 
-		const shouldUpdateTicket = ticket =>
+		const hasEcosystemAccess = ticket =>
+			!ecosystemId || Number(ticket.ecosystemId) === Number(ecosystemId);
+
+		const hasAssignmentAccess = ticket =>
+			isAdmin ||
+			isSupervisor ||
+			showAll ||
+			!ticket.userId ||
+			Number(ticket.userId) === Number(user?.id);
+
+		const shouldDisplayTicket = ticket =>
 			!searchParam &&
-			(!ticket.userId || ticket.userId === user?.id || showAll || isAdmin) &&
-			hasQueueAccess(ticket);
+			ticketMatchesStatus(ticket, status) &&
+			hasAssignmentAccess(ticket) &&
+			hasQueueAccess(ticket) &&
+			hasEcosystemAccess(ticket);
 
 		const notBelongsToUserQueues = ticket =>
 			!isAdmin &&
 			!showAll &&
 			ticket.queueId &&
-			selectedQueueIds.indexOf(ticket.queueId) === -1;
+			selectedQueues.length > 0 &&
+			selectedQueues.indexOf(ticket.queueId) === -1;
 
 		socket.on("connect", () => {
 			if (status) {
@@ -218,11 +244,15 @@ const reducer = (state, action) => {
 				});
 			}
 
-			if (data.action === "update" && shouldUpdateTicket(data.ticket)) {
-				dispatch({
-					type: "UPDATE_TICKET",
-					payload: data.ticket,
-				});
+			if (data.action === "update") {
+				if (shouldDisplayTicket(data.ticket)) {
+					dispatch({
+						type: "UPDATE_TICKET",
+						payload: data.ticket,
+					});
+				} else {
+					dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+				}
 			}
 
 			if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
@@ -235,11 +265,13 @@ const reducer = (state, action) => {
 		});
 
 		socket.on("appMessage", data => {
-			if (data.action === "create" && shouldUpdateTicket(data.ticket)) {
+			if (data.action === "create" && shouldDisplayTicket(data.ticket)) {
 				dispatch({
 					type: "UPDATE_TICKET_UNREAD_MESSAGES",
 					payload: data.ticket,
 				});
+			} else if (data.action === "create") {
+				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
 			}
 		});
 
@@ -255,7 +287,7 @@ const reducer = (state, action) => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [status, searchParam, showAll, user, selectedQueueIds]);
+	}, [status, searchParam, showAll, user, queueFilterKey, ecosystemId, selectedQueueIds]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

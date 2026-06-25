@@ -30,6 +30,7 @@ import ClickAwayListener from "@material-ui/core/ClickAwayListener";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
+import { logClientError } from "../../services/clientLogger";
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -235,7 +236,7 @@ const useStyles = makeStyles(theme => ({
   },
 }));
 
-const MessageInput = ({ ticketStatus }) => {
+const MessageInput = ({ ticketStatus, canReply = true }) => {
   const classes = useStyles();
   const { ticketId } = useParams();
 
@@ -247,18 +248,23 @@ const MessageInput = ({ ticketStatus }) => {
   const [quickAnswers, setQuickAnswer] = useState([]);
   const [typeBar, setTypeBar] = useState(false);
   const inputRef = useRef();
+  const lastTypingAtRef = useRef(0);
+  const TYPING_THROTTLE_MS = 20000;
+  const typingRequestRef = useRef(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
+  const canSendMessage = ticketStatus === "open" && canReply;
 
   useEffect(() => {
     inputRef.current.focus();
   }, [replyingMessage]);
 
   useEffect(() => {
+    lastTypingAtRef.current = 0;
     inputRef.current.focus();
     return () => {
       setInputMessage("");
@@ -268,9 +274,56 @@ const MessageInput = ({ ticketStatus }) => {
     };
   }, [ticketId, setReplyingMessage]);
 
+  const notifyTyping = ({ requireInput = false, value = "" } = {}) => {
+    if (!canSendMessage) return;
+    if (requireInput && !value.trim()) return;
+
+    const now = Date.now();
+    if (now - lastTypingAtRef.current < TYPING_THROTTLE_MS) return;
+
+    lastTypingAtRef.current = now;
+
+    if (typingRequestRef.current) {
+      typingRequestRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    typingRequestRef.current = controller;
+
+    api
+      .post(`/messages/${ticketId}/typing`, null, {
+        signal: controller.signal,
+      })
+      .catch(error => {
+        if (error?.code === "ERR_CANCELED") return;
+
+        logClientError({
+          message: "Failed to notify WhatsApp typing indicator",
+          error,
+          status: error?.response?.status,
+          method: "POST",
+          requestUrl: `/messages/${ticketId}/typing`,
+          responseError:
+            error?.response?.data?.error || error?.response?.data?.message,
+          level: "warn",
+        });
+      })
+      .finally(() => {
+        if (typingRequestRef.current === controller) {
+          typingRequestRef.current = null;
+        }
+      });
+  };
+
   const handleChangeInput = e => {
-    setInputMessage(e.target.value);
-    handleLoadQuickAnswer(e.target.value);
+    const value = e.target.value;
+    setInputMessage(value);
+    handleLoadQuickAnswer(value);
+    notifyTyping({ requireInput: true, value });
+  };
+
+  const handleFocusInput = () => {
+    notifyTyping();
   };
 
   const handleQuickAnswersClick = value => {
@@ -451,7 +504,7 @@ const MessageInput = ({ ticketStatus }) => {
         <IconButton
           aria-label="showRecorder"
           component="span"
-          disabled={loading || ticketStatus !== "open"}
+          disabled={loading || !canSendMessage}
           onClick={() => setReplyingMessage(null)}
         >
           <ClearIcon className={classes.sendMessageIcons} />
@@ -500,7 +553,7 @@ const MessageInput = ({ ticketStatus }) => {
             <IconButton
               aria-label="emojiPicker"
               component="span"
-              disabled={loading || recording || ticketStatus !== "open"}
+              disabled={loading || recording || !canSendMessage}
               onClick={() => setShowEmoji(prevState => !prevState)}
             >
               <MoodIcon className={classes.sendMessageIcons} />
@@ -522,7 +575,7 @@ const MessageInput = ({ ticketStatus }) => {
               multiple
               type="file"
               id="upload-button"
-              disabled={loading || recording || ticketStatus !== "open"}
+              disabled={loading || recording || !canSendMessage}
               className={classes.uploadInput}
               onChange={handleChangeMedias}
             />
@@ -530,7 +583,7 @@ const MessageInput = ({ ticketStatus }) => {
               <IconButton
                 aria-label="upload"
                 component="span"
-                disabled={loading || recording || ticketStatus !== "open"}
+                disabled={loading || recording || !canSendMessage}
               >
                 <AttachFileIcon className={classes.sendMessageIcons} />
               </IconButton>
@@ -571,7 +624,7 @@ const MessageInput = ({ ticketStatus }) => {
                 <IconButton
                   aria-label="emojiPicker"
                   component="span"
-                  disabled={loading || recording || ticketStatus !== "open"}
+                  disabled={loading || recording || !canSendMessage}
                   onClick={() => setShowEmoji(prevState => !prevState)}
                 >
                   <MoodIcon className={classes.sendMessageIcons} />
@@ -582,7 +635,7 @@ const MessageInput = ({ ticketStatus }) => {
                   multiple
                   type="file"
                   id="upload-button"
-                  disabled={loading || recording || ticketStatus !== "open"}
+                  disabled={loading || recording || !canSendMessage}
                   className={classes.uploadInput}
                   onChange={handleChangeMedias}
                 />
@@ -590,7 +643,7 @@ const MessageInput = ({ ticketStatus }) => {
                   <IconButton
                     aria-label="upload"
                     component="span"
-                    disabled={loading || recording || ticketStatus !== "open"}
+                    disabled={loading || recording || !canSendMessage}
                   >
                     <AttachFileIcon className={classes.sendMessageIcons} />
                   </IconButton>
@@ -624,17 +677,20 @@ const MessageInput = ({ ticketStatus }) => {
               }}
               className={classes.messageInput}
               placeholder={
-                ticketStatus === "open"
+                canSendMessage
                   ? i18n.t("messagesInput.placeholderOpen")
+                  : ticketStatus === "open"
+                  ? i18n.t("messagesInput.placeholderObserver")
                   : i18n.t("messagesInput.placeholderClosed")
               }
               multiline
               maxRows={5}
               value={inputMessage}
               onChange={handleChangeInput}
-              disabled={recording || loading || ticketStatus !== "open"}
+              onFocus={handleFocusInput}
+              disabled={recording || loading || !canSendMessage}
               onPaste={e => {
-                ticketStatus === "open" && handleInputPaste(e);
+                canSendMessage && handleInputPaste(e);
               }}
               onKeyPress={e => {
                 if (loading || e.shiftKey) return;
@@ -706,7 +762,7 @@ const MessageInput = ({ ticketStatus }) => {
             <IconButton
               aria-label="showRecorder"
               component="span"
-              disabled={loading || ticketStatus !== "open"}
+              disabled={loading || !canSendMessage}
               onClick={handleStartRecording}
             >
               <MicIcon className={classes.sendMessageIcons} />

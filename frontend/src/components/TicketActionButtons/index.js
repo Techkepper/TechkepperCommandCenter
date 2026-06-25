@@ -11,15 +11,21 @@ import TicketOptionsMenu from "../TicketOptionsMenu";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import TransferTicketModal from "../TransferTicketModal";
 
 const useStyles = makeStyles(theme => ({
 	actionButtons: {
-		marginRight: 6,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "flex-end",
+		flexWrap: "wrap",
+		gap: theme.spacing(0.75),
+		marginRight: theme.spacing(1),
+		marginLeft: "auto",
 		flex: "none",
 		alignSelf: "center",
-		marginLeft: "auto",
 		"& > *": {
-			margin: theme.spacing(1),
+			margin: 0,
 		},
 	},
 }));
@@ -28,19 +34,21 @@ const TicketActionButtons = ({ ticket }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
+	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const ticketOptionsMenuOpen = Boolean(anchorEl);
 	const { user } = useContext(AuthContext);
+	const isManager = user?.profile === "admin" || user?.profile === "supervisor";
 
 	const handleOpenTicketOptionsMenu = e => {
 		setAnchorEl(e.currentTarget);
 	};
 
-	const handleCloseTicketOptionsMenu = e => {
+	const handleCloseTicketOptionsMenu = () => {
 		setAnchorEl(null);
 	};
 
-	const handleUpdateTicketStatus = async (e, status, userId) => {
+	const handleUpdateTicketStatus = async (status, userId) => {
 		setLoading(true);
 		try {
 			await api.put(`/tickets/${ticket.id}`, {
@@ -67,7 +75,9 @@ const TicketActionButtons = ({ ticket }) => {
 					loading={loading}
 					startIcon={<Replay />}
 					size="small"
-					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+					variant="outlined"
+					color="primary"
+					onClick={() => handleUpdateTicketStatus("open", user?.id)}
 				>
 					{i18n.t("messagesList.header.buttons.reopen")}
 				</ButtonWithSpinner>
@@ -78,7 +88,9 @@ const TicketActionButtons = ({ ticket }) => {
 						loading={loading}
 						startIcon={<Replay />}
 						size="small"
-						onClick={e => handleUpdateTicketStatus(e, "pending", null)}
+						variant="outlined"
+						color="primary"
+						onClick={() => handleUpdateTicketStatus("pending", null)}
 					>
 						{i18n.t("messagesList.header.buttons.return")}
 					</ButtonWithSpinner>
@@ -87,7 +99,7 @@ const TicketActionButtons = ({ ticket }) => {
 						size="small"
 						variant="contained"
 						color="primary"
-						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+						onClick={() => handleUpdateTicketStatus("closed", user?.id)}
 					>
 						{i18n.t("messagesList.header.buttons.resolve")}
 					</ButtonWithSpinner>
@@ -102,13 +114,33 @@ const TicketActionButtons = ({ ticket }) => {
 					/>
 				</>
 			)}
-			{ticket.status === "pending" && (
+			{ticket.status === "pending" && isManager && (
+				<>
+					<ButtonWithSpinner
+						loading={loading}
+						size="small"
+						variant="contained"
+						color="primary"
+						onClick={() => setTransferTicketModalOpen(true)}
+					>
+						{i18n.t("messagesList.header.buttons.assign")}
+					</ButtonWithSpinner>
+					<TransferTicketModal
+						modalOpen={transferTicketModalOpen}
+						onClose={() => setTransferTicketModalOpen(false)}
+						ticketid={ticket.id}
+						ticketWhatsappId={ticket.whatsappId}
+						ticketEcosystemId={ticket.ecosystemId}
+					/>
+				</>
+			)}
+			{ticket.status === "pending" && !isManager && (
 				<ButtonWithSpinner
 					loading={loading}
 					size="small"
 					variant="contained"
 					color="primary"
-					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+					onClick={() => handleUpdateTicketStatus("open", user?.id)}
 				>
 					{i18n.t("messagesList.header.buttons.accept")}
 				</ButtonWithSpinner>

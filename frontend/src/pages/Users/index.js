@@ -210,6 +210,8 @@ const Users = () => {
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
             type="search"
+            variant="outlined"
+            size="small"
             value={searchParam}
             onChange={handleSearch}
             InputProps={{
@@ -279,7 +281,7 @@ const Users = () => {
 
                     <IconButton
                       size="small"
-                      onClick={(e) => {
+                      onClick={() => {
                         setConfirmModalOpen(true);
                         setDeletingUser(user);
                       }}
