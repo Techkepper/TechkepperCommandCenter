@@ -14,6 +14,7 @@ import {
   recordDocumentEvent,
   updateDocumentStatus
 } from "../services/DocumentServices/DocumentLifecycleService";
+import { listEligibleDocumentNotificationUsers } from "../services/DocumentServices/InternalDocumentNotificationService";
 
 type IndexQuery = {
   searchParam?: string;
@@ -199,10 +200,42 @@ export const updateStatus = async (
       documentId: req.params.documentId,
       newStatus: req.body.status,
       comment: req.body.comment,
+      notificationUserIds: req.body.notificationUserIds,
       userId: req.user.id,
       userProfile: req.user.profile
     });
     return res.json(document);
+  } catch (err) {
+    return rethrowDocumentDbError(err);
+  }
+};
+
+export const notificationRecipients = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    const document = await ShowDocumentService({
+      documentId: req.params.documentId,
+      userId: req.user.id,
+      userProfile: req.user.profile
+    });
+    const users = await listEligibleDocumentNotificationUsers({
+      document,
+      searchParam: String(req.query.searchParam || "")
+    });
+    return res.json({
+      users: users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        profile: user.profile,
+        queues: user.queues?.map(queue => ({
+          id: queue.id,
+          name: queue.name
+        }))
+      }))
+    });
   } catch (err) {
     return rethrowDocumentDbError(err);
   }

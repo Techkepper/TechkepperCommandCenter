@@ -107,6 +107,13 @@ documentRoutes.patch(
 );
 
 documentRoutes.get(
+  "/documents/:documentId/notification-recipients",
+  isAuth,
+  requireRole("admin", "supervisor"),
+  DocumentController.notificationRecipients
+);
+
+documentRoutes.get(
   "/documents/:documentId/download",
   isAuth,
   DocumentController.download

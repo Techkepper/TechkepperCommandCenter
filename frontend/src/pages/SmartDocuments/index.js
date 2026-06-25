@@ -14,6 +14,8 @@ import {
   makeStyles,
   MenuItem,
   Paper,
+  Radio,
+  RadioGroup,
   Select,
   Switch,
   Tab,
@@ -26,6 +28,7 @@ import {
   TextField,
   Typography,
 } from "@material-ui/core";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 import CloudUploadOutlinedIcon from "@material-ui/icons/CloudUploadOutlined";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import GetAppOutlinedIcon from "@material-ui/icons/GetAppOutlined";
@@ -118,6 +121,16 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexWrap: "wrap",
     gap: theme.spacing(0.5),
+  },
+  variableReview: {
+    minWidth: 230,
+  },
+  variableReviewPanel: {
+    marginTop: theme.spacing(1),
+    padding: theme.spacing(1),
+    borderRadius: 8,
+    border: "1px solid rgba(95, 175, 58, 0.24)",
+    background: "rgba(95, 175, 58, 0.04)",
   },
   generationSection: {
     marginTop: theme.spacing(2),
@@ -754,6 +767,13 @@ const SmartDocuments = () => {
   const [historyDocument, setHistoryDocument] = useState(null);
   const [documentEvents, setDocumentEvents] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [notificationMode, setNotificationMode] = useState("none");
+  const [notificationUsers, setNotificationUsers] = useState([]);
+  const [selectedNotificationUsers, setSelectedNotificationUsers] = useState([]);
+  const [notificationUsersLoading, setNotificationUsersLoading] =
+    useState(false);
+  const [expandedVariableTemplateId, setExpandedVariableTemplateId] =
+    useState(null);
   const generationBusinessClient = businessClients.find(
     (client) => client.id === Number(generationBusinessClientId)
   );
@@ -766,6 +786,23 @@ const SmartDocuments = () => {
   const selectedGenerationCollaborator = collaborators.find(
     (collaborator) => collaborator.id === Number(generationCollaboratorId)
   );
+
+  useEffect(() => {
+    const documentId = new URLSearchParams(history.location.search).get(
+      "documentId"
+    );
+    if (!documentId) return;
+    api
+      .get(`/documents/${documentId}`)
+      .then(({ data }) => {
+        setActiveTab(0);
+        setDocumentPurposeFilter("");
+        setDocumentStatusFilter("");
+        setSearchParam(data.title || data.originalName || "");
+        history.replace(history.location.pathname);
+      })
+      .catch(toastError);
+  }, [history, history.location.pathname, history.location.search]);
 
   useEffect(() => {
     api
@@ -1105,13 +1142,47 @@ const SmartDocuments = () => {
     setStatusDocument(document);
     setNextDocumentStatus(document.status || "generated");
     setStatusComment("");
+    setNotificationMode("none");
+    setNotificationUsers([]);
+    setSelectedNotificationUsers([]);
+  };
+
+  const enableInternalNotification = async () => {
+    setNotificationMode("users");
+    if (notificationUsers.length || !statusDocument) return;
+    setNotificationUsersLoading(true);
+    try {
+      const { data } = await api.get(
+        `/documents/${statusDocument.id}/notification-recipients`
+      );
+      setNotificationUsers(data.users || []);
+    } catch (error) {
+      setNotificationMode("none");
+      toastError(error);
+    } finally {
+      setNotificationUsersLoading(false);
+    }
   };
 
   const handleStatusChange = async () => {
+    if (
+      notificationMode === "users" &&
+      selectedNotificationUsers.length === 0
+    ) {
+      toast.warn("Seleccione al menos un usuario interno o elija no notificar.");
+      return;
+    }
     try {
       const { data } = await api.patch(
         `/documents/${statusDocument.id}/status`,
-        { status: nextDocumentStatus, comment: statusComment }
+        {
+          status: nextDocumentStatus,
+          comment: statusComment,
+          notificationUserIds:
+            notificationMode === "users"
+              ? selectedNotificationUsers.map((recipient) => recipient.id)
+              : [],
+        }
       );
       setDocuments((current) =>
         current.map((document) =>
@@ -1406,6 +1477,71 @@ const SmartDocuments = () => {
             value={statusComment}
             onChange={(event) => setStatusComment(event.target.value)}
           />
+          <div className={classes.generationSection}>
+            <Typography
+              className={classes.generationSectionTitle}
+              variant="subtitle2"
+            >
+              Notificación interna
+            </Typography>
+            <RadioGroup
+              value={notificationMode}
+              onChange={(event) => {
+                if (event.target.value === "users") {
+                  enableInternalNotification();
+                } else {
+                  setNotificationMode("none");
+                  setSelectedNotificationUsers([]);
+                }
+              }}
+            >
+              <FormControlLabel
+                value="none"
+                control={<Radio color="primary" />}
+                label="No notificar a nadie"
+              />
+              <FormControlLabel
+                value="users"
+                control={<Radio color="primary" />}
+                label="Notificar a usuarios internos"
+              />
+            </RadioGroup>
+            {notificationMode === "users" && (
+              <Autocomplete
+                multiple
+                options={notificationUsers}
+                value={selectedNotificationUsers}
+                loading={notificationUsersLoading}
+                getOptionLabel={(option) =>
+                  `${option.name} · ${option.email || option.profile}`
+                }
+                onChange={(_, value) => setSelectedNotificationUsers(value)}
+                renderOption={(option) => (
+                  <div>
+                    <Typography variant="body2">{option.name}</Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      {option.email} · {option.profile}
+                      {option.queues?.length
+                        ? ` · ${option.queues
+                            .map((queue) => queue.name)
+                            .join(", ")}`
+                        : " · Sin departamento"}
+                    </Typography>
+                  </div>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Usuarios destinatarios"
+                    placeholder="Buscar por nombre o correo"
+                    variant="outlined"
+                    margin="dense"
+                    helperText="Solo aparecen usuarios activos con permiso para ver este documento."
+                  />
+                )}
+              />
+            )}
+          </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setStatusDocument(null)}>Cancelar</Button>
@@ -2556,6 +2692,32 @@ const SmartDocuments = () => {
                 {templates.map((template) => {
                   const activeVersion = getActiveVersion(template);
                   const variables = activeVersion?.detectedVariables || [];
+                  const requiredVariables =
+                    activeVersion?.requiredVariables || [];
+                  const missingVariables =
+                    template.missingExpectedVariables || [];
+                  const completeVariables = Array.from(
+                    new Set([...requiredVariables, ...variables])
+                  );
+                  const expectedVariables = template.expectedVariables || [];
+                  const additionalVariables = variables.filter(
+                    (variable) =>
+                      !expectedVariables.includes(variable) &&
+                      !requiredVariables.includes(variable)
+                  );
+                  const variablesExpanded =
+                    expandedVariableTemplateId === template.id;
+                  const variableStatus = missingVariables.length
+                    ? `${missingVariables.length} faltante${
+                        missingVariables.length === 1 ? "" : "s"
+                      }`
+                    : `Completo${
+                        additionalVariables.length
+                          ? ` · ${additionalVariables.length} adicional${
+                              additionalVariables.length === 1 ? "" : "es"
+                            }`
+                          : ""
+                      }`;
                   return (
                     <TableRow key={template.id}>
                       <TableCell>
@@ -2591,15 +2753,53 @@ const SmartDocuments = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className={classes.variableList}>
-                          {variables.length ? (
-                            variables.map((variable) => (
-                              <Chip key={variable} size="small" label={variable} />
-                            ))
-                          ) : (
-                            <Typography variant="caption" color="textSecondary">
-                              Sin variables detectadas
-                            </Typography>
+                        <div className={classes.variableReview}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color={missingVariables.length ? "secondary" : "primary"}
+                            onClick={() =>
+                              setExpandedVariableTemplateId(
+                                variablesExpanded ? null : template.id
+                              )
+                            }
+                          >
+                            Revisar variables · {variableStatus}
+                          </Button>
+                          {variablesExpanded && (
+                            <div className={classes.variableReviewPanel}>
+                              {[
+                                ["Variables usadas", variables],
+                                ["Variables completas", completeVariables],
+                                ["Variables faltantes", missingVariables],
+                                ["Variables adicionales", additionalVariables],
+                              ].map(([label, items]) => (
+                                <div key={label}>
+                                  <Typography
+                                    variant="caption"
+                                    color="textSecondary"
+                                    display="block"
+                                  >
+                                    {label}
+                                  </Typography>
+                                  <div className={classes.variableList}>
+                                    {items.length ? (
+                                      items.map((variable) => (
+                                        <Chip
+                                          key={`${label}-${variable}`}
+                                          size="small"
+                                          label={variable}
+                                        />
+                                      ))
+                                    ) : (
+                                      <Typography variant="caption">
+                                        Ninguna
+                                      </Typography>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </TableCell>

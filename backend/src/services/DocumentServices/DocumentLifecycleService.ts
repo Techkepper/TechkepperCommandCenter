@@ -6,6 +6,11 @@ import SmartDocumentEvent from "../../models/SmartDocumentEvent";
 import User from "../../models/User";
 import sequelize from "../../database";
 import ShowDocumentService from "./ShowDocumentService";
+import {
+  createDocumentStatusNotifications,
+  emitInternalNotifications,
+  validateDocumentNotificationRecipients
+} from "./InternalDocumentNotificationService";
 
 export const documentStatuses = [
   "draft",
@@ -64,6 +69,17 @@ const transitions: Record<DocumentStatus, DocumentStatus[]> = {
   rejected: ["draft", "in_review", "archived"],
   archived: ["draft", "generated"],
   pending_signature: ["sent", "approved", "rejected", "archived"]
+};
+
+const statusLabels: Record<DocumentStatus, string> = {
+  draft: "Borrador",
+  generated: "Generado",
+  in_review: "En revisión",
+  sent: "Enviado",
+  approved: "Aprobado",
+  rejected: "Rechazado",
+  archived: "Archivado",
+  pending_signature: "Pendiente de firma"
 };
 
 export const isDocumentStatus = (value: unknown): value is DocumentStatus =>
@@ -131,12 +147,14 @@ export const updateDocumentStatus = async ({
   documentId,
   newStatus,
   comment,
+  notificationUserIds = [],
   userId,
   userProfile
 }: {
   documentId: string | number;
   newStatus: unknown;
   comment?: string;
+  notificationUserIds?: unknown;
   userId: string;
   userProfile: string;
 }): Promise<SmartDocument> => {
@@ -155,6 +173,20 @@ export const updateDocumentStatus = async ({
     userId,
     userProfile
   });
+  const recipientIds = Array.isArray(notificationUserIds)
+    ? notificationUserIds.map(Number)
+    : [];
+  if (recipientIds.length > 50) {
+    throw new AppError("Puede notificar como máximo a 50 usuarios.", 400);
+  }
+  const recipients = await validateDocumentNotificationRecipients({
+    document,
+    recipientIds
+  });
+  const actor = await User.findByPk(userId, {
+    attributes: ["id", "name", "email", "profile"]
+  });
+  if (!actor) throw new AppError("ERR_NO_USER_FOUND", 404);
   const previousStatus = normalizeDocumentStatus(document.status);
   if (previousStatus === newStatus) {
     throw new AppError("El documento ya tiene el estado seleccionado.", 400);
@@ -169,6 +201,7 @@ export const updateDocumentStatus = async ({
     );
   }
 
+  let notificationIds: number[] = [];
   await sequelize.transaction(async transaction => {
     await SmartDocument.update(
       { status: newStatus },
@@ -181,9 +214,23 @@ export const updateDocumentStatus = async ({
       previousStatus,
       newStatus,
       comment,
+      metadata: recipients.length
+        ? { notifiedUserIds: recipients.map(recipient => recipient.id) }
+        : null,
       transaction
     });
+    const notifications = await createDocumentStatusNotifications({
+      document,
+      recipients,
+      createdBy: actor,
+      status: newStatus,
+      statusLabel: statusLabels[newStatus],
+      comment,
+      transaction
+    });
+    notificationIds = notifications.map(notification => notification.id);
   });
 
+  await emitInternalNotifications(notificationIds);
   return ShowDocumentService({ documentId, userId, userProfile });
 };
