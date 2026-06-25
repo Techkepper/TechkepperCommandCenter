@@ -127,7 +127,11 @@ const documentTypeAliases: Record<string, string> = {
   freelance_contract: "freelance_sales_contract",
   sales_freelance_contract: "freelance_sales_contract",
   contrato_freelance: "freelance_sales_contract",
-  contrato_freelance_ventas: "freelance_sales_contract"
+  contrato_freelance_ventas: "freelance_sales_contract",
+  proposal: "commercial_proposal",
+  cotizacion: "commercial_proposal",
+  propuesta_comercial: "commercial_proposal",
+  commercial_quote: "commercial_proposal"
 };
 
 export const normalizeDocumentType = (

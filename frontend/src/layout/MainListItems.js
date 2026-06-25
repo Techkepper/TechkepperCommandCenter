@@ -20,6 +20,7 @@ import AssessmentOutlinedIcon from "@material-ui/icons/AssessmentOutlined";
 import DescriptionOutlinedIcon from "@material-ui/icons/DescriptionOutlined";
 import BusinessCenterOutlinedIcon from "@material-ui/icons/BusinessCenterOutlined";
 import WorkOutlineOutlinedIcon from "@material-ui/icons/WorkOutlineOutlined";
+import RequestQuoteOutlinedIcon from "@material-ui/icons/ReceiptOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -66,9 +67,7 @@ const MainListItems = ({ drawerClose }) => {
   const isSupervisor = user.profile === "supervisor";
 
   useEffect(() => {
-    setConnectionWarning(
-      whatsApps.some((item) => item.status !== "CONNECTED")
-    );
+    setConnectionWarning(whatsApps.some((item) => item.status !== "CONNECTED"));
   }, [whatsApps]);
 
   useEffect(() => {
@@ -120,6 +119,12 @@ const MainListItems = ({ drawerClose }) => {
         to={ROUTES.smartDocuments}
         primary="Documentos inteligentes"
         icon={<DescriptionOutlinedIcon />}
+        onNavigate={drawerClose}
+      />
+      <ListItemLink
+        to={ROUTES.commercialProposals}
+        primary="Propuestas"
+        icon={<RequestQuoteOutlinedIcon />}
         onNavigate={drawerClose}
       />
       <ListItemLink

@@ -49,7 +49,10 @@ const DocumentNotificationListener = () => {
 
   const showNotification = useCallback(
     (notification, playSound = true) => {
-      if (!notification?.id || shownNotificationIds.current.has(notification.id)) {
+      if (
+        !notification?.id ||
+        shownNotificationIds.current.has(notification.id)
+      ) {
         return;
       }
       shownNotificationIds.current.add(notification.id);
@@ -57,9 +60,17 @@ const DocumentNotificationListener = () => {
       const closeNotification = () => toast.dismiss(toastId);
       const openDocument = async () => {
         try {
+          if (notification.proposalId) {
+            await api.get(`/commercial-proposals/${notification.proposalId}`);
+            history.push(
+              `/commercial-proposals?proposalId=${notification.proposalId}`,
+            );
+            closeNotification();
+            return;
+          }
           await api.get(`/documents/${notification.documentId}`);
           history.push(
-            `/smart-documents?documentId=${notification.documentId}`
+            `/smart-documents?documentId=${notification.documentId}`,
           );
           closeNotification();
         } catch (error) {
@@ -78,7 +89,7 @@ const DocumentNotificationListener = () => {
           autoClose: false,
           closeOnClick: false,
           onClose: () => markRead(notification.id),
-        }
+        },
       );
       if (playSound) {
         try {
@@ -88,7 +99,7 @@ const DocumentNotificationListener = () => {
         }
       }
     },
-    [history, markRead]
+    [history, markRead],
   );
 
   useEffect(() => {
@@ -98,7 +109,7 @@ const DocumentNotificationListener = () => {
       .then(({ data }) => {
         if (!mounted) return;
         (data.notifications || []).forEach((notification, index) =>
-          showNotification(notification, index === 0)
+          showNotification(notification, index === 0),
         );
       })
       .catch(toastError);

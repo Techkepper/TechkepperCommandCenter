@@ -107,7 +107,7 @@ const Collaborators = () => {
 
   useEffect(() => {
     api
-      .get("/queues")
+      .get("/queue")
       .then(({ data }) => setQueues(Array.isArray(data) ? data : data.queues || []))
       .catch(toastError);
   }, []);

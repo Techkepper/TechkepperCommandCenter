@@ -21,6 +21,10 @@ import Collaborator from "../models/Collaborator";
 import CollaboratorDocument from "../models/CollaboratorDocument";
 import SmartDocumentEvent from "../models/SmartDocumentEvent";
 import InternalNotification from "../models/InternalNotification";
+import CommercialProposal from "../models/CommercialProposal";
+import CommercialProposalItem from "../models/CommercialProposalItem";
+import CommercialProposalPaymentMilestone from "../models/CommercialProposalPaymentMilestone";
+import CommercialProposalEvent from "../models/CommercialProposalEvent";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -50,7 +54,11 @@ const models = [
   Collaborator,
   CollaboratorDocument,
   SmartDocumentEvent,
-  InternalNotification
+  InternalNotification,
+  CommercialProposal,
+  CommercialProposalItem,
+  CommercialProposalPaymentMilestone,
+  CommercialProposalEvent
 ];
 
 sequelize.addModels(models);

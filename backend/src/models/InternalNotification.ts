@@ -14,8 +14,9 @@ import {
 
 import SmartDocument from "./SmartDocument";
 import User from "./User";
+import CommercialProposal from "./CommercialProposal";
 
-@Table({ tableName: "InternalNotifications" })
+@Table({ tableName: "InternalNotificationsV2" })
 class InternalNotification extends Model<InternalNotification> {
   @PrimaryKey
   @AutoIncrement
@@ -46,11 +47,18 @@ class InternalNotification extends Model<InternalNotification> {
   message: string;
 
   @ForeignKey(() => SmartDocument)
-  @Column({ type: DataType.INTEGER, allowNull: false })
-  documentId: number;
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  documentId: number | null;
 
   @BelongsTo(() => SmartDocument)
-  document: SmartDocument;
+  document: SmartDocument | null;
+
+  @ForeignKey(() => CommercialProposal)
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  proposalId: number | null;
+
+  @BelongsTo(() => CommercialProposal)
+  proposal: CommercialProposal | null;
 
   @Column({ type: DataType.STRING(50), allowNull: false })
   status: string;

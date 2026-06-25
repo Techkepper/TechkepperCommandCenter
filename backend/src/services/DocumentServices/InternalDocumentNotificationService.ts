@@ -4,6 +4,7 @@ import AppError from "../../errors/AppError";
 import { getIO } from "../../libs/socket";
 import InternalNotification from "../../models/InternalNotification";
 import SmartDocument from "../../models/SmartDocument";
+import CommercialProposal from "../../models/CommercialProposal";
 import User from "../../models/User";
 import { logger } from "../../utils/logger";
 import { ensureDocumentAccess } from "./documentPermissions";
@@ -13,6 +14,11 @@ const notificationIncludes = [
   {
     model: SmartDocument,
     as: "document",
+    attributes: ["id", "title", "status"]
+  },
+  {
+    model: CommercialProposal,
+    as: "proposal",
     attributes: ["id", "title", "status"]
   }
 ];

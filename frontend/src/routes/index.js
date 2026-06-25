@@ -13,6 +13,7 @@ import Contacts from "../pages/Contacts/";
 import BusinessClients from "../pages/BusinessClients";
 import Collaborators from "../pages/Collaborators";
 import SmartDocuments from "../pages/SmartDocuments";
+import CommercialProposals from "../pages/CommercialProposals";
 import QuickAnswers from "../pages/QuickAnswers/";
 import Queues from "../pages/Queues/";
 import { AuthProvider } from "../context/Auth/AuthContext";
@@ -53,12 +54,7 @@ const AuthenticatedRoutes = () => (
           isPrivate
           roles={["admin"]}
         />
-        <Route
-          exact
-          path={ROUTES.contacts}
-          component={Contacts}
-          isPrivate
-        />
+        <Route exact path={ROUTES.contacts} component={Contacts} isPrivate />
         <Route
           exact
           path={ROUTES.businessClients}
@@ -75,6 +71,12 @@ const AuthenticatedRoutes = () => (
           exact
           path={ROUTES.smartDocuments}
           component={SmartDocuments}
+          isPrivate
+        />
+        <Route
+          exact
+          path={ROUTES.commercialProposals}
+          component={CommercialProposals}
           isPrivate
         />
         <Route
