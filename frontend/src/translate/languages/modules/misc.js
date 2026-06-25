@@ -17,6 +17,16 @@ export const misc = {
 			download: "Descargar",
 			unsupported: "Mensaje no compatible",
 		},
+		messageInput: {
+			recorder: {
+				insecure:
+					"El micrófono requiere una conexión segura (HTTPS) o abrir la app desde localhost. Pídele a tu administrador habilitar HTTPS.",
+				unavailable: "No se pudo iniciar el grabador de audio.",
+				denied:
+					"Permiso de micrófono denegado. Habilítalo en el navegador para grabar audio.",
+				noDevice: "No se detectó ningún micrófono.",
+			},
+		},
 		ticketView: {
 			deleted: "Conversación eliminada correctamente.",
 			readOnlyNotice:
@@ -81,6 +91,16 @@ export const misc = {
 			download: "Download",
 			unsupported: "Unsupported message",
 		},
+		messageInput: {
+			recorder: {
+				insecure:
+					"The microphone requires a secure connection (HTTPS) or opening the app from localhost. Ask your administrator to enable HTTPS.",
+				unavailable: "Could not start the audio recorder.",
+				denied:
+					"Microphone permission denied. Enable it in your browser to record audio.",
+				noDevice: "No microphone was detected.",
+			},
+		},
 		ticketView: {
 			deleted: "Conversation deleted successfully.",
 			readOnlyNotice:
@@ -144,6 +164,16 @@ export const misc = {
 			sayHello: "Diga olá ao seu novo contato!",
 			download: "Baixar",
 			unsupported: "Mensagem não compatível",
+		},
+		messageInput: {
+			recorder: {
+				insecure:
+					"O microfone requer uma conexão segura (HTTPS) ou abrir o app pelo localhost. Peça ao seu administrador para habilitar HTTPS.",
+				unavailable: "Não foi possível iniciar o gravador de áudio.",
+				denied:
+					"Permissão de microfone negada. Habilite-a no navegador para gravar áudio.",
+				noDevice: "Nenhum microfone foi detectado.",
+			},
 		},
 		ticketView: {
 			deleted: "Conversa excluída com sucesso.",
