@@ -24,8 +24,18 @@ import DocumentNotificationListener from "../components/DocumentNotificationList
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
-import { i18n } from "../translate/i18n";
+import {
+  i18n,
+  SUPPORTED_LANGUAGES,
+  LANGUAGE_STORAGE_KEY,
+} from "../translate/i18n";
 import { useThemeContext } from "../context/DarkMode";
+
+const LANGUAGE_LABELS = {
+  es: "Español",
+  en: "English",
+  pt: "Português",
+};
 
 const drawerWidth = 272;
 
@@ -178,6 +188,22 @@ const LoggedInLayout = ({ children }) => {
     handleLogout();
   };
 
+  const handleChangeLanguage = (language) => {
+    if (language === i18n.language) {
+      handleCloseMenu();
+      return;
+    }
+    try {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    } catch (_err) {
+      // Si localStorage no está disponible, igual se aplica para esta sesión.
+    }
+    i18n.changeLanguage(language);
+    // Los textos se leen con i18n.t() (sin re-render automático), por lo que
+    // recargamos para que el cambio de idioma aplique en toda la interfaz.
+    window.location.reload();
+  };
+
   const drawerClose = () => {
     if (document.body.offsetWidth < 600) {
       setDrawerOpen(false);
@@ -295,6 +321,20 @@ const LoggedInLayout = ({ children }) => {
               <MenuItem onClick={handleClickLogout}>
                 {i18n.t("mainDrawer.appBar.user.logout")}
               </MenuItem>
+              <Divider />
+              <MenuItem disabled dense>
+                {i18n.t("mainDrawer.appBar.user.language")}
+              </MenuItem>
+              {SUPPORTED_LANGUAGES.map((language) => (
+                <MenuItem
+                  key={language}
+                  dense
+                  selected={i18n.language === language}
+                  onClick={() => handleChangeLanguage(language)}
+                >
+                  {LANGUAGE_LABELS[language]}
+                </MenuItem>
+              ))}
             </Menu>
           </div>
         </Toolbar>

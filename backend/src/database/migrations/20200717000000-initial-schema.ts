@@ -1,0 +1,635 @@
+import { QueryInterface } from "sequelize";
+
+/**
+ * Esquema base consolidado (baseline).
+ *
+ * Esta migración reemplaza a todas las migraciones incrementales previas y crea
+ * el esquema completo en un solo paso, para que levantar la app desde cero sea
+ * lo más simple posible.
+ *
+ * Los nombres de tabla se declaran en CamelCase a propósito: así funciona tanto
+ * en filesystems case-insensitive con lower_case_table_names=1 (macOS) como en
+ * Linux con el valor por defecto. Las llaves foráneas se crean con
+ * FOREIGN_KEY_CHECKS desactivado para no depender del orden de creación.
+ */
+const createStatements: string[] = [
+  `CREATE TABLE IF NOT EXISTS \`Users\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(255) NOT NULL,
+    \`email\` varchar(255) NOT NULL,
+    \`passwordHash\` varchar(255) NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`profile\` varchar(255) NOT NULL DEFAULT 'admin',
+    \`tokenVersion\` int(11) NOT NULL DEFAULT 0,
+    \`whatsappId\` int(11) DEFAULT NULL,
+    \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
+    \`theme\` varchar(255) NOT NULL DEFAULT 'dark',
+    \`lastActivityAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`email\` (\`email\`),
+    KEY \`Users_whatsappId_foreign_idx\` (\`whatsappId\`),
+    CONSTRAINT \`Users_whatsappId_foreign_idx\` FOREIGN KEY (\`whatsappId\`) REFERENCES \`Whatsapps\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`Whatsapps\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`session\` text DEFAULT NULL,
+    \`qrcode\` text DEFAULT NULL,
+    \`status\` varchar(255) DEFAULT NULL,
+    \`battery\` varchar(255) DEFAULT NULL,
+    \`plugged\` tinyint(1) DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`name\` varchar(255) NOT NULL,
+    \`isDefault\` tinyint(1) NOT NULL DEFAULT 0,
+    \`retries\` int(11) NOT NULL DEFAULT 0,
+    \`greetingMessage\` text DEFAULT NULL,
+    \`farewellMessage\` text DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`name\` (\`name\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`Contacts\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(255) NOT NULL,
+    \`number\` varchar(255) DEFAULT NULL,
+    \`profilePicUrl\` varchar(255) DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`email\` varchar(255) NOT NULL DEFAULT '',
+    \`isGroup\` tinyint(1) NOT NULL DEFAULT 0,
+    \`lid\` varchar(255) DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`number\` (\`number\`),
+    UNIQUE KEY \`lid\` (\`lid\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`ContactCustomFields\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(255) NOT NULL,
+    \`value\` varchar(255) NOT NULL,
+    \`contactId\` int(11) NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`contactId\` (\`contactId\`),
+    CONSTRAINT \`contactcustomfields_ibfk_1\` FOREIGN KEY (\`contactId\`) REFERENCES \`Contacts\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`Queues\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(255) NOT NULL,
+    \`color\` varchar(255) NOT NULL,
+    \`greetingMessage\` text DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`name\` (\`name\`),
+    UNIQUE KEY \`color\` (\`color\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`Ecosystems\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(255) NOT NULL,
+    \`color\` varchar(255) NOT NULL DEFAULT '#8ee63f',
+    \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`name\` (\`name\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`Tickets\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`status\` varchar(255) NOT NULL DEFAULT 'pending',
+    \`lastMessage\` text DEFAULT NULL,
+    \`contactId\` int(11) DEFAULT NULL,
+    \`userId\` int(11) DEFAULT NULL,
+    \`createdAt\` datetime(6) NOT NULL,
+    \`updatedAt\` datetime(6) NOT NULL,
+    \`whatsappId\` int(11) DEFAULT NULL,
+    \`isGroup\` tinyint(1) NOT NULL DEFAULT 0,
+    \`unreadMessages\` int(11) DEFAULT NULL,
+    \`queueId\` int(11) DEFAULT NULL,
+    \`ecosystemId\` int(11) DEFAULT NULL,
+    \`firstResponseAt\` datetime DEFAULT NULL,
+    \`closedAt\` datetime DEFAULT NULL,
+    \`lastCustomerMessageId\` varchar(255) DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`contactId\` (\`contactId\`),
+    KEY \`userId\` (\`userId\`),
+    KEY \`Tickets_whatsappId_foreign_idx\` (\`whatsappId\`),
+    KEY \`Tickets_queueId_foreign_idx\` (\`queueId\`),
+    KEY \`Tickets_ecosystemId_foreign_idx\` (\`ecosystemId\`),
+    CONSTRAINT \`Tickets_ecosystemId_foreign_idx\` FOREIGN KEY (\`ecosystemId\`) REFERENCES \`Ecosystems\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`Tickets_queueId_foreign_idx\` FOREIGN KEY (\`queueId\`) REFERENCES \`Queues\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`Tickets_whatsappId_foreign_idx\` FOREIGN KEY (\`whatsappId\`) REFERENCES \`Whatsapps\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`tickets_ibfk_1\` FOREIGN KEY (\`contactId\`) REFERENCES \`Contacts\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`tickets_ibfk_2\` FOREIGN KEY (\`userId\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`Messages\` (
+    \`id\` varchar(255) NOT NULL,
+    \`body\` text NOT NULL,
+    \`ack\` int(11) NOT NULL DEFAULT 0,
+    \`read\` tinyint(1) NOT NULL DEFAULT 0,
+    \`mediaType\` varchar(255) DEFAULT NULL,
+    \`mediaUrl\` varchar(255) DEFAULT NULL,
+    \`ticketId\` int(11) NOT NULL,
+    \`createdAt\` datetime(6) NOT NULL,
+    \`updatedAt\` datetime(6) NOT NULL,
+    \`fromMe\` tinyint(1) NOT NULL DEFAULT 0,
+    \`isDeleted\` tinyint(1) NOT NULL DEFAULT 0,
+    \`contactId\` int(11) DEFAULT NULL,
+    \`quotedMsgId\` varchar(255) DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`ticketId\` (\`ticketId\`),
+    KEY \`Messages_contactId_foreign_idx\` (\`contactId\`),
+    KEY \`Messages_quotedMsgId_foreign_idx\` (\`quotedMsgId\`),
+    CONSTRAINT \`Messages_contactId_foreign_idx\` FOREIGN KEY (\`contactId\`) REFERENCES \`Contacts\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`Messages_quotedMsgId_foreign_idx\` FOREIGN KEY (\`quotedMsgId\`) REFERENCES \`Messages\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`messages_ibfk_2\` FOREIGN KEY (\`ticketId\`) REFERENCES \`Tickets\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`Settings\` (
+    \`key\` varchar(255) NOT NULL,
+    \`value\` text NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`key\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`UserQueues\` (
+    \`userId\` int(11) NOT NULL,
+    \`queueId\` int(11) NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`userId\`,\`queueId\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`WhatsappQueues\` (
+    \`whatsappId\` int(11) NOT NULL,
+    \`queueId\` int(11) NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`whatsappId\`,\`queueId\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`QuickAnswers\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`shortcut\` text NOT NULL,
+    \`message\` text NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`queueId\` int(11) DEFAULT NULL,
+    \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
+    PRIMARY KEY (\`id\`),
+    KEY \`QuickAnswers_queueId_foreign_idx\` (\`queueId\`),
+    CONSTRAINT \`QuickAnswers_queueId_foreign_idx\` FOREIGN KEY (\`queueId\`) REFERENCES \`Queues\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`TicketAssignmentEvents\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`ticketId\` int(11) NOT NULL,
+    \`oldUserId\` int(11) DEFAULT NULL,
+    \`newUserId\` int(11) DEFAULT NULL,
+    \`performedByUserId\` int(11) NOT NULL,
+    \`action\` varchar(255) NOT NULL,
+    \`autoMessageStatus\` varchar(255) NOT NULL DEFAULT 'not_applicable',
+    \`autoMessageError\` text DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`ticketId\` (\`ticketId\`),
+    KEY \`oldUserId\` (\`oldUserId\`),
+    KEY \`newUserId\` (\`newUserId\`),
+    KEY \`performedByUserId\` (\`performedByUserId\`),
+    CONSTRAINT \`ticketassignmentevents_ibfk_1\` FOREIGN KEY (\`ticketId\`) REFERENCES \`Tickets\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`ticketassignmentevents_ibfk_2\` FOREIGN KEY (\`oldUserId\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`ticketassignmentevents_ibfk_3\` FOREIGN KEY (\`newUserId\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`ticketassignmentevents_ibfk_4\` FOREIGN KEY (\`performedByUserId\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`SmartDocuments\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`title\` varchar(255) NOT NULL,
+    \`description\` text DEFAULT NULL,
+    \`originalName\` varchar(255) NOT NULL,
+    \`storedName\` varchar(255) NOT NULL,
+    \`storagePath\` varchar(500) NOT NULL,
+    \`mimeType\` varchar(150) NOT NULL,
+    \`size\` int(11) NOT NULL,
+    \`category\` varchar(120) DEFAULT NULL,
+    \`purpose\` varchar(80) DEFAULT NULL,
+    \`status\` varchar(50) NOT NULL DEFAULT 'generated',
+    \`tags\` text DEFAULT NULL,
+    \`uploadedById\` int(11) NOT NULL,
+    \`contactId\` int(11) DEFAULT NULL,
+    \`ticketId\` int(11) DEFAULT NULL,
+    \`queueId\` int(11) DEFAULT NULL,
+    \`ecosystemId\` int(11) DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`deletedAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`idx_smart_documents_uploaded_by\` (\`uploadedById\`),
+    KEY \`idx_smart_documents_contact\` (\`contactId\`),
+    KEY \`idx_smart_documents_ticket\` (\`ticketId\`),
+    KEY \`idx_smart_documents_queue\` (\`queueId\`),
+    KEY \`idx_smart_documents_ecosystem\` (\`ecosystemId\`),
+    KEY \`idx_smart_documents_created_at\` (\`createdAt\`),
+    KEY \`idx_smart_documents_purpose\` (\`purpose\`),
+    KEY \`idx_smart_documents_status\` (\`status\`),
+    CONSTRAINT \`smartdocuments_ibfk_1\` FOREIGN KEY (\`uploadedById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocuments_ibfk_2\` FOREIGN KEY (\`contactId\`) REFERENCES \`Contacts\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocuments_ibfk_3\` FOREIGN KEY (\`ticketId\`) REFERENCES \`Tickets\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocuments_ibfk_4\` FOREIGN KEY (\`queueId\`) REFERENCES \`Queues\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocuments_ibfk_5\` FOREIGN KEY (\`ecosystemId\`) REFERENCES \`Ecosystems\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`SmartDocumentEvents\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`documentId\` int(11) NOT NULL,
+    \`userId\` int(11) DEFAULT NULL,
+    \`eventType\` varchar(80) NOT NULL,
+    \`previousStatus\` varchar(50) DEFAULT NULL,
+    \`newStatus\` varchar(50) DEFAULT NULL,
+    \`comment\` text DEFAULT NULL,
+    \`metadata\` text DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`idx_smart_document_events_document\` (\`documentId\`),
+    KEY \`idx_smart_document_events_user\` (\`userId\`),
+    KEY \`idx_smart_document_events_type\` (\`eventType\`),
+    KEY \`idx_smart_document_events_created\` (\`createdAt\`),
+    KEY \`idx_smart_document_events_status\` (\`newStatus\`),
+    CONSTRAINT \`smartdocumentevents_ibfk_1\` FOREIGN KEY (\`documentId\`) REFERENCES \`SmartDocuments\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocumentevents_ibfk_2\` FOREIGN KEY (\`userId\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`SmartDocumentTemplates\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(255) NOT NULL,
+    \`description\` text DEFAULT NULL,
+    \`category\` varchar(120) DEFAULT NULL,
+    \`documentType\` varchar(120) DEFAULT NULL,
+    \`purpose\` varchar(80) DEFAULT NULL,
+    \`requiresClient\` tinyint(1) NOT NULL DEFAULT 0,
+    \`allowGenericRecipient\` tinyint(1) NOT NULL DEFAULT 0,
+    \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
+    \`createdById\` int(11) NOT NULL,
+    \`queueId\` int(11) DEFAULT NULL,
+    \`ecosystemId\` int(11) DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`deletedAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`idx_smart_document_templates_created_by\` (\`createdById\`),
+    KEY \`idx_smart_document_templates_queue\` (\`queueId\`),
+    KEY \`idx_smart_document_templates_ecosystem\` (\`ecosystemId\`),
+    KEY \`idx_smart_document_templates_updated_at\` (\`updatedAt\`),
+    KEY \`idx_smart_document_templates_purpose\` (\`purpose\`),
+    KEY \`idx_smart_document_templates_document_type\` (\`documentType\`),
+    CONSTRAINT \`smartdocumenttemplates_ibfk_1\` FOREIGN KEY (\`createdById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocumenttemplates_ibfk_2\` FOREIGN KEY (\`queueId\`) REFERENCES \`Queues\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocumenttemplates_ibfk_3\` FOREIGN KEY (\`ecosystemId\`) REFERENCES \`Ecosystems\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`SmartDocumentTemplateVersions\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`templateId\` int(11) NOT NULL,
+    \`version\` int(11) NOT NULL,
+    \`originalName\` varchar(255) NOT NULL,
+    \`storedName\` varchar(255) NOT NULL,
+    \`storagePath\` varchar(500) NOT NULL,
+    \`mimeType\` varchar(150) NOT NULL,
+    \`size\` int(11) NOT NULL,
+    \`detectedVariables\` text NOT NULL,
+    \`requiredVariables\` text NOT NULL,
+    \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
+    \`uploadedById\` int(11) NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`deletedAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`uk_smart_document_template_version\` (\`templateId\`,\`version\`),
+    KEY \`idx_smart_document_template_versions_template\` (\`templateId\`),
+    KEY \`idx_smart_document_template_versions_uploaded_by\` (\`uploadedById\`),
+    CONSTRAINT \`smartdocumenttemplateversions_ibfk_1\` FOREIGN KEY (\`templateId\`) REFERENCES \`SmartDocumentTemplates\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocumenttemplateversions_ibfk_2\` FOREIGN KEY (\`uploadedById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`BusinessClients\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`type\` enum('physical','legal') NOT NULL,
+    \`displayName\` varchar(255) NOT NULL,
+    \`legalName\` varchar(255) DEFAULT NULL,
+    \`tradeName\` varchar(255) DEFAULT NULL,
+    \`identificationType\` varchar(80) NOT NULL,
+    \`identificationNumber\` varchar(80) NOT NULL,
+    \`normalizedIdentificationNumber\` varchar(80) NOT NULL,
+    \`legalRepresentativeName\` varchar(255) DEFAULT NULL,
+    \`legalRepresentativeId\` varchar(80) DEFAULT NULL,
+    \`legalRepresentativePosition\` varchar(255) DEFAULT NULL,
+    \`email\` varchar(255) DEFAULT NULL,
+    \`phone\` varchar(80) DEFAULT NULL,
+    \`address\` varchar(500) DEFAULT NULL,
+    \`country\` varchar(120) DEFAULT NULL,
+    \`province\` varchar(120) DEFAULT NULL,
+    \`canton\` varchar(120) DEFAULT NULL,
+    \`district\` varchar(120) DEFAULT NULL,
+    \`notes\` text DEFAULT NULL,
+    \`queueId\` int(11) DEFAULT NULL,
+    \`createdById\` int(11) NOT NULL,
+    \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`deletedAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`uk_business_clients_identification\` (\`normalizedIdentificationNumber\`),
+    KEY \`idx_business_clients_display_name\` (\`displayName\`),
+    KEY \`idx_business_clients_queue\` (\`queueId\`),
+    KEY \`idx_business_clients_active\` (\`isActive\`),
+    KEY \`idx_business_clients_created_by\` (\`createdById\`),
+    CONSTRAINT \`businessclients_ibfk_1\` FOREIGN KEY (\`queueId\`) REFERENCES \`Queues\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`businessclients_ibfk_2\` FOREIGN KEY (\`createdById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`BusinessClientDocuments\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`businessClientId\` int(11) NOT NULL,
+    \`documentId\` int(11) NOT NULL,
+    \`linkedById\` int(11) NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`documentId\` (\`documentId\`),
+    KEY \`idx_business_client_documents_client\` (\`businessClientId\`),
+    KEY \`idx_business_client_documents_linked_by\` (\`linkedById\`),
+    CONSTRAINT \`businessclientdocuments_ibfk_1\` FOREIGN KEY (\`businessClientId\`) REFERENCES \`BusinessClients\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`businessclientdocuments_ibfk_2\` FOREIGN KEY (\`documentId\`) REFERENCES \`SmartDocuments\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`businessclientdocuments_ibfk_3\` FOREIGN KEY (\`linkedById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`Collaborators\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`fullName\` varchar(255) NOT NULL,
+    \`identificationType\` varchar(80) NOT NULL,
+    \`identificationNumber\` varchar(80) NOT NULL,
+    \`normalizedIdentificationNumber\` varchar(80) NOT NULL,
+    \`contractualDenomination\` enum('LA CONTRATISTA','EL CONTRATISTA') NOT NULL,
+    \`email\` varchar(255) DEFAULT NULL,
+    \`phone\` varchar(80) DEFAULT NULL,
+    \`address\` varchar(500) DEFAULT NULL,
+    \`notes\` text DEFAULT NULL,
+    \`queueId\` int(11) DEFAULT NULL,
+    \`createdById\` int(11) NOT NULL,
+    \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`deletedAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`normalizedIdentificationNumber\` (\`normalizedIdentificationNumber\`),
+    KEY \`queueId\` (\`queueId\`),
+    KEY \`createdById\` (\`createdById\`),
+    CONSTRAINT \`collaborators_ibfk_1\` FOREIGN KEY (\`queueId\`) REFERENCES \`Queues\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`collaborators_ibfk_2\` FOREIGN KEY (\`createdById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`CollaboratorDocuments\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`collaboratorId\` int(11) NOT NULL,
+    \`documentId\` int(11) NOT NULL,
+    \`linkedById\` int(11) NOT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`documentId\` (\`documentId\`),
+    KEY \`collaboratorId\` (\`collaboratorId\`),
+    KEY \`linkedById\` (\`linkedById\`),
+    CONSTRAINT \`collaboratordocuments_ibfk_1\` FOREIGN KEY (\`collaboratorId\`) REFERENCES \`Collaborators\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`collaboratordocuments_ibfk_2\` FOREIGN KEY (\`documentId\`) REFERENCES \`SmartDocuments\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`collaboratordocuments_ibfk_3\` FOREIGN KEY (\`linkedById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`CommercialProposals\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`businessClientId\` int(11) DEFAULT NULL,
+    \`manualClientName\` varchar(255) DEFAULT NULL,
+    \`manualClientEmail\` varchar(255) DEFAULT NULL,
+    \`manualClientPhone\` varchar(80) DEFAULT NULL,
+    \`manualClientIdentification\` varchar(80) DEFAULT NULL,
+    \`clientNumber\` varchar(80) NOT NULL,
+    \`proposalNumber\` varchar(80) NOT NULL,
+    \`offerDate\` date NOT NULL,
+    \`title\` varchar(255) NOT NULL,
+    \`introduction\` text DEFAULT NULL,
+    \`identifiedNeed\` text DEFAULT NULL,
+    \`generalScope\` text DEFAULT NULL,
+    \`investmentAnalysis\` text DEFAULT NULL,
+    \`currency\` varchar(3) NOT NULL,
+    \`desiredNetAmount\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`sellerCommissionRate\` decimal(7,4) NOT NULL DEFAULT 0.0000,
+    \`externalCosts\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`thirdPartyLicenses\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`additionalMarginRate\` decimal(7,4) NOT NULL DEFAULT 0.0000,
+    \`recommendedSubtotal\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`discountAmount\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`ivaRate\` decimal(7,4) NOT NULL DEFAULT 13.0000,
+    \`subtotal\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`ivaAmount\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`total\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`estimatedCommission\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`estimatedNetAmount\` decimal(15,2) NOT NULL DEFAULT 0.00,
+    \`roundFinalPrice\` tinyint(1) NOT NULL DEFAULT 0,
+    \`showIvi\` tinyint(1) NOT NULL DEFAULT 0,
+    \`paymentTermsText\` text DEFAULT NULL,
+    \`projectTimeline\` varchar(255) DEFAULT NULL,
+    \`termsText\` text DEFAULT NULL,
+    \`futureRecommendation\` text DEFAULT NULL,
+    \`status\` varchar(50) NOT NULL DEFAULT 'draft',
+    \`queueId\` int(11) DEFAULT NULL,
+    \`generatedDocumentId\` int(11) DEFAULT NULL,
+    \`createdById\` int(11) NOT NULL,
+    \`updatedById\` int(11) DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`deletedAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`proposalNumber\` (\`proposalNumber\`),
+    KEY \`generatedDocumentId\` (\`generatedDocumentId\`),
+    KEY \`createdById\` (\`createdById\`),
+    KEY \`updatedById\` (\`updatedById\`),
+    KEY \`idx_proposals_status\` (\`status\`),
+    KEY \`idx_proposals_client\` (\`businessClientId\`),
+    KEY \`idx_proposals_queue\` (\`queueId\`),
+    KEY \`idx_proposals_offer_date\` (\`offerDate\`),
+    CONSTRAINT \`commercialproposals_ibfk_1\` FOREIGN KEY (\`businessClientId\`) REFERENCES \`BusinessClients\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`commercialproposals_ibfk_2\` FOREIGN KEY (\`queueId\`) REFERENCES \`Queues\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`commercialproposals_ibfk_3\` FOREIGN KEY (\`generatedDocumentId\`) REFERENCES \`SmartDocuments\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`commercialproposals_ibfk_4\` FOREIGN KEY (\`createdById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE,
+    CONSTRAINT \`commercialproposals_ibfk_5\` FOREIGN KEY (\`updatedById\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`CommercialProposalItems\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`proposalId\` int(11) NOT NULL,
+    \`sortOrder\` int(11) NOT NULL,
+    \`title\` varchar(255) NOT NULL,
+    \`description\` text DEFAULT NULL,
+    \`includedItems\` text NOT NULL,
+    \`subtotal\` decimal(15,2) NOT NULL,
+    \`isIncluded\` tinyint(1) NOT NULL DEFAULT 1,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`idx_proposal_items_proposal\` (\`proposalId\`),
+    CONSTRAINT \`commercialproposalitems_ibfk_1\` FOREIGN KEY (\`proposalId\`) REFERENCES \`CommercialProposals\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`CommercialProposalPaymentMilestones\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`proposalId\` int(11) NOT NULL,
+    \`sortOrder\` int(11) NOT NULL,
+    \`name\` varchar(255) NOT NULL,
+    \`percentage\` decimal(7,4) NOT NULL,
+    \`amount\` decimal(15,2) NOT NULL,
+    \`description\` text DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`idx_proposal_milestones_proposal\` (\`proposalId\`),
+    CONSTRAINT \`commercialproposalpaymentmilestones_ibfk_1\` FOREIGN KEY (\`proposalId\`) REFERENCES \`CommercialProposals\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`CommercialProposalEvents\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`proposalId\` int(11) NOT NULL,
+    \`userId\` int(11) DEFAULT NULL,
+    \`eventType\` varchar(80) NOT NULL,
+    \`previousStatus\` varchar(50) DEFAULT NULL,
+    \`newStatus\` varchar(50) DEFAULT NULL,
+    \`comment\` text DEFAULT NULL,
+    \`metadata\` text DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`userId\` (\`userId\`),
+    KEY \`idx_proposal_events_proposal\` (\`proposalId\`),
+    CONSTRAINT \`commercialproposalevents_ibfk_1\` FOREIGN KEY (\`proposalId\`) REFERENCES \`CommercialProposals\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`commercialproposalevents_ibfk_2\` FOREIGN KEY (\`userId\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`InternalNotifications\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`userId\` int(11) NOT NULL,
+    \`createdById\` int(11) DEFAULT NULL,
+    \`type\` varchar(80) NOT NULL,
+    \`title\` varchar(255) NOT NULL,
+    \`message\` text NOT NULL,
+    \`documentId\` int(11) NOT NULL,
+    \`status\` varchar(50) NOT NULL,
+    \`comment\` text DEFAULT NULL,
+    \`readAt\` datetime DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`proposalId\` int(11) DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`idx_internal_notifications_user\` (\`userId\`),
+    KEY \`idx_internal_notifications_creator\` (\`createdById\`),
+    KEY \`idx_internal_notifications_document\` (\`documentId\`),
+    KEY \`idx_internal_notifications_type\` (\`type\`),
+    KEY \`idx_internal_notifications_read\` (\`readAt\`),
+    KEY \`idx_internal_notifications_created\` (\`createdAt\`),
+    KEY \`idx_internal_notifications_proposal\` (\`proposalId\`),
+    CONSTRAINT \`InternalNotifications_proposalId_foreign_idx\` FOREIGN KEY (\`proposalId\`) REFERENCES \`CommercialProposals\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`internalnotifications_ibfk_1\` FOREIGN KEY (\`userId\`) REFERENCES \`Users\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`internalnotifications_ibfk_2\` FOREIGN KEY (\`createdById\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`internalnotifications_ibfk_3\` FOREIGN KEY (\`documentId\`) REFERENCES \`SmartDocuments\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`InternalNotificationsV2\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`userId\` int(11) NOT NULL,
+    \`createdById\` int(11) DEFAULT NULL,
+    \`type\` varchar(80) NOT NULL,
+    \`title\` varchar(255) NOT NULL,
+    \`message\` text NOT NULL,
+    \`documentId\` int(11) DEFAULT NULL,
+    \`proposalId\` int(11) DEFAULT NULL,
+    \`status\` varchar(50) NOT NULL,
+    \`comment\` text DEFAULT NULL,
+    \`readAt\` datetime DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`createdById\` (\`createdById\`),
+    KEY \`idx_internal_notifications_v2_user\` (\`userId\`),
+    KEY \`idx_internal_notifications_v2_document\` (\`documentId\`),
+    KEY \`idx_internal_notifications_v2_proposal\` (\`proposalId\`),
+    KEY \`idx_internal_notifications_v2_read\` (\`readAt\`),
+    CONSTRAINT \`internalnotificationsv2_ibfk_1\` FOREIGN KEY (\`userId\`) REFERENCES \`Users\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`internalnotificationsv2_ibfk_2\` FOREIGN KEY (\`createdById\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`internalnotificationsv2_ibfk_3\` FOREIGN KEY (\`documentId\`) REFERENCES \`SmartDocuments\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT \`internalnotificationsv2_ibfk_4\` FOREIGN KEY (\`proposalId\`) REFERENCES \`CommercialProposals\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`
+];
+
+const dropOrder: string[] = [
+  "InternalNotificationsV2",
+  "InternalNotifications",
+  "CommercialProposalEvents",
+  "CommercialProposalPaymentMilestones",
+  "CommercialProposalItems",
+  "CommercialProposals",
+  "CollaboratorDocuments",
+  "Collaborators",
+  "BusinessClientDocuments",
+  "BusinessClients",
+  "SmartDocumentTemplateVersions",
+  "SmartDocumentTemplates",
+  "SmartDocumentEvents",
+  "SmartDocuments",
+  "TicketAssignmentEvents",
+  "QuickAnswers",
+  "WhatsappQueues",
+  "UserQueues",
+  "Settings",
+  "Messages",
+  "Tickets",
+  "Ecosystems",
+  "Queues",
+  "ContactCustomFields",
+  "Contacts",
+  "Whatsapps",
+  "Users"
+];
+
+module.exports = {
+  up: async (queryInterface: QueryInterface): Promise<void> => {
+    await queryInterface.sequelize.query("SET FOREIGN_KEY_CHECKS = 0");
+    try {
+      for (const statement of createStatements) {
+        await queryInterface.sequelize.query(statement);
+      }
+    } finally {
+      await queryInterface.sequelize.query("SET FOREIGN_KEY_CHECKS = 1");
+    }
+  },
+
+  down: async (queryInterface: QueryInterface): Promise<void> => {
+    await queryInterface.sequelize.query("SET FOREIGN_KEY_CHECKS = 0");
+    try {
+      for (const table of dropOrder) {
+        await queryInterface.sequelize.query(
+          `DROP TABLE IF EXISTS \`${table}\``
+        );
+      }
+    } finally {
+      await queryInterface.sequelize.query("SET FOREIGN_KEY_CHECKS = 1");
+    }
+  }
+};

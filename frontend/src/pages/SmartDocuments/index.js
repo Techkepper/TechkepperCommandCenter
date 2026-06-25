@@ -2216,8 +2216,8 @@ const SmartDocuments = () => {
           <Typography variant="h6">Instalación pendiente</Typography>
           <Typography color="textSecondary">
             El módulo está integrado, pero faltan tablas o columnas de
-            Documentos inteligentes. Revise SQL_MANUAL_STEPS.md antes de
-            habilitar el uso operativo.
+            Documentos inteligentes. Ejecute las migraciones del backend
+            (npm run db:migrate) para crearlas automáticamente.
           </Typography>
         </Paper>
       )}

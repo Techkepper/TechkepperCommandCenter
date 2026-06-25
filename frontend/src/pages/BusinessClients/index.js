@@ -347,8 +347,8 @@ const BusinessClients = () => {
           <Typography variant="h6">Instalación pendiente</Typography>
           <Typography color="textSecondary">
             El módulo Clientes está integrado, pero la tabla BusinessClients
-            todavía no existe. Revise SQL_MANUAL_STEPS.md y ejecute únicamente
-            el bloque correspondiente en la base correcta.
+            todavía no existe. Ejecute las migraciones del backend
+            (npm run db:migrate) para crearla automáticamente.
           </Typography>
         </Paper>
       ) : (

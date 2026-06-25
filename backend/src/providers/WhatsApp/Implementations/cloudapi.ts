@@ -21,6 +21,7 @@ interface CloudApiConfig {
   accessToken: string;
   apiVersion: string;
   phoneNumberId: string;
+  wabaId: string;
 }
 
 interface HttpResponse {
@@ -40,7 +41,8 @@ const getSessionEnv = (sessionId: number, key: string): string =>
 export const getCloudApiConfig = (sessionId: number): CloudApiConfig => ({
   accessToken: getSessionEnv(sessionId, "ACCESS_TOKEN"),
   apiVersion: getSessionEnv(sessionId, "GRAPH_API_VERSION"),
-  phoneNumberId: getSessionEnv(sessionId, "PHONE_NUMBER_ID")
+  phoneNumberId: getSessionEnv(sessionId, "PHONE_NUMBER_ID"),
+  wabaId: getSessionEnv(sessionId, "WABA_ID")
 });
 
 const requireConfig = (sessionId: number): CloudApiConfig => {
@@ -216,6 +218,55 @@ const persistOutgoingMessage = async (
   );
 };
 
+// Garantiza que la app (la del access token) esté suscrita a la WABA.
+// Sin esta suscripción Meta NO entrega los webhooks entrantes (`messages`),
+// aunque la URL del webhook esté verificada y el campo `messages` marcado.
+// Verificar la URL no suscribe la cuenta; esto debe hacerse explícitamente y
+// se pierde cada vez que se recrea la app o se cambia de WABA en Meta.
+const ensureAppSubscribed = async (config: CloudApiConfig): Promise<void> => {
+  if (!config.wabaId) {
+    logger.warn(
+      { phoneNumberId: config.phoneNumberId },
+      "META_WHATSAPP_WABA_ID no configurado; se omite el chequeo de suscripción del webhook. Los mensajes entrantes pueden no llegar."
+    );
+    return;
+  }
+
+  try {
+    const subscribed = await graphRequest<{
+      data?: Array<{ whatsapp_business_api_data?: { id?: string } }>;
+    }>(config, `${config.wabaId}/subscribed_apps`);
+    const subscribedIds = (subscribed.data || [])
+      .map(item => item.whatsapp_business_api_data?.id)
+      .filter((id): id is string => Boolean(id));
+
+    const tokenInfo = await graphRequest<{ data?: { app_id?: string } }>(
+      config,
+      `debug_token?input_token=${encodeURIComponent(config.accessToken)}`
+    );
+    const appId = tokenInfo.data?.app_id;
+
+    if (appId && subscribedIds.includes(appId)) {
+      logger.debug(
+        { wabaId: config.wabaId, appId },
+        "WhatsApp app already subscribed to WABA"
+      );
+      return;
+    }
+
+    await graphRequest(config, `${config.wabaId}/subscribed_apps`, "POST");
+    logger.info(
+      { wabaId: config.wabaId, appId },
+      "Subscribed WhatsApp app to WABA for inbound webhooks"
+    );
+  } catch (err) {
+    logger.warn(
+      { err, wabaId: config.wabaId },
+      "Could not verify or set the WABA app subscription; inbound webhooks may not be delivered"
+    );
+  }
+};
+
 const init = async (whatsapp: Whatsapp): Promise<void> => {
   activeSessions.delete(whatsapp.id);
   const config = getCloudApiConfig(whatsapp.id);
@@ -246,6 +297,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     config,
     `${config.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating`
   );
+  await ensureAppSubscribed(config);
   activeSessions.set(whatsapp.id, config);
   await whatsapp.update({ status: "CONNECTED", qrcode: "", retries: 0 });
   EmitWhatsappSession(whatsapp);
@@ -477,6 +529,35 @@ const sendTyping = async (
   );
 };
 const fetchChatMessages = async (): Promise<ProviderMessage[]> => [];
+
+export interface CloudApiPhoneInfo {
+  phoneNumberId: string;
+  apiVersion: string;
+  displayPhoneNumber: string;
+  verifiedName: string;
+  qualityRating: string;
+}
+
+export const getCloudApiPhoneInfo = async (
+  sessionId: number
+): Promise<CloudApiPhoneInfo> => {
+  const config = requireConfig(sessionId);
+  const info = await graphRequest<{
+    display_phone_number?: string;
+    verified_name?: string;
+    quality_rating?: string;
+  }>(
+    config,
+    `${config.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating`
+  );
+  return {
+    phoneNumberId: config.phoneNumberId,
+    apiVersion: config.apiVersion,
+    displayPhoneNumber: info.display_phone_number || "",
+    verifiedName: info.verified_name || "",
+    qualityRating: info.quality_rating || ""
+  };
+};
 
 export const findCloudApiWhatsappByPhoneNumberId = async (
   phoneNumberId: string

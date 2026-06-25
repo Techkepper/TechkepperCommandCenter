@@ -7,6 +7,7 @@ import ListWhatsAppsService from "../services/WhatsappService/ListWhatsAppsServi
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateWhatsAppService from "../services/WhatsappService/UpdateWhatsAppService";
 import { whatsappProvider } from "../providers/WhatsApp";
+import { getCloudApiPhoneInfo } from "../providers/WhatsApp/Implementations/cloudapi";
 import {
   EmitWhatsapp
 } from "../helpers/EmitWhatsappSession";
@@ -65,6 +66,23 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   const whatsapp = await ShowWhatsAppService(whatsappId);
 
   return res.status(200).json(SerializeWhatsapp(whatsapp));
+};
+
+export const metaInfo = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { whatsappId } = req.params;
+
+  await ShowWhatsAppService(whatsappId);
+  const info = await getCloudApiPhoneInfo(Number(whatsappId));
+
+  const publicUrl = (process.env.BACKEND_PUBLIC_URL || "").replace(/\/+$/, "");
+  const webhookUrl = publicUrl
+    ? `${publicUrl}/webhooks/whatsapp`
+    : "/webhooks/whatsapp";
+
+  return res.status(200).json({ ...info, webhookUrl });
 };
 
 export const update = async (

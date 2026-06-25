@@ -16,6 +16,13 @@ whatsappRoutes.post(
 );
 
 whatsappRoutes.get(
+  "/whatsapp/:whatsappId/meta-info",
+  isAuth,
+  requireRole("admin"),
+  WhatsAppController.metaInfo
+);
+
+whatsappRoutes.get(
   "/whatsapp/:whatsappId",
   isAuth,
   requireRole("admin"),

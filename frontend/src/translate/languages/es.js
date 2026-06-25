@@ -69,6 +69,7 @@ const messages = {
           disconnect: "Desconectar",
           tryAgain: "Reintentar",
           connecting: "Conectando",
+          metaInfo: "Ver verificación del número",
         },
         toolTips: {
           error: {
@@ -113,6 +114,17 @@ const messages = {
           okAdd: "Agregar",
           okEdit: "Guardar",
           cancel: "Cancelar",
+        },
+        meta: {
+          title: "Conexión con Meta (Cloud API)",
+          loading: "Consultando a Meta...",
+          error:
+            "No se pudo obtener la información de Meta. Revisa el token y el ID del número en el servidor.",
+          number: "Número",
+          verifiedName: "Nombre verificado",
+          phoneNumberId: "ID del número (phone_number_id)",
+          apiVersion: "Versión de API",
+          webhook: "Webhook configurado",
         },
         success: "Conexión de WhatsApp guardada correctamente.",
       },
@@ -300,6 +312,7 @@ const messages = {
           user: {
             profile: "Perfil",
             logout: "Cerrar sesión",
+            language: "Idioma",
           },
         },
       },

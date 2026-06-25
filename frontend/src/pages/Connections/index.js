@@ -27,6 +27,7 @@ import {
 	SignalCellular4Bar,
 	DeleteOutline,
 	ErrorOutline,
+	VerifiedUser,
 } from "@material-ui/icons";
 
 import MainContainer from "../../components/MainContainer";
@@ -37,6 +38,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 
 import api from "../../services/api";
 import WhatsAppModal from "../../components/WhatsAppModal";
+import WhatsAppMetaInfoModal from "../../components/WhatsAppMetaInfo";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { i18n } from "../../translate/i18n";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
@@ -99,6 +101,8 @@ const Connections = () => {
 	const { whatsApps, loading, reloadWhatsApps } = useContext(WhatsAppsContext);
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
 	const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
+	const [metaInfoModalOpen, setMetaInfoModalOpen] = useState(false);
+	const [metaInfoWhatsAppId, setMetaInfoWhatsAppId] = useState(null);
 	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
 	const confirmationModalInitialState = {
 		action: "",
@@ -146,6 +150,16 @@ const Connections = () => {
 		setSelectedWhatsApp(whatsApp);
 		setWhatsAppModalOpen(true);
 	};
+
+	const handleOpenMetaInfoModal = whatsApp => {
+		setMetaInfoWhatsAppId(whatsApp.id);
+		setMetaInfoModalOpen(true);
+	};
+
+	const handleCloseMetaInfoModal = useCallback(() => {
+		setMetaInfoModalOpen(false);
+		setMetaInfoWhatsAppId(null);
+	}, [setMetaInfoModalOpen, setMetaInfoWhatsAppId]);
 
 	const handleOpenConfirmationModal = (action, whatsAppId) => {
 		if (action === "disconnect") {
@@ -279,6 +293,11 @@ const Connections = () => {
 				onClose={handleCloseWhatsAppModal}
 				whatsAppId={selectedWhatsApp?.id}
 			/>
+			<WhatsAppMetaInfoModal
+				open={metaInfoModalOpen}
+				onClose={handleCloseMetaInfoModal}
+				whatsAppId={metaInfoWhatsAppId}
+			/>
 			<MainHeader>
 				<Title>Conexión WhatsApp</Title>
 				<MainHeaderButtonsWrapper>
@@ -362,6 +381,15 @@ const Connections = () => {
 												)}
 											</TableCell>
 											<TableCell align="center">
+												<Tooltip title={i18n.t("connections.buttons.metaInfo")}>
+													<IconButton
+														size="small"
+														onClick={() => handleOpenMetaInfoModal(whatsApp)}
+													>
+														<VerifiedUser />
+													</IconButton>
+												</Tooltip>
+
 												<IconButton
 													size="small"
 													onClick={() => handleEditWhatsApp(whatsApp)}

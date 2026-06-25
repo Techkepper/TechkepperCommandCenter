@@ -22,6 +22,7 @@ import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import QueueSelect from "../QueueSelect";
+import { WhatsAppMetaInfo } from "../WhatsAppMetaInfo";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -134,6 +135,14 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 					{({ values, touched, errors, isSubmitting }) => (
 						<Form>
 							<DialogContent dividers>
+								{whatsAppId && (
+									<div style={{ marginBottom: 8 }}>
+										<WhatsAppMetaInfo
+											whatsAppId={whatsAppId}
+											open={open}
+										/>
+									</div>
+								)}
 								<div className={classes.multFieldLine}>
 									<Field
 										as={TextField}
