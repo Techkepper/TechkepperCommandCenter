@@ -302,11 +302,19 @@ const messages = {
           connections: "Conexión WhatsApp",
           tickets: "Conversaciones",
           contacts: "Contactos",
+          businessClients: "Clientes",
+          collaborators: "Colaboradores",
+          smartDocuments: "Documentos inteligentes",
+          commercialProposals: "Propuestas",
           quickAnswers: "Respuestas rápidas",
           queues: "Departamentos",
           administration: "Administración",
+          agentHistory: "Historial por agente",
           users: "Usuarios",
           settings: "Configuración",
+        },
+        listSubheaders: {
+          supervision: "Supervisión",
         },
         appBar: {
           user: {

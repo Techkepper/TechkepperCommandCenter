@@ -360,6 +360,11 @@ const sendMessage = async (
   return message;
 };
 
+// La Cloud API solo acepta ciertos mimetypes; el grabador del frontend produce
+// "audio/mp3", que Meta rechaza. Lo mapeamos al equivalente aceptado.
+const normalizeUploadMimetype = (mimetype: string): string =>
+  mimetype.toLowerCase() === "audio/mp3" ? "audio/mpeg" : mimetype;
+
 const uploadMedia = async (
   config: CloudApiConfig,
   media: ProviderMediaInput,
@@ -367,11 +372,12 @@ const uploadMedia = async (
 ): Promise<string> => {
   const boundary = `----techkepper-${randomBytes(12).toString("hex")}`;
   const safeFilename = media.filename.replace(/["\r\n]/g, "_");
+  const uploadMimetype = normalizeUploadMimetype(media.mimetype);
   const prefix = Buffer.from(
     `--${boundary}\r\nContent-Disposition: form-data; name="messaging_product"\r\n\r\nwhatsapp\r\n` +
-      `--${boundary}\r\nContent-Disposition: form-data; name="type"\r\n\r\n${media.mimetype}\r\n` +
+      `--${boundary}\r\nContent-Disposition: form-data; name="type"\r\n\r\n${uploadMimetype}\r\n` +
       `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${safeFilename}"\r\n` +
-      `Content-Type: ${media.mimetype}\r\n\r\n`
+      `Content-Type: ${uploadMimetype}\r\n\r\n`
   );
   const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
   const response = await requestBuffer(
@@ -443,7 +449,7 @@ const sendMedia = async (
 
   const message: ProviderMessage = {
     id: response.messages[0].id,
-    body: options?.caption || media.filename,
+    body: options?.caption || "",
     fromMe: true,
     hasMedia: true,
     type: messageType,

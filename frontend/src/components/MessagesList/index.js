@@ -31,6 +31,7 @@ import whatsBackground from "../../assets/wa-background.png";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import Audio from "../Audio";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   messagesListWrapper: {
@@ -259,7 +260,17 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "inherit",
     padding: 10,
   },
+
+  unsupportedMessage: {
+    fontStyle: "italic",
+    color: "rgba(0, 0, 0, 0.45)",
+  },
 }));
+
+const hasRenderableMedia = (message) =>
+  Boolean(message.mediaUrl) ||
+  message.mediaType === "location" ||
+  message.mediaType === "vcard";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_MESSAGES") {
@@ -465,7 +476,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
         )
       } else return (<></>)
     }*/
-    else if ( /^.*\.(jpe?g|png|gif)?$/i.exec(message.mediaUrl) && message.mediaType === "image") {
+    else if (message.mediaType === "image" || message.mediaType === "sticker") {
       return <ModalImageCors imageUrl={message.mediaUrl} />;
     } else if (message.mediaType === "audio") {
       return <Audio url={message.mediaUrl} />
@@ -488,7 +499,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
               target="_blank"
               href={message.mediaUrl}
             >
-              Download
+              {i18n.t("messagesList.download")}
             </Button>
           </div>
           <Divider />
@@ -590,6 +601,20 @@ const MessagesList = ({ ticketId, isGroup }) => {
     );
   };
 
+  const renderTextBody = (message) => {
+    if (message.body && message.body.trim()) {
+      return <MarkdownWrapper>{message.body}</MarkdownWrapper>;
+    }
+    if (!hasRenderableMedia(message)) {
+      return (
+        <span className={classes.unsupportedMessage}>
+          {i18n.t("messagesList.unsupported")}
+        </span>
+      );
+    }
+    return null;
+  };
+
   const renderMessages = () => {
     if (messagesList.length > 0) {
       const viewMessagesList = messagesList.map((message, index) => {
@@ -614,12 +639,10 @@ const MessagesList = ({ ticketId, isGroup }) => {
                     {message.contact?.name}
                   </span>
                 )}
-                {(message.mediaUrl || message.mediaType === "location" || message.mediaType === "vcard"
-                  //|| message.mediaType === "multi_vcard" 
-                ) && checkMessageMedia(message)}
+                {hasRenderableMedia(message) && checkMessageMedia(message)}
                 <div className={classes.textContentItem}>
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  {renderTextBody(message)}
                   <span className={classes.timestamp}>
                     {format(parseISO(message.createdAt), "HH:mm")}
                   </span>
@@ -643,9 +666,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                 >
                   <ExpandMore />
                 </IconButton>
-                {(message.mediaUrl || message.mediaType === "location" || message.mediaType === "vcard"
-                  //|| message.mediaType === "multi_vcard" 
-                ) && checkMessageMedia(message)}
+                {hasRenderableMedia(message) && checkMessageMedia(message)}
                 <div
                   className={clsx(classes.textContentItem, {
                     [classes.textContentItemDeleted]: message.isDeleted,
@@ -659,7 +680,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                     />
                   )}
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  {renderTextBody(message)}
                   <span className={classes.timestamp}>
                     {format(parseISO(message.createdAt), "HH:mm")}
                     {renderMessageAck(message)}
@@ -672,7 +693,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
       });
       return viewMessagesList;
     } else {
-      return <div>Say hello to your new contact!</div>;
+      return <div>{i18n.t("messagesList.sayHello")}</div>;
     }
   };
 

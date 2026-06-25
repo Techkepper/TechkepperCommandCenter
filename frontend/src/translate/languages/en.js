@@ -298,11 +298,19 @@ const messages = {
           connections: "Connections",
           tickets: "Tickets",
           contacts: "Contacts",
+          businessClients: "Clients",
+          collaborators: "Collaborators",
+          smartDocuments: "Smart documents",
+          commercialProposals: "Proposals",
           quickAnswers: "Quick Answers",
           queues: "Queues",
           administration: "Administration",
+          agentHistory: "History by agent",
           users: "Users",
           settings: "Settings",
+        },
+        listSubheaders: {
+          supervision: "Supervision",
         },
         appBar: {
           user: {

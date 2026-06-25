@@ -14,6 +14,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   root: { paddingTop: theme.spacing(4), paddingBottom: theme.spacing(5) },
@@ -67,7 +68,7 @@ const Settings = () => {
           .filter((key) => values[key] !== undefined)
           .map((key) => api.put(`/settings/${key}`, { value: values[key] }))
       );
-      toast.success("Configuración actualizada.");
+      toast.success(i18n.t("settings.operational.saved"));
     } catch (error) {
       toastError(error);
     } finally {
@@ -79,9 +80,11 @@ const Settings = () => {
     <Container maxWidth="md" className={classes.root}>
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <div>
-          <Typography variant="h4">Configuración operativa</Typography>
+          <Typography variant="h4">
+            {i18n.t("settings.operational.title")}
+          </Typography>
           <Typography color="textSecondary">
-            Identidad, asignaciones automáticas y acceso a reportes.
+            {i18n.t("settings.operational.subtitle")}
           </Typography>
         </div>
         <Button
@@ -91,18 +94,20 @@ const Settings = () => {
           onClick={save}
           disabled={saving}
         >
-          Guardar cambios
+          {i18n.t("settings.operational.save")}
         </Button>
       </Box>
 
       <Paper className={classes.card}>
-        <Typography variant="h6">Empresa</Typography>
+        <Typography variant="h6">
+          {i18n.t("settings.operational.company")}
+        </Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               variant="outlined"
-              label="Nombre de empresa"
+              label={i18n.t("settings.operational.companyName")}
               value={values.companyName || ""}
               onChange={change("companyName")}
             />
@@ -111,7 +116,7 @@ const Settings = () => {
             <TextField
               fullWidth
               variant="outlined"
-              label="Correo operativo"
+              label={i18n.t("settings.operational.companyEmail")}
               value={values.companyEmail || ""}
               onChange={change("companyEmail")}
             />
@@ -120,7 +125,7 @@ const Settings = () => {
             <TextField
               fullWidth
               variant="outlined"
-              label="Canal operativo"
+              label={i18n.t("settings.operational.companyPhone")}
               value={values.companyPhone || ""}
               onChange={change("companyPhone")}
             />
@@ -129,7 +134,7 @@ const Settings = () => {
             <TextField
               fullWidth
               variant="outlined"
-              label="Horario de atención"
+              label={i18n.t("settings.operational.businessHours")}
               value={values.businessHours || ""}
               onChange={change("businessHours")}
             />
@@ -138,19 +143,25 @@ const Settings = () => {
       </Paper>
 
       <Paper className={classes.card}>
-        <Typography variant="h6">Mensaje automático de asignación</Typography>
+        <Typography variant="h6">
+          {i18n.t("settings.operational.assignmentTitle")}
+        </Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={5}>
             <TextField
               select
               fullWidth
               variant="outlined"
-              label="Estado"
+              label={i18n.t("settings.operational.status")}
               value={values.assignmentAutoMessage || "enabled"}
               onChange={change("assignmentAutoMessage")}
             >
-              <MenuItem value="enabled">Activado</MenuItem>
-              <MenuItem value="disabled">Desactivado</MenuItem>
+              <MenuItem value="enabled">
+                {i18n.t("settings.operational.enabled")}
+              </MenuItem>
+              <MenuItem value="disabled">
+                {i18n.t("settings.operational.disabled")}
+              </MenuItem>
             </TextField>
           </Grid>
           <Grid item xs={12}>
@@ -159,35 +170,40 @@ const Settings = () => {
               multiline
               minRows={4}
               variant="outlined"
-              label="Plantilla"
+              label={i18n.t("settings.operational.template")}
               value={values.assignmentMessageTemplate || ""}
               onChange={change("assignmentMessageTemplate")}
-              helperText="Variables: {NOMBRE_AGENTE}, {NOMBRE_CLIENTE}, {DEPARTAMENTO}, {EMPRESA}, {HORARIO_ATENCION}"
+              helperText={i18n.t("settings.operational.templateHelp")}
             />
           </Grid>
         </Grid>
         <div className={classes.note}>
           <Typography variant="body2">
-            La asignación nunca se revierte si falla el envío. El resultado
-            queda registrado en la auditoría interna de la conversación.
+            {i18n.t("settings.operational.note")}
           </Typography>
         </div>
       </Paper>
 
       <Paper className={classes.card}>
-        <Typography variant="h6">Experiencia y permisos</Typography>
+        <Typography variant="h6">
+          {i18n.t("settings.operational.experience")}
+        </Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <TextField
               select
               fullWidth
               variant="outlined"
-              label="Tema predeterminado"
+              label={i18n.t("settings.operational.defaultTheme")}
               value={values.defaultTheme || "dark"}
               onChange={change("defaultTheme")}
             >
-              <MenuItem value="dark">Oscuro</MenuItem>
-              <MenuItem value="light">Claro</MenuItem>
+              <MenuItem value="dark">
+                {i18n.t("settings.operational.dark")}
+              </MenuItem>
+              <MenuItem value="light">
+                {i18n.t("settings.operational.light")}
+              </MenuItem>
             </TextField>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -195,12 +211,16 @@ const Settings = () => {
               select
               fullWidth
               variant="outlined"
-              label="Agentes pueden ver su historial"
+              label={i18n.t("settings.operational.allowAgentHistory")}
               value={values.allowAgentHistory || "disabled"}
               onChange={change("allowAgentHistory")}
             >
-              <MenuItem value="enabled">Sí</MenuItem>
-              <MenuItem value="disabled">No</MenuItem>
+              <MenuItem value="enabled">
+                {i18n.t("settings.operational.yes")}
+              </MenuItem>
+              <MenuItem value="disabled">
+                {i18n.t("settings.operational.no")}
+              </MenuItem>
             </TextField>
           </Grid>
         </Grid>

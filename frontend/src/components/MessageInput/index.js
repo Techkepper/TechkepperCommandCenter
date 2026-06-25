@@ -451,7 +451,6 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
       const formData = new FormData();
       const filename = `${new Date().getTime()}.mp3`;
       formData.append("medias", blob, filename);
-      formData.append("body", filename);
       formData.append("fromMe", true);
 
       await api.post(`/messages/${ticketId}`, formData);

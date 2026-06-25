@@ -12,11 +12,13 @@ import {
   IconButton,
   Menu,
   Switch,
+  Tooltip,
 } from "@material-ui/core";
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import AccountCircle from "@material-ui/icons/AccountCircle";
 import Brightness4Icon from "@material-ui/icons/Brightness4";
+import TranslateIcon from "@material-ui/icons/Translate";
 
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
@@ -24,12 +26,9 @@ import DocumentNotificationListener from "../components/DocumentNotificationList
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
-import {
-  i18n,
-  SUPPORTED_LANGUAGES,
-  LANGUAGE_STORAGE_KEY,
-} from "../translate/i18n";
+import { i18n } from "../translate/i18n";
 import { useThemeContext } from "../context/DarkMode";
+import { useLanguage } from "../context/Language";
 
 const LANGUAGE_LABELS = {
   es: "Español",
@@ -150,11 +149,14 @@ const LoggedInLayout = ({ children }) => {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [langAnchorEl, setLangAnchorEl] = useState(null);
+  const langMenuOpen = Boolean(langAnchorEl);
   const { handleLogout, loading } = useContext(AuthContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { user } = useContext(AuthContext);
   const { darkMode, toggleTheme } = useThemeContext();
+  const { language, changeLanguage, supportedLanguages } = useLanguage();
 
   useEffect(() => {
     const updateDrawer = () => {
@@ -188,20 +190,17 @@ const LoggedInLayout = ({ children }) => {
     handleLogout();
   };
 
-  const handleChangeLanguage = (language) => {
-    if (language === i18n.language) {
-      handleCloseMenu();
-      return;
-    }
-    try {
-      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-    } catch (_err) {
-      // Si localStorage no está disponible, igual se aplica para esta sesión.
-    }
-    i18n.changeLanguage(language);
-    // Los textos se leen con i18n.t() (sin re-render automático), por lo que
-    // recargamos para que el cambio de idioma aplique en toda la interfaz.
-    window.location.reload();
+  const handleOpenLangMenu = (event) => {
+    setLangAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseLangMenu = () => {
+    setLangAnchorEl(null);
+  };
+
+  const handleSelectLanguage = (selected) => {
+    changeLanguage(selected);
+    handleCloseLangMenu();
   };
 
   const drawerClose = () => {
@@ -286,6 +285,38 @@ const LoggedInLayout = ({ children }) => {
             />
           </div>
 
+          <Tooltip title={i18n.t("mainDrawer.appBar.user.language")}>
+            <IconButton
+              aria-label={i18n.t("mainDrawer.appBar.user.language")}
+              aria-controls="menu-language"
+              aria-haspopup="true"
+              onClick={handleOpenLangMenu}
+              className={classes.iconButton}
+            >
+              <TranslateIcon />
+            </IconButton>
+          </Tooltip>
+          <Menu
+            id="menu-language"
+            anchorEl={langAnchorEl}
+            getContentAnchorEl={null}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            open={langMenuOpen}
+            onClose={handleCloseLangMenu}
+          >
+            {supportedLanguages.map((lng) => (
+              <MenuItem
+                key={lng}
+                dense
+                selected={language === lng}
+                onClick={() => handleSelectLanguage(lng)}
+              >
+                {LANGUAGE_LABELS[lng]}
+              </MenuItem>
+            ))}
+          </Menu>
+
           {user.id && (
             <NotificationsPopOver className={classes.iconButton} />
           )}
@@ -321,20 +352,6 @@ const LoggedInLayout = ({ children }) => {
               <MenuItem onClick={handleClickLogout}>
                 {i18n.t("mainDrawer.appBar.user.logout")}
               </MenuItem>
-              <Divider />
-              <MenuItem disabled dense>
-                {i18n.t("mainDrawer.appBar.user.language")}
-              </MenuItem>
-              {SUPPORTED_LANGUAGES.map((language) => (
-                <MenuItem
-                  key={language}
-                  dense
-                  selected={i18n.language === language}
-                  onClick={() => handleChangeLanguage(language)}
-                >
-                  {LANGUAGE_LABELS[language]}
-                </MenuItem>
-              ))}
             </Menu>
           </div>
         </Toolbar>

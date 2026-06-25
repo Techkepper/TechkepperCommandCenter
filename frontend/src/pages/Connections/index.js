@@ -115,12 +115,12 @@ const Connections = () => {
 		confirmationModalInitialState
 	);
 	const statusLabels = {
-		CONNECTED: "Conectada",
-		OPENING: "Verificando con Meta...",
-		CONFIG_REQUIRED: "Configuración requerida",
-		TIMEOUT: "Sin respuesta",
-		DISCONNECTED: "Desconectada",
-		ERROR: "Error",
+		CONNECTED: i18n.t("connections.statuses.connected"),
+		OPENING: i18n.t("connections.statuses.verifying"),
+		CONFIG_REQUIRED: i18n.t("connections.statuses.configRequired"),
+		TIMEOUT: i18n.t("connections.statuses.timeout"),
+		DISCONNECTED: i18n.t("connections.statuses.disconnected"),
+		ERROR: i18n.t("connections.statuses.error"),
 	};
 
 	useEffect(() => {
@@ -130,7 +130,7 @@ const Connections = () => {
 	const handleVerifyConnection = async whatsApp => {
 		try {
 			await api.post(`/whatsappsession/${whatsApp.id}`);
-			toast.success("Verificación solicitada a WhatsApp Cloud API.");
+			toast.success(i18n.t("connections.toasts.verifyRequested"));
 		} catch (err) {
 			toastError(err);
 		}
@@ -213,7 +213,7 @@ const Connections = () => {
 						color="primary"
 						onClick={() => handleVerifyConnection(whatsApp)}
 					>
-						Verificar API oficial
+						{i18n.t("connections.buttons.verify")}
 					</Button>
 				)}
 				{whatsApp.status === "OPENING" && (
@@ -247,8 +247,8 @@ const Connections = () => {
 				)}
 				{whatsApp.status === "CONFIG_REQUIRED" && (
 					<CustomToolTip
-						title="Falta configurar Meta"
-						content="Defina el token, Phone Number ID, versión de Graph API y secretos del webhook en el servidor."
+						title={i18n.t("connections.toolTips.configRequired.title")}
+						content={i18n.t("connections.toolTips.configRequired.content")}
 					>
 						<ErrorOutline color="action" />
 					</CustomToolTip>
@@ -271,7 +271,10 @@ const Connections = () => {
 						size="small"
 						variant="outlined"
 						color={whatsApp.status === "CONNECTED" ? "primary" : "default"}
-						label={statusLabels[whatsApp.status] || "Estado desconocido"}
+						label={
+							statusLabels[whatsApp.status] ||
+							i18n.t("connections.statuses.unknown")
+						}
 					/>
 				</Box>
 			</div>
@@ -299,7 +302,7 @@ const Connections = () => {
 				whatsAppId={metaInfoWhatsAppId}
 			/>
 			<MainHeader>
-				<Title>Conexión WhatsApp</Title>
+				<Title>{i18n.t("connections.title")}</Title>
 				<MainHeaderButtonsWrapper>
 					<Button
 						variant="contained"
@@ -313,16 +316,14 @@ const Connections = () => {
 			<Paper variant="outlined" style={{ padding: 16, marginBottom: 16 }}>
 				<Box display="flex" flexWrap="wrap" style={{ gap: 12 }}>
 					<Typography variant="body2">
-						<strong>Integración oficial:</strong> esta instalación usa
-						WhatsApp Cloud API de Meta, sin QR ni sesiones de WhatsApp Web.
+						<strong>{i18n.t("connections.info.officialTitle")}</strong>{" "}
+						{i18n.t("connections.info.officialText")}
 					</Typography>
 					<Typography variant="body2" color="textSecondary">
-						Las respuestas de servicio dentro de la ventana de 24 horas no
-						tienen cargo; otras categorías pueden tener costo según Meta.
+						{i18n.t("connections.info.pricing")}
 					</Typography>
 					<Typography variant="caption" color="textSecondary">
-						Webhook: /webhooks/whatsapp. Los tokens permanecen únicamente
-						en variables de entorno del servidor.
+						{i18n.t("connections.info.webhook")}
 					</Typography>
 				</Box>
 			</Paper>
@@ -337,7 +338,7 @@ const Connections = () => {
 								{i18n.t("connections.table.status")}
 							</TableCell>
 							<TableCell align="center">
-								Verificación
+								{i18n.t("connections.table.verification")}
 							</TableCell>
 							<TableCell align="center">
 								{i18n.t("connections.table.lastUpdate")}
@@ -413,7 +414,7 @@ const Connections = () => {
 										<TableCell colSpan={6} align="center">
 											<Box py={4}>
 												<Typography color="textSecondary">
-													No hay conexiones de WhatsApp configuradas.
+													{i18n.t("connections.noConnections")}
 												</Typography>
 											</Box>
 										</TableCell>

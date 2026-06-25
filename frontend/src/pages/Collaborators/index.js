@@ -37,6 +37,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import EntityDossierDialog from "../../components/EntityDossierDialog";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   paper: { flex: 1, padding: theme.spacing(1), overflowY: "auto" },
@@ -150,8 +151,8 @@ const Collaborators = () => {
       setDialogOpen(false);
       toast.success(
         editingId
-          ? "Colaborador actualizado correctamente."
-          : "Colaborador creado correctamente."
+          ? i18n.t("collaborators.toasts.updated")
+          : i18n.t("collaborators.toasts.created")
       );
       await loadCollaborators();
     } catch (error) {
@@ -166,8 +167,8 @@ const Collaborators = () => {
       });
       toast.success(
         collaborator.isActive
-          ? "Colaborador desactivado correctamente."
-          : "Colaborador reactivado correctamente."
+          ? i18n.t("collaborators.toasts.deactivated")
+          : i18n.t("collaborators.toasts.reactivated")
       );
       await loadCollaborators();
     } catch (error) {
@@ -205,12 +206,14 @@ const Collaborators = () => {
         fullWidth
       >
         <DialogTitle>
-          {editingId ? "Editar colaborador" : "Nuevo colaborador"}
+          {editingId
+            ? i18n.t("collaborators.dialog.editTitle")
+            : i18n.t("collaborators.newCollaborator")}
         </DialogTitle>
         <DialogContent dividers>
           <div className={classes.formGrid}>
             <TextField
-              label="Nombre completo"
+              label={i18n.t("collaborators.fields.fullName")}
               variant="outlined"
               margin="dense"
               value={form.fullName}
@@ -219,10 +222,12 @@ const Collaborators = () => {
               }
             />
             <FormControl variant="outlined" margin="dense">
-              <InputLabel>Denominación contractual</InputLabel>
+              <InputLabel>
+                {i18n.t("collaborators.fields.contractualDenomination")}
+              </InputLabel>
               <Select
                 value={form.contractualDenomination}
-                label="Denominación contractual"
+                label={i18n.t("collaborators.fields.contractualDenomination")}
                 onChange={(event) =>
                   setForm({
                     ...form,
@@ -235,7 +240,7 @@ const Collaborators = () => {
               </Select>
             </FormControl>
             <TextField
-              label="Tipo de identificación"
+              label={i18n.t("collaborators.fields.identificationType")}
               variant="outlined"
               margin="dense"
               value={form.identificationType}
@@ -244,7 +249,7 @@ const Collaborators = () => {
               }
             />
             <TextField
-              label="Número de identificación"
+              label={i18n.t("collaborators.fields.identificationNumber")}
               variant="outlined"
               margin="dense"
               value={form.identificationNumber}
@@ -253,7 +258,7 @@ const Collaborators = () => {
               }
             />
             <TextField
-              label="Correo electrónico"
+              label={i18n.t("collaborators.fields.email")}
               variant="outlined"
               margin="dense"
               value={form.email}
@@ -262,7 +267,7 @@ const Collaborators = () => {
               }
             />
             <TextField
-              label="Teléfono"
+              label={i18n.t("collaborators.fields.phone")}
               variant="outlined"
               margin="dense"
               value={form.phone}
@@ -271,16 +276,16 @@ const Collaborators = () => {
               }
             />
             <FormControl variant="outlined" margin="dense">
-              <InputLabel>Departamento</InputLabel>
+              <InputLabel>{i18n.t("collaborators.fields.department")}</InputLabel>
               <Select
                 value={form.queueId}
-                label="Departamento"
+                label={i18n.t("collaborators.fields.department")}
                 onChange={(event) =>
                   setForm({ ...form, queueId: event.target.value })
                 }
               >
                 {user.profile === "admin" && (
-                  <MenuItem value="">Global</MenuItem>
+                  <MenuItem value="">{i18n.t("collaborators.global")}</MenuItem>
                 )}
                 {queues.map((queue) => (
                   <MenuItem key={queue.id} value={queue.id}>
@@ -291,7 +296,7 @@ const Collaborators = () => {
             </FormControl>
             <TextField
               className={classes.fullWidth}
-              label="Dirección"
+              label={i18n.t("collaborators.fields.address")}
               variant="outlined"
               margin="dense"
               value={form.address}
@@ -301,7 +306,7 @@ const Collaborators = () => {
             />
             <TextField
               className={classes.fullWidth}
-              label="Notas internas"
+              label={i18n.t("collaborators.fields.notes")}
               variant="outlined"
               margin="dense"
               multiline
@@ -314,7 +319,9 @@ const Collaborators = () => {
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
+          <Button onClick={() => setDialogOpen(false)}>
+            {i18n.t("collaborators.buttons.cancel")}
+          </Button>
           <Button
             color="primary"
             variant="contained"
@@ -325,16 +332,16 @@ const Collaborators = () => {
               !form.identificationNumber.trim()
             }
           >
-            Guardar
+            {i18n.t("collaborators.buttons.save")}
           </Button>
         </DialogActions>
       </Dialog>
 
       <MainHeader>
-        <Title>Colaboradores</Title>
+        <Title>{i18n.t("collaborators.title")}</Title>
         <MainHeaderButtonsWrapper>
           <TextField
-            placeholder="Buscar colaborador"
+            placeholder={i18n.t("collaborators.searchPlaceholder")}
             type="search"
             variant="outlined"
             size="small"
@@ -353,20 +360,26 @@ const Collaborators = () => {
             variant="outlined"
             size="small"
           >
-            <InputLabel>Estado</InputLabel>
+            <InputLabel>{i18n.t("collaborators.fields.status")}</InputLabel>
             <Select
               value={status}
-              label="Estado"
+              label={i18n.t("collaborators.fields.status")}
               onChange={(event) => setStatus(event.target.value)}
             >
-              <MenuItem value="active">Activos</MenuItem>
-              <MenuItem value="inactive">Inactivos</MenuItem>
-              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="active">
+                {i18n.t("collaborators.statusFilter.active")}
+              </MenuItem>
+              <MenuItem value="inactive">
+                {i18n.t("collaborators.statusFilter.inactive")}
+              </MenuItem>
+              <MenuItem value="all">
+                {i18n.t("collaborators.statusFilter.all")}
+              </MenuItem>
             </Select>
           </FormControl>
           {canManage && !installRequired && (
             <Button color="primary" variant="contained" onClick={openCreate}>
-              Nuevo colaborador
+              {i18n.t("collaborators.newCollaborator")}
             </Button>
           )}
         </MainHeaderButtonsWrapper>
@@ -374,9 +387,11 @@ const Collaborators = () => {
 
       {installRequired ? (
         <Paper className={classes.warning} variant="outlined">
-          <Typography variant="h6">Instalación pendiente</Typography>
+          <Typography variant="h6">
+            {i18n.t("collaborators.install.title")}
+          </Typography>
           <Typography color="textSecondary">
-            El módulo Colaboradores requiere ejecutar la migración incluida.
+            {i18n.t("collaborators.install.description")}
           </Typography>
         </Paper>
       ) : (
@@ -384,13 +399,15 @@ const Collaborators = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Colaborador</TableCell>
-                <TableCell>Identificación</TableCell>
-                <TableCell>Denominación</TableCell>
-                <TableCell>Departamento</TableCell>
-                <TableCell>Contacto</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell align="center">Acciones</TableCell>
+                <TableCell>{i18n.t("collaborators.table.collaborator")}</TableCell>
+                <TableCell>{i18n.t("collaborators.table.identification")}</TableCell>
+                <TableCell>{i18n.t("collaborators.table.denomination")}</TableCell>
+                <TableCell>{i18n.t("collaborators.fields.department")}</TableCell>
+                <TableCell>{i18n.t("collaborators.table.contact")}</TableCell>
+                <TableCell>{i18n.t("collaborators.fields.status")}</TableCell>
+                <TableCell align="center">
+                  {i18n.t("collaborators.table.actions")}
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -399,13 +416,16 @@ const Collaborators = () => {
                   <TableCell>{collaborator.fullName}</TableCell>
                   <TableCell>{collaborator.identificationNumber}</TableCell>
                   <TableCell>{collaborator.contractualDenomination}</TableCell>
-                  <TableCell>{collaborator.queue?.name || "Global"}</TableCell>
+                  <TableCell>
+                    {collaborator.queue?.name || i18n.t("collaborators.global")}
+                  </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {collaborator.email || "Sin correo"}
+                      {collaborator.email || i18n.t("collaborators.table.noEmail")}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
-                      {collaborator.phone || "Sin teléfono"}
+                      {collaborator.phone ||
+                        i18n.t("collaborators.table.noPhone")}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -413,13 +433,17 @@ const Collaborators = () => {
                       size="small"
                       variant="outlined"
                       color={collaborator.isActive ? "primary" : "default"}
-                      label={collaborator.isActive ? "Activo" : "Inactivo"}
+                      label={
+                        collaborator.isActive
+                          ? i18n.t("collaborators.chip.active")
+                          : i18n.t("collaborators.chip.inactive")
+                      }
                     />
                   </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"
-                      title="Ver expediente"
+                      title={i18n.t("collaborators.tooltips.viewDossier")}
                       onClick={() => openDossier(collaborator.id)}
                     >
                       <VisibilityOutlinedIcon />
@@ -428,7 +452,7 @@ const Collaborators = () => {
                       <>
                         <IconButton
                           size="small"
-                          title="Editar"
+                          title={i18n.t("collaborators.tooltips.edit")}
                           onClick={() => openEdit(collaborator)}
                         >
                           <EditOutlinedIcon />
@@ -436,7 +460,9 @@ const Collaborators = () => {
                         <IconButton
                           size="small"
                           title={
-                            collaborator.isActive ? "Desactivar" : "Reactivar"
+                            collaborator.isActive
+                              ? i18n.t("collaborators.tooltips.deactivate")
+                              : i18n.t("collaborators.tooltips.reactivate")
                           }
                           onClick={() => toggleStatus(collaborator)}
                         >
@@ -455,7 +481,7 @@ const Collaborators = () => {
                 <TableRow>
                   <TableCell colSpan={7} align="center">
                     <Typography color="textSecondary">
-                      No hay colaboradores para mostrar.
+                      {i18n.t("collaborators.table.empty")}
                     </Typography>
                   </TableCell>
                 </TableRow>

@@ -5,6 +5,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import clsx from "clsx";
 import api from "../../services/api";
 import openSocket from "../../services/socket-io";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -46,16 +47,19 @@ const useStyles = makeStyles((theme) => ({
 
 const actionText = (event) => {
   if (event.action === "take") {
-    return `Conversación tomada por ${event.newUser?.name || "agente"}`;
+    return i18n.t("assignmentAudit.takenBy", {
+      name: event.newUser?.name || i18n.t("assignmentAudit.agent"),
+    });
   }
   if (event.action === "reassignment") {
-    return `Reasignado de ${event.oldUser?.name || "sin asignar"} a ${
-      event.newUser?.name || "sin asignar"
-    }`;
+    return i18n.t("assignmentAudit.reassigned", {
+      from: event.oldUser?.name || i18n.t("assignmentAudit.unassigned"),
+      to: event.newUser?.name || i18n.t("assignmentAudit.unassigned"),
+    });
   }
   return event.newUser
-    ? `Asignado a ${event.newUser.name}`
-    : "Asignación removida";
+    ? i18n.t("assignmentAudit.assignedTo", { name: event.newUser.name })
+    : i18n.t("assignmentAudit.removed");
 };
 
 const AssignmentAudit = ({ ticketId }) => {
@@ -80,10 +84,10 @@ const AssignmentAudit = ({ ticketId }) => {
 
   if (!events.length) return null;
   const noticeStatus = {
-    sent: "enviado",
-    pending: "pendiente",
-    failed: "fallido",
-    skipped: "omitido",
+    sent: i18n.t("assignmentAudit.noticeStatuses.sent"),
+    pending: i18n.t("assignmentAudit.noticeStatuses.pending"),
+    failed: i18n.t("assignmentAudit.noticeStatuses.failed"),
+    skipped: i18n.t("assignmentAudit.noticeStatuses.skipped"),
   };
 
   return (
@@ -92,7 +96,8 @@ const AssignmentAudit = ({ ticketId }) => {
         <HistoryOutlined fontSize="small" color="action" />
         <Box ml={1} flex={1}>
           <Typography variant="caption">
-            Última asignación: {actionText(events[0])}
+            {i18n.t("assignmentAudit.lastAssignmentPrefix")}{" "}
+            {actionText(events[0])}
           </Typography>
         </Box>
         <Chip
@@ -100,9 +105,11 @@ const AssignmentAudit = ({ ticketId }) => {
           className={clsx(classes.statusChip, {
             [classes.statusChipSent]: events[0].autoMessageStatus === "sent",
           })}
-          label={`Aviso: ${
-            noticeStatus[events[0].autoMessageStatus] || "sin estado"
-          }`}
+          label={i18n.t("assignmentAudit.notice", {
+            status:
+              noticeStatus[events[0].autoMessageStatus] ||
+              i18n.t("assignmentAudit.noticeStatuses.none"),
+          })}
         />
         <IconButton size="small" onClick={() => setOpen((value) => !value)}>
           {open ? <ExpandLess /> : <ExpandMore />}
@@ -113,8 +120,11 @@ const AssignmentAudit = ({ ticketId }) => {
           <div className={classes.event} key={event.id}>
             <Typography variant="body2">{actionText(event)}</Typography>
             <Typography variant="caption" color="textSecondary">
-              Por {event.performedByUser?.name || "usuario"} ·{" "}
-              {new Date(event.createdAt).toLocaleString()}
+              {i18n.t("assignmentAudit.by", {
+                name:
+                  event.performedByUser?.name || i18n.t("assignmentAudit.user"),
+              })}{" "}
+              · {new Date(event.createdAt).toLocaleString()}
               {event.autoMessageError ? ` · ${event.autoMessageError}` : ""}
             </Typography>
           </div>

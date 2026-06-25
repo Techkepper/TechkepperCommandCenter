@@ -86,7 +86,7 @@ const MainListItems = ({ drawerClose }) => {
         <ListItemLink
           exact
           to={ROUTES.dashboard}
-          primary="Centro operativo"
+          primary={i18n.t("mainDrawer.listItems.dashboard")}
           icon={<DashboardOutlinedIcon />}
           onNavigate={drawerClose}
         />
@@ -105,31 +105,31 @@ const MainListItems = ({ drawerClose }) => {
       />
       <ListItemLink
         to={ROUTES.businessClients}
-        primary="Clientes"
+        primary={i18n.t("mainDrawer.listItems.businessClients")}
         icon={<BusinessCenterOutlinedIcon />}
         onNavigate={drawerClose}
       />
       <ListItemLink
         to={ROUTES.collaborators}
-        primary="Colaboradores"
+        primary={i18n.t("mainDrawer.listItems.collaborators")}
         icon={<WorkOutlineOutlinedIcon />}
         onNavigate={drawerClose}
       />
       <ListItemLink
         to={ROUTES.smartDocuments}
-        primary="Documentos inteligentes"
+        primary={i18n.t("mainDrawer.listItems.smartDocuments")}
         icon={<DescriptionOutlinedIcon />}
         onNavigate={drawerClose}
       />
       <ListItemLink
         to={ROUTES.commercialProposals}
-        primary="Propuestas"
+        primary={i18n.t("mainDrawer.listItems.commercialProposals")}
         icon={<RequestQuoteOutlinedIcon />}
         onNavigate={drawerClose}
       />
       <ListItemLink
         to={ROUTES.quickAnswers}
-        primary="Respuestas rápidas"
+        primary={i18n.t("mainDrawer.listItems.quickAnswers")}
         icon={<QuestionAnswerOutlinedIcon />}
         onNavigate={drawerClose}
       />
@@ -137,10 +137,12 @@ const MainListItems = ({ drawerClose }) => {
       {(isAdmin || isSupervisor || agentHistoryEnabled) && (
         <>
           <Divider />
-          <ListSubheader inset>Supervisión</ListSubheader>
+          <ListSubheader inset>
+            {i18n.t("mainDrawer.listSubheaders.supervision")}
+          </ListSubheader>
           <ListItemLink
             to={ROUTES.agentHistory}
-            primary="Historial por agente"
+            primary={i18n.t("mainDrawer.listItems.agentHistory")}
             icon={<AssessmentOutlinedIcon />}
             onNavigate={drawerClose}
           />
@@ -150,10 +152,12 @@ const MainListItems = ({ drawerClose }) => {
       {isAdmin && (
         <>
           <Divider />
-          <ListSubheader inset>Administración</ListSubheader>
+          <ListSubheader inset>
+            {i18n.t("mainDrawer.listItems.administration")}
+          </ListSubheader>
           <ListItemLink
             to={ROUTES.connections}
-            primary="Conexión WhatsApp"
+            primary={i18n.t("mainDrawer.listItems.connections")}
             icon={
               <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
                 <SyncAltIcon />
@@ -163,19 +167,19 @@ const MainListItems = ({ drawerClose }) => {
           />
           <ListItemLink
             to={ROUTES.users}
-            primary="Agentes y usuarios"
+            primary={i18n.t("mainDrawer.listItems.users")}
             icon={<PeopleAltOutlinedIcon />}
             onNavigate={drawerClose}
           />
           <ListItemLink
             to={ROUTES.queues}
-            primary="Departamentos"
+            primary={i18n.t("mainDrawer.listItems.queues")}
             icon={<AccountTreeOutlinedIcon />}
             onNavigate={drawerClose}
           />
           <ListItemLink
             to={ROUTES.settings}
-            primary="Configuración"
+            primary={i18n.t("mainDrawer.listItems.settings")}
             icon={<SettingsOutlinedIcon />}
             onNavigate={drawerClose}
           />

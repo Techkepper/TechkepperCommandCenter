@@ -300,11 +300,19 @@ const messages = {
           connections: "Conexões",
           tickets: "Tickets",
           contacts: "Contatos",
+          businessClients: "Clientes",
+          collaborators: "Colaboradores",
+          smartDocuments: "Documentos inteligentes",
+          commercialProposals: "Propostas",
           quickAnswers: "Respostas Rápidas",
           queues: "Filas",
           administration: "Administração",
+          agentHistory: "Histórico por agente",
           users: "Usuários",
           settings: "Configurações",
+        },
+        listSubheaders: {
+          supervision: "Supervisão",
         },
         appBar: {
           user: {

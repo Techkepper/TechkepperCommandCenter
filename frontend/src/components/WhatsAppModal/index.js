@@ -53,9 +53,9 @@ const useStyles = makeStyles(theme => ({
 
 const SessionSchema = Yup.object().shape({
 	name: Yup.string()
-		.min(2, "Ingrese al menos 2 caracteres.")
-		.max(50, "Ingrese como máximo 50 caracteres.")
-		.required("El nombre es obligatorio."),
+		.min(2, i18n.t("validation.min2"))
+		.max(50, i18n.t("validation.max50"))
+		.required(i18n.t("validation.nameRequired")),
 });
 
 const WhatsAppModal = ({ open, onClose, whatsAppId }) => {

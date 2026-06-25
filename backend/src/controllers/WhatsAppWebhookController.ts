@@ -53,11 +53,16 @@ const getMessageBody = (message: any): string => {
   if (message.type === "text") return message.text?.body || "";
   if (message.type === "button") return message.button?.text || "";
   if (message.type === "interactive") {
+    const interactive = message.interactive || {};
     return (
-      message.interactive?.button_reply?.title ||
-      message.interactive?.list_reply?.title ||
+      interactive.button_reply?.title ||
+      interactive.list_reply?.title ||
+      interactive.nfm_reply?.body ||
       ""
     );
+  }
+  if (message.type === "order") {
+    return message.order?.text || "";
   }
   if (message.type === "location") {
     const { latitude, longitude, name, address } = message.location || {};
@@ -68,6 +73,9 @@ const getMessageBody = (message: any): string => {
     const contact = message.contacts?.[0] || {};
     const phone = contact.phones?.[0]?.phone || "";
     return `BEGIN:VCARD\nVERSION:3.0\nFN:${contact.name?.formatted_name || phone}\nTEL:${phone}\nEND:VCARD`;
+  }
+  if (message.type === "reaction") {
+    return message.reaction?.emoji || "";
   }
   return (
     message.image?.caption ||
@@ -131,6 +139,19 @@ const processWebhook = async (payload: any): Promise<void> => {
           (item: any) => item.wa_id === message.from
         );
         const mediaId = getMediaId(message);
+        const messageBody = getMessageBody(message);
+        const messageType = getMessageType(message);
+
+        // Algunos eventos entrantes llegan sin contenido útil (tipos no
+        // soportados que caen a "chat" sin texto ni media). No los guardamos
+        // para evitar burbujas vacías / "Mensaje no compatible".
+        if (!messageBody && !mediaId && messageType === "chat") {
+          logger.info(
+            { messageId: message.id, type: message.type },
+            "Ignoring empty/unsupported inbound WhatsApp message"
+          );
+          continue;
+        }
         let mediaPayload;
         if (mediaId) {
           try {
@@ -144,10 +165,10 @@ const processWebhook = async (payload: any): Promise<void> => {
         }
         const messagePayload: MessagePayload = {
           id: message.id,
-          body: getMessageBody(message),
+          body: messageBody,
           fromMe: false,
           hasMedia: Boolean(mediaId),
-          type: getMessageType(message),
+          type: messageType,
           timestamp: Number(message.timestamp || Date.now() / 1000),
           from: message.from,
           to: value.metadata?.display_phone_number || phoneNumberId,

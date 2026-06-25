@@ -48,6 +48,7 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -176,34 +177,21 @@ const getErrorCode = (err) =>
 const getActiveVersion = (template) => template.versions?.[0] || null;
 
 const documentStatusOptions = [
-  { value: "draft", label: "Borrador", color: "#8C9AA8" },
-  { value: "generated", label: "Generado", color: "#63B246" },
-  { value: "in_review", label: "En revisión", color: "#D9A441" },
-  { value: "sent", label: "Enviado", color: "#4E9FD1" },
-  { value: "approved", label: "Aprobado", color: "#45A66B" },
-  { value: "rejected", label: "Rechazado", color: "#D0605D" },
-  { value: "archived", label: "Archivado", color: "#707B86" },
-  {
-    value: "pending_signature",
-    label: "Pendiente de firma",
-    color: "#9B75D1",
-  },
+  { value: "draft", color: "#8C9AA8" },
+  { value: "generated", color: "#63B246" },
+  { value: "in_review", color: "#D9A441" },
+  { value: "sent", color: "#4E9FD1" },
+  { value: "approved", color: "#45A66B" },
+  { value: "rejected", color: "#D0605D" },
+  { value: "archived", color: "#707B86" },
+  { value: "pending_signature", color: "#9B75D1" },
 ];
 
-const documentEventLabels = {
-  created: "Creado",
-  generated: "Generado",
-  uploaded: "Subido",
-  downloaded_docx: "DOCX descargado",
-  downloaded_pdf: "PDF descargado",
-  status_changed: "Estado actualizado",
-  associated_client: "Cliente asociado",
-  associated_collaborator: "Colaborador asociado",
-  deleted: "Eliminado",
-  restored: "Restaurado",
-  archived: "Archivado",
-  comment_added: "Comentario agregado",
-};
+const documentStatusLabel = (status) =>
+  i18n.t(`smartDocuments.statuses.${status}`);
+
+const documentEventLabel = (eventType) =>
+  i18n.t(`smartDocuments.events.${eventType}`, { defaultValue: eventType });
 
 const getDocumentStatus = (status) =>
   documentStatusOptions.find((option) => option.value === status) ||
@@ -237,34 +225,33 @@ const getRequiredRecipientMode = (documentType) => {
 };
 
 const documentPurposes = [
-  { value: "", label: "Todos" },
-  { value: "contracts", label: "Contratos" },
-  { value: "quotations", label: "Cotizaciones" },
-  { value: "nda", label: "NDA" },
-  { value: "letters", label: "Cartas" },
-  { value: "delivery", label: "Actas" },
-  { value: "other", label: "Otros" },
+  { value: "" },
+  { value: "contracts" },
+  { value: "quotations" },
+  { value: "nda" },
+  { value: "letters" },
+  { value: "delivery" },
+  { value: "other" },
 ];
 
 const documentTypes = [
-  { value: "web_contract", label: "Contrato Techkepper Web", purpose: "contracts" },
-  { value: "secure_contract", label: "Contrato Techkepper Secure", purpose: "contracts" },
-  { value: "growth_contract", label: "Contrato Techkepper Growth", purpose: "contracts" },
-  { value: "automate_contract", label: "Contrato Techkepper Automate", purpose: "contracts" },
-  { value: "service_contract", label: "Contrato de servicio", purpose: "contracts" },
-  {
-    value: "freelance_sales_contract",
-    label: "Contrato freelance de ventas",
-    purpose: "contracts",
-  },
-  { value: "nda_mutual", label: "NDA mutuo", purpose: "nda" },
-  { value: "nda_unilateral", label: "NDA unilateral", purpose: "nda" },
-  { value: "quotation", label: "Cotización", purpose: "quotations" },
-  { value: "commercial_proposal", label: "Propuesta comercial", purpose: "quotations" },
-  { value: "generic_letter", label: "Carta para quien corresponda", purpose: "letters" },
-  { value: "delivery_record", label: "Acta de entrega", purpose: "delivery" },
-  { value: "other", label: "Otro", purpose: "other" },
+  { value: "web_contract", purpose: "contracts" },
+  { value: "secure_contract", purpose: "contracts" },
+  { value: "growth_contract", purpose: "contracts" },
+  { value: "automate_contract", purpose: "contracts" },
+  { value: "service_contract", purpose: "contracts" },
+  { value: "freelance_sales_contract", purpose: "contracts" },
+  { value: "nda_mutual", purpose: "nda" },
+  { value: "nda_unilateral", purpose: "nda" },
+  { value: "quotation", purpose: "quotations" },
+  { value: "commercial_proposal", purpose: "quotations" },
+  { value: "generic_letter", purpose: "letters" },
+  { value: "delivery_record", purpose: "delivery" },
+  { value: "other", purpose: "other" },
 ];
+
+const documentTypeLabel = (value) =>
+  i18n.t(`smartDocuments.documentTypes.${value}`, { defaultValue: "" });
 
 const contractRequiredVariables = [
   "CLIENTE_RAZON_SOCIAL",
@@ -292,45 +279,12 @@ const contractRequiredVariables = [
 const contractOptionalVariables = ["CLIENTE_TELEFONO"];
 
 const ecosystemContractConfigs = {
-  web_contract: {
-    ecosystem: "Web",
-    projectPrefix: "Techkepper Web",
-    scopeLabel: "Alcance de desarrollo web",
-    deliverablesLabel: "Entregables web",
-    labels: {
-      HERRAMIENTAS_INCLUIDAS: "Herramientas/licencias incluidas",
-      HERRAMIENTAS_EXCLUIDAS: "Herramientas/licencias excluidas",
-    },
-  },
-  secure_contract: {
-    ecosystem: "Secure",
-    projectPrefix: "Techkepper Secure",
-    scopeLabel: "Alcance de seguridad",
-    deliverablesLabel: "Activos evaluados / entregables",
-    labels: {
-      HERRAMIENTAS_INCLUIDAS: "Herramientas de seguridad incluidas",
-      HERRAMIENTAS_EXCLUIDAS: "Herramientas de seguridad excluidas",
-    },
-  },
-  growth_contract: {
-    ecosystem: "Growth",
-    projectPrefix: "Techkepper Growth",
-    scopeLabel: "Alcance de Growth",
-    deliverablesLabel: "Entregables Growth",
-    labels: {
-      HERRAMIENTAS_INCLUIDAS: "Herramientas/licencias incluidas",
-      HERRAMIENTAS_EXCLUIDAS: "Herramientas/licencias excluidas",
-    },
-  },
+  web_contract: { ecosystem: "Web", projectPrefix: "Techkepper Web" },
+  secure_contract: { ecosystem: "Secure", projectPrefix: "Techkepper Secure" },
+  growth_contract: { ecosystem: "Growth", projectPrefix: "Techkepper Growth" },
   automate_contract: {
     ecosystem: "Automate",
     projectPrefix: "Techkepper Automate",
-    scopeLabel: "Alcance de automatización",
-    deliverablesLabel: "Flujos / automatizaciones",
-    labels: {
-      HERRAMIENTAS_INCLUIDAS: "Integraciones y herramientas incluidas",
-      HERRAMIENTAS_EXCLUIDAS: "Integraciones y herramientas excluidas",
-    },
   },
 };
 
@@ -365,84 +319,52 @@ const freelanceSalesVariables = [
   "FECHA_FIRMA",
 ];
 
-const variableLabels = {
-  CLIENTE_RAZON_SOCIAL: "Razón social o nombre completo",
-  CLIENTE_CEDULA: "Cédula jurídica o física",
-  CLIENTE_REPRESENTANTE: "Representante legal",
-  CLIENTE_CEDULA_REPRESENTANTE: "Cédula del representante",
-  CLIENTE_CARGO_REPRESENTANTE: "Cargo del representante",
-  CLIENTE_DOMICILIO: "Domicilio",
-  CLIENTE_CORREO: "Correo electrónico",
-  CLIENTE_TELEFONO: "Teléfono",
-  ECOSISTEMA: "Ecosistema",
-  NOMBRE_PROYECTO: "Nombre del proyecto",
-  MONTO: "Monto",
-  MONEDA: "Moneda",
-  PERIODICIDAD: "Periodicidad",
-  PLAZO_MINIMO: "Plazo mínimo",
-  FECHA_INICIO: "Fecha de inicio",
-  ENTREGABLES: "Entregables",
-  TIEMPOS_RESPUESTA: "Tiempos de respuesta",
-  HERRAMIENTAS_INCLUIDAS: "Herramientas/licencias incluidas",
-  HERRAMIENTAS_EXCLUIDAS: "Herramientas/licencias excluidas",
-  CONDICIONES_ESPECIALES: "Condiciones especiales",
-  LUGAR_FIRMA: "Lugar de firma",
-  FECHA_FIRMA: "Fecha de firma",
-  PROPOSITO: "Propósito",
-  FREELANCE_NOMBRE: "Nombre completo del freelance",
-  FREELANCE_CEDULA: "Cédula del freelance",
-  FREELANCE_DENOMINACION: "Denominación contractual",
+const purposeLabel = (value) => {
+  const item = documentPurposes.find((entry) => entry.value === value);
+  return i18n.t(
+    `smartDocuments.purposes.${item ? item.value || "all" : "other"}`
+  );
 };
-
-const ndaUnilateralVariableLabels = {
-  CLIENTE_RAZON_SOCIAL: "Receptor / cliente",
-  CLIENTE_CEDULA: "Cédula física o jurídica",
-  CLIENTE_REPRESENTANTE: "Representante legal",
-  CLIENTE_CEDULA_REPRESENTANTE: "Cédula del representante",
-  CLIENTE_CARGO_REPRESENTANTE: "Cargo del representante",
-  CLIENTE_DOMICILIO: "Domicilio contractual",
-  CLIENTE_CORREO: "Correo oficial",
-  PROPOSITO: "Propósito",
-  FECHA_FIRMA: "Fecha de firma",
-};
-
-const collaboratorVariableLabels = {
-  CLIENTE_RAZON_SOCIAL: "Nombre completo del colaborador",
-  CLIENTE_CEDULA: "Cédula del colaborador",
-  CLIENTE_DOMICILIO: "Domicilio del colaborador",
-  CLIENTE_CORREO: "Correo electrónico del colaborador",
-};
-
-const purposeLabel = (value) =>
-  documentPurposes.find((item) => item.value === value)?.label || "Otros";
 
 const variableLabel = (variable, documentType, recipientMode) => {
-  if (
-    recipientMode === "collaborator" &&
-    collaboratorVariableLabels[variable]
-  ) {
-    return collaboratorVariableLabels[variable];
+  if (recipientMode === "collaborator") {
+    const collaboratorLabel = i18n.t(
+      `smartDocuments.variablesCollaborator.${variable}`,
+      { defaultValue: "" }
+    );
+    if (collaboratorLabel) return collaboratorLabel;
   }
-  if (
-    documentType === "nda_unilateral" &&
-    ndaUnilateralVariableLabels[variable]
-  ) {
-    return ndaUnilateralVariableLabels[variable];
+  if (documentType === "nda_unilateral") {
+    const ndaLabel = i18n.t(
+      `smartDocuments.variablesNdaUnilateral.${variable}`,
+      { defaultValue: "" }
+    );
+    if (ndaLabel) return ndaLabel;
   }
 
   const contractConfig = ecosystemContractConfigs[documentType];
   if (variable === "ENTREGABLES" && contractConfig) {
-    return contractConfig.deliverablesLabel;
+    return i18n.t(`smartDocuments.deliverablesLabels.${documentType}`);
   }
-  if (contractConfig?.labels?.[variable]) {
-    return contractConfig.labels[variable];
+  if (
+    contractConfig &&
+    (variable === "HERRAMIENTAS_INCLUIDAS" ||
+      variable === "HERRAMIENTAS_EXCLUIDAS")
+  ) {
+    return i18n.t(
+      `smartDocuments.ecosystemToolLabels.${documentType}.${variable}`
+    );
   }
+
+  const baseLabel = i18n.t(`smartDocuments.variables.${variable}`, {
+    defaultValue: "",
+  });
   return (
-    variableLabels[variable] ||
-  variable
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    baseLabel ||
+    variable
+      .toLowerCase()
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ")
   );
 };
@@ -547,7 +469,7 @@ const getGenerationDefaults = (documentType, clientName = "Cliente") => {
 
 const generationVariableGroups = [
   {
-    title: "Datos del cliente",
+    key: "clientData",
     variables: [
       "CLIENTE_RAZON_SOCIAL",
       "CLIENTE_CEDULA",
@@ -560,7 +482,7 @@ const generationVariableGroups = [
     ],
   },
   {
-    title: "Datos comerciales",
+    key: "commercialData",
     variables: [
       "ECOSISTEMA",
       "NOMBRE_PROYECTO",
@@ -572,7 +494,7 @@ const generationVariableGroups = [
     ],
   },
   {
-    title: "Alcance del ecosistema",
+    key: "ecosystemScope",
     variables: [
       "ENTREGABLES",
       "TIEMPOS_RESPUESTA",
@@ -582,14 +504,14 @@ const generationVariableGroups = [
     ],
   },
   {
-    title: "Firma",
+    key: "signature",
     variables: ["LUGAR_FIRMA", "FECHA_FIRMA"],
   },
 ];
 
 const ndaUnilateralVariableGroups = [
   {
-    title: "Datos del receptor",
+    key: "recipientData",
     variables: [
       "CLIENTE_RAZON_SOCIAL",
       "CLIENTE_CEDULA",
@@ -601,26 +523,26 @@ const ndaUnilateralVariableGroups = [
     ],
   },
   {
-    title: "Propósito del acuerdo",
+    key: "agreementPurpose",
     variables: ["PROPOSITO"],
   },
   {
-    title: "Firma",
+    key: "signature",
     variables: ["FECHA_FIRMA"],
   },
 ];
 
 const freelanceSalesVariableGroups = [
   {
-    title: "Datos del freelance",
+    key: "freelanceData",
     variables: ["FREELANCE_NOMBRE", "FREELANCE_CEDULA"],
   },
   {
-    title: "Denominación contractual",
+    key: "contractualDenomination",
     variables: ["FREELANCE_DENOMINACION"],
   },
   {
-    title: "Firma",
+    key: "signature",
     variables: ["LUGAR_FIRMA", "FECHA_FIRMA"],
   },
 ];
@@ -645,7 +567,7 @@ const groupGenerationVariables = (variables, documentType) => {
 
   if (remaining.size) {
     groups.push({
-      title: "Variables adicionales",
+      key: "additionalVariables",
       variables: Array.from(remaining),
     });
   }
@@ -667,33 +589,21 @@ const getVisibleGenerationVariables = (variables, client, recipientMode) =>
 
 const variablePlaceholder = (variable, documentType) => {
   const ecosystem = ecosystemContractConfigs[documentType]?.ecosystem;
-  const placeholders = {
-    web_contract: {
-      ENTREGABLES:
-        "Desarrollo web, UX/UI, WordPress, Elementor Pro, SEO técnico inicial y plataforma editable.",
-    },
-    secure_contract: {
-      ENTREGABLES:
-        "Auditorías, hardening, activos evaluados, protección de datos, monitoreo y continuidad.",
-    },
-    growth_contract: {
-      ENTREGABLES:
-        "SEO, GEO, AI Search Optimization, contenido, Google Ads, analítica y adquisición multicanal.",
-    },
-    automate_contract: {
-      ENTREGABLES:
-        "Flujos inteligentes, CRM, agentes IA, integraciones, software a medida y trazabilidad.",
-    },
-  };
 
-  if (placeholders[documentType]?.[variable]) {
-    return placeholders[documentType][variable];
+  if (variable === "ENTREGABLES") {
+    const deliverablesPlaceholder = i18n.t(
+      `smartDocuments.placeholders.entregables.${documentType}`,
+      { defaultValue: "" }
+    );
+    if (deliverablesPlaceholder) return deliverablesPlaceholder;
   }
   if (variable === "CONDICIONES_ESPECIALES" && ecosystem) {
-    return `Condiciones particulares del servicio Techkepper ${ecosystem}.`;
+    return i18n.t("smartDocuments.placeholders.condicionesEspeciales", {
+      ecosystem,
+    });
   }
   if (documentType === "nda_unilateral" && variable === "PROPOSITO") {
-    return "Describa el propósito específico para el cual se compartirá la información confidencial.";
+    return i18n.t("smartDocuments.placeholders.proposito");
   }
   return "";
 };
@@ -971,7 +881,7 @@ const SmartDocuments = () => {
 
   const handleUpload = async () => {
     if (!file) {
-      toast.warn("Seleccione un archivo para subir.");
+      toast.warn(i18n.t("smartDocuments.toasts.selectFileToUpload"));
       return;
     }
 
@@ -1000,7 +910,7 @@ const SmartDocuments = () => {
           };
         } else {
           toast.warn(
-            "Documento guardado, pero la asociación con clientes requiere instalación."
+            i18n.t("smartDocuments.toasts.savedButAssociationRequiresInstall")
           );
         }
       }
@@ -1014,7 +924,7 @@ const SmartDocuments = () => {
       setUploadPurpose("other");
       setFile(null);
       setSelectedBusinessClientId("");
-      toast.success("Documento guardado correctamente.");
+      toast.success(i18n.t("smartDocuments.toasts.documentSaved"));
     } catch (err) {
       if (getErrorCode(err) === "ERR_SMART_DOCUMENTS_NOT_INSTALLED") {
         setInstallRequired(true);
@@ -1028,7 +938,7 @@ const SmartDocuments = () => {
 
   const handleUploadTemplate = async () => {
     if (!templateFile) {
-      toast.warn("Seleccione una plantilla DOCX.");
+      toast.warn(i18n.t("smartDocuments.toasts.selectDocxTemplate"));
       return;
     }
 
@@ -1058,9 +968,9 @@ const SmartDocuments = () => {
       ]);
       if (data.missingExpectedVariables?.length) {
         toast.warn(
-          `La plantilla se guardó, pero el DOCX no contiene: ${data.missingExpectedVariables.join(
-            ", "
-          )}`
+          i18n.t("smartDocuments.toasts.templateSavedMissingVariables", {
+            variables: data.missingExpectedVariables.join(", "),
+          })
         );
       }
       setTemplateName("");
@@ -1072,7 +982,7 @@ const SmartDocuments = () => {
       setTemplateAllowGenericRecipient(false);
       setTemplateRequiredVariables(contractRequiredVariables.join(", "));
       setTemplateFile(null);
-      toast.success("Plantilla guardada correctamente.");
+      toast.success(i18n.t("smartDocuments.toasts.templateSaved"));
     } catch (err) {
       if (getErrorCode(err) === "ERR_SMART_DOCUMENTS_NOT_INSTALLED") {
         setInstallRequired(true);
@@ -1114,7 +1024,7 @@ const SmartDocuments = () => {
       setDocuments((current) =>
         current.filter((document) => document.id !== deletingDocument.id)
       );
-      toast.success("Documento eliminado correctamente.");
+      toast.success(i18n.t("smartDocuments.toasts.documentDeleted"));
     } catch (err) {
       toastError(err);
     } finally {
@@ -1129,7 +1039,7 @@ const SmartDocuments = () => {
       setTemplates((current) =>
         current.filter((template) => template.id !== deletingTemplate.id)
       );
-      toast.success("Plantilla eliminada correctamente.");
+      toast.success(i18n.t("smartDocuments.toasts.templateDeleted"));
     } catch (err) {
       toastError(err);
     } finally {
@@ -1169,7 +1079,7 @@ const SmartDocuments = () => {
       notificationMode === "users" &&
       selectedNotificationUsers.length === 0
     ) {
-      toast.warn("Seleccione al menos un usuario interno o elija no notificar.");
+      toast.warn(i18n.t("smartDocuments.toasts.selectUserOrNoNotify"));
       return;
     }
     try {
@@ -1192,7 +1102,7 @@ const SmartDocuments = () => {
         )
       );
       setStatusDocument(null);
-      toast.success("Estado documental actualizado correctamente.");
+      toast.success(i18n.t("smartDocuments.toasts.statusUpdated"));
     } catch (error) {
       toastError(error);
     }
@@ -1346,7 +1256,7 @@ const SmartDocuments = () => {
     try {
       return JSON.parse(generationData);
     } catch {
-      toast.warn("Revise el JSON de variables antes de continuar.");
+      toast.warn(i18n.t("smartDocuments.toasts.reviewJson"));
       return null;
     }
   };
@@ -1363,14 +1273,14 @@ const SmartDocuments = () => {
     const parsedData = parseGenerationData();
     if (!parsedData) return;
     if (requiredRecipientMode === "client" && !generationBusinessClientId) {
-      toast.warn("Seleccione un cliente para este documento.");
+      toast.warn(i18n.t("smartDocuments.toasts.selectClient"));
       return;
     }
     if (
       requiredRecipientMode === "collaborator" &&
       !generationCollaboratorId
     ) {
-      toast.warn("Seleccione un colaborador para este documento.");
+      toast.warn(i18n.t("smartDocuments.toasts.selectCollaborator"));
       return;
     }
     setGenerationStage("summary");
@@ -1403,7 +1313,7 @@ const SmartDocuments = () => {
       ]);
       setGeneratedDocument(generatedDocument);
       setGenerationStage("success");
-      toast.success("Documento generado correctamente.");
+      toast.success(i18n.t("smartDocuments.toasts.documentGenerated"));
     } catch (err) {
       toastError(err);
     } finally {
@@ -1428,15 +1338,16 @@ const SmartDocuments = () => {
       <ConfirmationModal
         title={
           deletingDocument
-            ? `Eliminar documento ${deletingDocument.title}?`
-            : "Eliminar documento"
+            ? i18n.t("smartDocuments.confirm.deleteDocumentTitle", {
+                title: deletingDocument.title,
+              })
+            : i18n.t("smartDocuments.confirm.deleteDocumentTitleDefault")
         }
         open={confirmModalOpen}
         onClose={setConfirmModalOpen}
         onConfirm={handleDelete}
       >
-        Esta acción quitará el documento del módulo y eliminará el archivo
-        almacenado.
+        {i18n.t("smartDocuments.confirm.deleteDocumentBody")}
       </ConfirmationModal>
 
       <Dialog
@@ -1445,14 +1356,16 @@ const SmartDocuments = () => {
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>Cambiar estado documental</DialogTitle>
+        <DialogTitle>{i18n.t("smartDocuments.statusDialog.title")}</DialogTitle>
         <DialogContent>
           <FormControl variant="outlined" margin="dense" fullWidth>
-            <InputLabel>Nuevo estado</InputLabel>
+            <InputLabel>
+              {i18n.t("smartDocuments.statusDialog.newStatus")}
+            </InputLabel>
             <Select
               value={nextDocumentStatus}
               onChange={(event) => setNextDocumentStatus(event.target.value)}
-              label="Nuevo estado"
+              label={i18n.t("smartDocuments.statusDialog.newStatus")}
             >
               {documentStatusOptions
                 .filter(
@@ -1462,13 +1375,13 @@ const SmartDocuments = () => {
                 )
                 .map((option) => (
                   <MenuItem key={option.value} value={option.value}>
-                    {option.label}
+                    {documentStatusLabel(option.value)}
                   </MenuItem>
                 ))}
             </Select>
           </FormControl>
           <TextField
-            label="Comentario opcional"
+            label={i18n.t("smartDocuments.statusDialog.optionalComment")}
             variant="outlined"
             margin="dense"
             fullWidth
@@ -1482,7 +1395,7 @@ const SmartDocuments = () => {
               className={classes.generationSectionTitle}
               variant="subtitle2"
             >
-              Notificación interna
+              {i18n.t("smartDocuments.statusDialog.internalNotification")}
             </Typography>
             <RadioGroup
               value={notificationMode}
@@ -1498,12 +1411,12 @@ const SmartDocuments = () => {
               <FormControlLabel
                 value="none"
                 control={<Radio color="primary" />}
-                label="No notificar a nadie"
+                label={i18n.t("smartDocuments.statusDialog.notifyNone")}
               />
               <FormControlLabel
                 value="users"
                 control={<Radio color="primary" />}
-                label="Notificar a usuarios internos"
+                label={i18n.t("smartDocuments.statusDialog.notifyUsers")}
               />
             </RadioGroup>
             {notificationMode === "users" && (
@@ -1525,18 +1438,24 @@ const SmartDocuments = () => {
                         ? ` · ${option.queues
                             .map((queue) => queue.name)
                             .join(", ")}`
-                        : " · Sin departamento"}
+                        : ` · ${i18n.t(
+                            "smartDocuments.statusDialog.noDepartment"
+                          )}`}
                     </Typography>
                   </div>
                 )}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Usuarios destinatarios"
-                    placeholder="Buscar por nombre o correo"
+                    label={i18n.t("smartDocuments.statusDialog.recipientUsers")}
+                    placeholder={i18n.t(
+                      "smartDocuments.statusDialog.searchByNameOrEmail"
+                    )}
                     variant="outlined"
                     margin="dense"
-                    helperText="Solo aparecen usuarios activos con permiso para ver este documento."
+                    helperText={i18n.t(
+                      "smartDocuments.statusDialog.recipientHelper"
+                    )}
                   />
                 )}
               />
@@ -1544,7 +1463,9 @@ const SmartDocuments = () => {
           </div>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusDocument(null)}>Cancelar</Button>
+          <Button onClick={() => setStatusDocument(null)}>
+            {i18n.t("smartDocuments.buttons.cancel")}
+          </Button>
           <Button
             color="primary"
             variant="contained"
@@ -1554,7 +1475,7 @@ const SmartDocuments = () => {
             }
             onClick={handleStatusChange}
           >
-            Guardar estado
+            {i18n.t("smartDocuments.statusDialog.saveStatus")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1566,35 +1487,44 @@ const SmartDocuments = () => {
         maxWidth="md"
       >
         <DialogTitle>
-          Historial · {historyDocument?.title || "Documento"}
+          {i18n.t("smartDocuments.historyDialog.title")} ·{" "}
+          {historyDocument?.title ||
+            i18n.t("smartDocuments.historyDialog.documentFallback")}
         </DialogTitle>
         <DialogContent dividers>
           {historyLoading && (
-            <Typography color="textSecondary">Cargando historial...</Typography>
+            <Typography color="textSecondary">
+              {i18n.t("smartDocuments.historyDialog.loading")}
+            </Typography>
           )}
           {!historyLoading && documentEvents.length === 0 && (
             <Typography color="textSecondary">
-              Este documento todavía no tiene eventos registrados.
+              {i18n.t("smartDocuments.historyDialog.empty")}
             </Typography>
           )}
           {documentEvents.map((event) => (
             <div className={classes.generationSection} key={event.id}>
               <Typography variant="subtitle2">
-                {documentEventLabels[event.eventType] || event.eventType}
+                {documentEventLabel(event.eventType)}
               </Typography>
               <Typography variant="caption" color="textSecondary">
                 {new Date(event.createdAt).toLocaleString()} ·{" "}
-                {event.user?.name || "Sistema"}
+                {event.user?.name ||
+                  i18n.t("smartDocuments.historyDialog.system")}
               </Typography>
               {(event.previousStatus || event.newStatus) && (
                 <Typography variant="body2">
                   {event.previousStatus
-                    ? getDocumentStatus(event.previousStatus).label
-                    : "Sin estado previo"}
+                    ? documentStatusLabel(
+                        getDocumentStatus(event.previousStatus).value
+                      )
+                    : i18n.t("smartDocuments.historyDialog.noPreviousStatus")}
                   {" → "}
                   {event.newStatus
-                    ? getDocumentStatus(event.newStatus).label
-                    : "Sin cambio de estado"}
+                    ? documentStatusLabel(
+                        getDocumentStatus(event.newStatus).value
+                      )
+                    : i18n.t("smartDocuments.historyDialog.noStatusChange")}
                 </Typography>
               )}
               {event.comment && (
@@ -1604,7 +1534,9 @@ const SmartDocuments = () => {
           ))}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setHistoryDocument(null)}>Cerrar</Button>
+          <Button onClick={() => setHistoryDocument(null)}>
+            {i18n.t("smartDocuments.buttons.close")}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -1614,14 +1546,18 @@ const SmartDocuments = () => {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>Descargar documento</DialogTitle>
+        <DialogTitle>
+          {i18n.t("smartDocuments.downloadDialog.title")}
+        </DialogTitle>
         <DialogContent>
           <Typography color="textSecondary">
-            Seleccione el formato en que desea descargar el documento.
+            {i18n.t("smartDocuments.downloadDialog.body")}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDownloadingDocument(null)}>Cancelar</Button>
+          <Button onClick={() => setDownloadingDocument(null)}>
+            {i18n.t("smartDocuments.buttons.cancel")}
+          </Button>
           {canCreateDocuments &&
             downloadingDocument?.mimeType ===
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && (
@@ -1630,7 +1566,7 @@ const SmartDocuments = () => {
               variant="outlined"
               onClick={() => handleDownload(downloadingDocument, "docx")}
             >
-              Descargar DOCX
+              {i18n.t("smartDocuments.buttons.downloadDocx")}
             </Button>
           )}
           {(downloadingDocument?.mimeType ===
@@ -1641,7 +1577,7 @@ const SmartDocuments = () => {
               variant="contained"
               onClick={() => handleDownload(downloadingDocument, "pdf")}
             >
-              Descargar PDF
+              {i18n.t("smartDocuments.buttons.downloadPdf")}
             </Button>
           )}
           {canCreateDocuments &&
@@ -1657,7 +1593,7 @@ const SmartDocuments = () => {
                   handleDownload(downloadingDocument, "original")
                 }
               >
-                Descargar original
+                {i18n.t("smartDocuments.buttons.downloadOriginal")}
               </Button>
             )}
         </DialogActions>
@@ -1666,15 +1602,16 @@ const SmartDocuments = () => {
       <ConfirmationModal
         title={
           deletingTemplate
-            ? `Eliminar plantilla ${deletingTemplate.name}?`
-            : "Eliminar plantilla"
+            ? i18n.t("smartDocuments.confirm.deleteTemplateTitle", {
+                name: deletingTemplate.name,
+              })
+            : i18n.t("smartDocuments.confirm.deleteTemplateTitleDefault")
         }
         open={templateConfirmOpen}
         onClose={setTemplateConfirmOpen}
         onConfirm={handleDeleteTemplate}
       >
-        La plantilla dejará de estar disponible para generar documentos. Los
-        documentos creados anteriormente se conservarán.
+        {i18n.t("smartDocuments.confirm.deleteTemplateBody")}
       </ConfirmationModal>
 
       <Dialog
@@ -1687,45 +1624,46 @@ const SmartDocuments = () => {
       >
         <DialogTitle>
           {generationStage === "summary"
-            ? "Revisar documento"
+            ? i18n.t("smartDocuments.generateDialog.titleReview")
             : generationStage === "success"
-            ? "Documento generado"
-            : "Generar documento"}
+            ? i18n.t("smartDocuments.generateDialog.titleSuccess")
+            : i18n.t("smartDocuments.generateDialog.titleForm")}
         </DialogTitle>
         <DialogContent>
           {generationStage === "form" && (
             <>
           <Typography color="textSecondary" gutterBottom>
-            Seleccione el propósito y el machote. El formulario solicitará
-            únicamente las variables que necesita ese documento.
+            {i18n.t("smartDocuments.generateDialog.intro")}
           </Typography>
           <FormControl variant="outlined" margin="dense" fullWidth>
-            <InputLabel>Propósito</InputLabel>
+            <InputLabel>{i18n.t("smartDocuments.fields.purpose")}</InputLabel>
             <Select
               value={generationPurpose}
               onChange={(event) => {
                 setGenerationPurpose(event.target.value);
                 setSelectedTemplate(null);
               }}
-              label="Propósito"
+              label={i18n.t("smartDocuments.fields.purpose")}
             >
               {documentPurposes
                 .filter((purpose) => purpose.value)
                 .map((purpose) => (
                   <MenuItem key={purpose.value} value={purpose.value}>
-                    {purpose.label}
+                    {purposeLabel(purpose.value)}
                   </MenuItem>
                 ))}
             </Select>
           </FormControl>
           <FormControl variant="outlined" margin="dense" fullWidth>
-            <InputLabel>Documento a generar</InputLabel>
+            <InputLabel>
+              {i18n.t("smartDocuments.generateDialog.documentToGenerate")}
+            </InputLabel>
             <Select
               value={selectedTemplate?.id || ""}
               onChange={(event) =>
                 selectGenerationTemplate(event.target.value)
               }
-              label="Documento a generar"
+              label={i18n.t("smartDocuments.generateDialog.documentToGenerate")}
               disabled={!generationPurpose}
             >
               {templates
@@ -1748,42 +1686,54 @@ const SmartDocuments = () => {
             <>
               {selectedTemplate.missingExpectedVariables?.length > 0 && (
                 <Typography color="error" variant="body2">
-                  Aviso: el DOCX no contiene estas variables esperadas:{" "}
-                  {selectedTemplate.missingExpectedVariables.join(", ")}.
+                  {i18n.t("smartDocuments.generateDialog.missingExpectedWarning", {
+                    variables:
+                      selectedTemplate.missingExpectedVariables.join(", "),
+                  })}
                 </Typography>
               )}
               {!requiredRecipientMode && (
                 <FormControl variant="outlined" margin="dense" fullWidth>
-                  <InputLabel>Destinatario</InputLabel>
+                  <InputLabel>
+                    {i18n.t("smartDocuments.fields.recipient")}
+                  </InputLabel>
                   <Select
                     value={recipientMode}
                     onChange={(event) =>
                       handleRecipientModeChange(event.target.value)
                     }
-                    label="Destinatario"
+                    label={i18n.t("smartDocuments.fields.recipient")}
                   >
-                    <MenuItem value="client">Cliente registrado</MenuItem>
+                    <MenuItem value="client">
+                      {i18n.t("smartDocuments.recipients.client")}
+                    </MenuItem>
                     <MenuItem value="collaborator">
-                      Colaborador registrado
+                      {i18n.t("smartDocuments.recipients.collaborator")}
                     </MenuItem>
                     {!selectedTemplate.requiresClient && (
-                      <MenuItem value="manual">Datos manuales</MenuItem>
+                      <MenuItem value="manual">
+                        {i18n.t("smartDocuments.recipients.manual")}
+                      </MenuItem>
                     )}
                     {selectedTemplate.allowGenericRecipient && (
-                      <MenuItem value="generic">Para quien corresponda</MenuItem>
+                      <MenuItem value="generic">
+                        {i18n.t("smartDocuments.recipients.generic")}
+                      </MenuItem>
                     )}
                   </Select>
                 </FormControl>
               )}
               {recipientMode === "client" && (
                 <FormControl variant="outlined" margin="dense" fullWidth>
-                  <InputLabel>Cliente</InputLabel>
+                  <InputLabel>
+                    {i18n.t("smartDocuments.fields.client")}
+                  </InputLabel>
                   <Select
                     value={generationBusinessClientId}
                     onChange={(event) =>
                       handleGenerationClientChange(event.target.value)
                     }
-                    label="Cliente"
+                    label={i18n.t("smartDocuments.fields.client")}
                   >
                     {businessClients.map((client) => (
                       <MenuItem key={client.id} value={client.id}>
@@ -1795,13 +1745,15 @@ const SmartDocuments = () => {
               )}
               {recipientMode === "collaborator" && (
                 <FormControl variant="outlined" margin="dense" fullWidth>
-                  <InputLabel>Colaborador</InputLabel>
+                  <InputLabel>
+                    {i18n.t("smartDocuments.fields.collaborator")}
+                  </InputLabel>
                   <Select
                     value={generationCollaboratorId}
                     onChange={(event) =>
                       handleGenerationCollaboratorChange(event.target.value)
                     }
-                    label="Colaborador"
+                    label={i18n.t("smartDocuments.fields.collaborator")}
                   >
                     {collaborators.map((collaborator) => (
                       <MenuItem key={collaborator.id} value={collaborator.id}>
@@ -1815,7 +1767,7 @@ const SmartDocuments = () => {
             </>
           )}
           <TextField
-            label="Nombre del documento"
+            label={i18n.t("smartDocuments.fields.documentName")}
             variant="outlined"
             margin="dense"
             fullWidth
@@ -1833,20 +1785,24 @@ const SmartDocuments = () => {
               ),
               selectedTemplate.documentType
             ).map((group) => (
-                <div className={classes.generationSection} key={group.title}>
+                <div className={classes.generationSection} key={group.key}>
                   <Typography
                     className={classes.generationSectionTitle}
                     variant="subtitle2"
                   >
                     {recipientMode === "collaborator" &&
-                    ["Datos del cliente", "Datos del receptor"].includes(
-                      group.title
-                    )
-                      ? "Datos del colaborador"
-                      : group.title === "Alcance del ecosistema"
-                      ? ecosystemContractConfigs[selectedTemplate.documentType]
-                          ?.scopeLabel || group.title
-                      : group.title}
+                    ["clientData", "recipientData"].includes(group.key)
+                      ? i18n.t("smartDocuments.variableGroups.collaboratorData")
+                      : group.key === "ecosystemScope"
+                      ? i18n.t(
+                          `smartDocuments.scopeLabels.${selectedTemplate.documentType}`,
+                          {
+                            defaultValue: i18n.t(
+                              "smartDocuments.variableGroups.ecosystemScope"
+                            ),
+                          }
+                        )
+                      : i18n.t(`smartDocuments.variableGroups.${group.key}`)}
                   </Typography>
                   {group.variables.map((variable) =>
                     variable === "FREELANCE_DENOMINACION" ? (
@@ -1856,7 +1812,11 @@ const SmartDocuments = () => {
                         margin="dense"
                         fullWidth
                       >
-                        <InputLabel>Denominación contractual *</InputLabel>
+                        <InputLabel>
+                          {`${i18n.t(
+                            "smartDocuments.fields.contractualDenomination"
+                          )} *`}
+                        </InputLabel>
                         <Select
                           value={generationValues[variable] || ""}
                           onChange={(event) =>
@@ -1865,7 +1825,9 @@ const SmartDocuments = () => {
                               [variable]: event.target.value,
                             }))
                           }
-                          label="Denominación contractual *"
+                          label={`${i18n.t(
+                            "smartDocuments.fields.contractualDenomination"
+                          )} *`}
                         >
                           <MenuItem value="LA CONTRATISTA">
                             LA CONTRATISTA
@@ -1938,12 +1900,11 @@ const SmartDocuments = () => {
                 selectedTemplate.documentType
               ) && (
                 <Typography color="textSecondary" variant="body2">
-                  Esta plantilla no tiene un tipo visual conocido. Complete las
-                  variables mediante el modo técnico JSON.
+                  {i18n.t("smartDocuments.generateDialog.noVisualType")}
                 </Typography>
               )}
               <TextField
-                label="Variables JSON"
+                label={i18n.t("smartDocuments.generateDialog.variablesJson")}
                 variant="outlined"
                 margin="dense"
                 fullWidth
@@ -1973,7 +1934,7 @@ const SmartDocuments = () => {
                   }}
                 />
               }
-              label="Modo técnico JSON"
+              label={i18n.t("smartDocuments.generateDialog.technicalMode")}
             />
           )}
             </>
@@ -1981,46 +1942,47 @@ const SmartDocuments = () => {
           {generationStage === "summary" && selectedTemplate && (
             <>
               <Typography color="textSecondary">
-                Confirme la información antes de generar el archivo definitivo.
+                {i18n.t("smartDocuments.generateDialog.summaryIntro")}
               </Typography>
               <div className={classes.generationSummary}>
                 <div className={classes.generationSummaryCard}>
                   <Typography variant="caption" color="textSecondary">
-                    Tipo documental
+                    {i18n.t("smartDocuments.generateDialog.summaryDocumentType")}
                   </Typography>
                   <Typography>
-                    {documentTypes.find(
-                      (item) => item.value === selectedTemplate.documentType
-                    )?.label || "Otro / modo técnico"}
+                    {documentTypeLabel(selectedTemplate.documentType) ||
+                      i18n.t("smartDocuments.generateDialog.otherTechnical")}
                   </Typography>
                 </div>
                 <div className={classes.generationSummaryCard}>
                   <Typography variant="caption" color="textSecondary">
-                    Plantilla
+                    {i18n.t("smartDocuments.generateDialog.summaryTemplate")}
                   </Typography>
                   <Typography>{selectedTemplate.name}</Typography>
                 </div>
                 <div className={classes.generationSummaryCard}>
                   <Typography variant="caption" color="textSecondary">
-                    Destinatario
+                    {i18n.t("smartDocuments.fields.recipient")}
                   </Typography>
                   <Typography>
                     {selectedGenerationClient?.displayName ||
                       selectedGenerationCollaborator?.fullName ||
                       (recipientMode === "generic"
-                        ? "Para quien corresponda"
-                        : "Datos manuales")}
+                        ? i18n.t("smartDocuments.recipients.generic")
+                        : i18n.t("smartDocuments.recipients.manual"))}
                   </Typography>
                 </div>
                 <div className={classes.generationSummaryCard}>
                   <Typography variant="caption" color="textSecondary">
-                    Formatos disponibles
+                    {i18n.t("smartDocuments.generateDialog.availableFormats")}
                   </Typography>
-                  <Typography>DOCX y PDF</Typography>
+                  <Typography>
+                    {i18n.t("smartDocuments.generateDialog.docxAndPdf")}
+                  </Typography>
                 </div>
                 <div className={classes.generationSummaryCard}>
                   <Typography variant="caption" color="textSecondary">
-                    Variables completas
+                    {i18n.t("smartDocuments.generateDialog.completeVariables")}
                   </Typography>
                   <Typography>
                     {
@@ -2032,7 +1994,7 @@ const SmartDocuments = () => {
                 </div>
                 <div className={classes.generationSummaryCard}>
                   <Typography variant="caption" color="textSecondary">
-                    Variables faltantes
+                    {i18n.t("smartDocuments.generateDialog.missingVariables")}
                   </Typography>
                   <div className={classes.variableList}>
                     {getMissingGenerationVariables(
@@ -2053,7 +2015,9 @@ const SmartDocuments = () => {
                         />
                       ))
                     ) : (
-                      <Typography>Sin campos pendientes</Typography>
+                      <Typography>
+                        {i18n.t("smartDocuments.generateDialog.noPendingFields")}
+                      </Typography>
                     )}
                   </div>
                 </div>
@@ -2063,7 +2027,7 @@ const SmartDocuments = () => {
           {generationStage === "success" && generatedDocument && (
             <>
               <Typography>
-                El documento se generó y quedó asociado correctamente.
+                {i18n.t("smartDocuments.generateDialog.successMessage")}
               </Typography>
               <div className={classes.generationResultActions}>
                 {canCreateDocuments && (
@@ -2072,7 +2036,7 @@ const SmartDocuments = () => {
                     variant="outlined"
                     onClick={() => handleDownload(generatedDocument, "docx")}
                   >
-                    Descargar DOCX
+                    {i18n.t("smartDocuments.buttons.downloadDocx")}
                   </Button>
                 )}
                 <Button
@@ -2080,7 +2044,7 @@ const SmartDocuments = () => {
                   variant="contained"
                   onClick={() => handleDownload(generatedDocument, "pdf")}
                 >
-                  Descargar PDF
+                  {i18n.t("smartDocuments.buttons.downloadPdf")}
                 </Button>
                 <Button
                   onClick={() => {
@@ -2088,16 +2052,18 @@ const SmartDocuments = () => {
                     setActiveTab(0);
                   }}
                 >
-                  Ver en Documentos
+                  {i18n.t("smartDocuments.generateDialog.viewInDocuments")}
                 </Button>
                 {generatedDocument.businessClient && (
                   <Button onClick={() => history.push("/business-clients")}>
-                    Ver cliente relacionado
+                    {i18n.t("smartDocuments.generateDialog.viewRelatedClient")}
                   </Button>
                 )}
                 {generatedDocument.collaborator && (
                   <Button onClick={() => history.push("/collaborators")}>
-                    Ver colaborador relacionado
+                    {i18n.t(
+                      "smartDocuments.generateDialog.viewRelatedCollaborator"
+                    )}
                   </Button>
                 )}
               </div>
@@ -2108,7 +2074,7 @@ const SmartDocuments = () => {
           {generationStage === "form" && (
             <>
               <Button onClick={() => setGenerateDialogOpen(false)}>
-                Cancelar
+                {i18n.t("smartDocuments.buttons.cancel")}
               </Button>
               <Button
                 color="primary"
@@ -2116,14 +2082,14 @@ const SmartDocuments = () => {
                 disabled={saving || !selectedTemplate}
                 onClick={handleReviewGeneration}
               >
-                Revisar
+                {i18n.t("smartDocuments.buttons.review")}
               </Button>
             </>
           )}
           {generationStage === "summary" && (
             <>
               <Button onClick={() => setGenerationStage("form")}>
-                Volver
+                {i18n.t("smartDocuments.buttons.back")}
               </Button>
               <Button
                 color="primary"
@@ -2136,21 +2102,29 @@ const SmartDocuments = () => {
                 }
                 onClick={handleGenerateDocument}
               >
-                {saving ? "Generando..." : "Confirmar y generar"}
+                {saving
+                  ? i18n.t("smartDocuments.generateDialog.generating")
+                  : i18n.t("smartDocuments.generateDialog.confirmAndGenerate")}
               </Button>
             </>
           )}
           {generationStage === "success" && (
-            <Button onClick={() => setGenerateDialogOpen(false)}>Cerrar</Button>
+            <Button onClick={() => setGenerateDialogOpen(false)}>
+              {i18n.t("smartDocuments.buttons.close")}
+            </Button>
           )}
         </DialogActions>
       </Dialog>
 
       <MainHeader>
-        <Title>Documentos inteligentes</Title>
+        <Title>{i18n.t("smartDocuments.title")}</Title>
         <MainHeaderButtonsWrapper>
           <TextField
-            placeholder={activeTab === 0 ? "Buscar documento" : "Buscar plantilla"}
+            placeholder={
+              activeTab === 0
+                ? i18n.t("smartDocuments.search.document")
+                : i18n.t("smartDocuments.search.template")
+            }
             type="search"
             variant="outlined"
             size="small"
@@ -2170,18 +2144,20 @@ const SmartDocuments = () => {
           />
           {activeTab === 0 && (
             <FormControl variant="outlined" size="small">
-              <InputLabel>Estado</InputLabel>
+              <InputLabel>{i18n.t("smartDocuments.filters.status")}</InputLabel>
               <Select
                 value={documentStatusFilter}
                 onChange={(event) =>
                   setDocumentStatusFilter(event.target.value)
                 }
-                label="Estado"
+                label={i18n.t("smartDocuments.filters.status")}
               >
-                <MenuItem value="">Todos los estados</MenuItem>
+                <MenuItem value="">
+                  {i18n.t("smartDocuments.filters.allStatuses")}
+                </MenuItem>
                 {documentStatusOptions.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
-                    {option.label}
+                    {documentStatusLabel(option.value)}
                   </MenuItem>
                 ))}
               </Select>
@@ -2193,7 +2169,7 @@ const SmartDocuments = () => {
               variant="contained"
               onClick={openGenerationWizard}
             >
-              Generar documento
+              {i18n.t("smartDocuments.buttons.generateDocument")}
             </Button>
           )}
         </MainHeaderButtonsWrapper>
@@ -2206,18 +2182,20 @@ const SmartDocuments = () => {
           indicatorColor="primary"
           textColor="primary"
         >
-          <Tab label="Documentos" />
-          {canCreateDocuments && <Tab label="Plantillas" />}
+          <Tab label={i18n.t("smartDocuments.tabs.documents")} />
+          {canCreateDocuments && (
+            <Tab label={i18n.t("smartDocuments.tabs.templates")} />
+          )}
         </Tabs>
       </Paper>
 
       {installRequired && (
         <Paper className={classes.installWarning} variant="outlined">
-          <Typography variant="h6">Instalación pendiente</Typography>
+          <Typography variant="h6">
+            {i18n.t("smartDocuments.install.title")}
+          </Typography>
           <Typography color="textSecondary">
-            El módulo está integrado, pero faltan tablas o columnas de
-            Documentos inteligentes. Ejecute las migraciones del backend
-            (npm run db:migrate) para crearlas automáticamente.
+            {i18n.t("smartDocuments.install.body")}
           </Typography>
         </Paper>
       )}
@@ -2237,7 +2215,7 @@ const SmartDocuments = () => {
                 <Tab
                   key={purpose.value || "all"}
                   value={purpose.value}
-                  label={purpose.label}
+                  label={purposeLabel(purpose.value)}
                 />
               ))}
             </Tabs>
@@ -2245,47 +2223,51 @@ const SmartDocuments = () => {
           {canCreateDocuments && (
           <Paper className={classes.uploadPanel} variant="outlined">
             <TextField
-              label="Nombre del documento"
+              label={i18n.t("smartDocuments.fields.documentName")}
               variant="outlined"
               size="small"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
             <TextField
-              label="Categoría"
+              label={i18n.t("smartDocuments.fields.category")}
               variant="outlined"
               size="small"
               value={category}
               onChange={(event) => setCategory(event.target.value)}
             />
             <FormControl variant="outlined" size="small">
-              <InputLabel>Uso</InputLabel>
+              <InputLabel>{i18n.t("smartDocuments.fields.usage")}</InputLabel>
               <Select
                 value={uploadPurpose}
                 onChange={(event) => setUploadPurpose(event.target.value)}
-                label="Uso"
+                label={i18n.t("smartDocuments.fields.usage")}
               >
                 {documentPurposes
                   .filter((purpose) => purpose.value)
                   .map((purpose) => (
                     <MenuItem key={purpose.value} value={purpose.value}>
-                      {purpose.label}
+                      {purposeLabel(purpose.value)}
                     </MenuItem>
                   ))}
               </Select>
             </FormControl>
             {canManageClientLinks && (
               <FormControl variant="outlined" size="small">
-                <InputLabel>Cliente comercial</InputLabel>
+                <InputLabel>
+                  {i18n.t("smartDocuments.fields.businessClient")}
+                </InputLabel>
                 <Select
                   value={selectedBusinessClientId}
                   onChange={(event) =>
                     setSelectedBusinessClientId(event.target.value)
                   }
-                  label="Cliente comercial"
+                  label={i18n.t("smartDocuments.fields.businessClient")}
                   disabled={!associationInstalled}
                 >
-                  <MenuItem value="">Sin cliente asociado</MenuItem>
+                  <MenuItem value="">
+                    {i18n.t("smartDocuments.upload.noClientAssociated")}
+                  </MenuItem>
                   {businessClients.map((client) => (
                     <MenuItem key={client.id} value={client.id}>
                       {client.displayName}
@@ -2308,7 +2290,9 @@ const SmartDocuments = () => {
                   variant="outlined"
                   startIcon={<CloudUploadOutlinedIcon />}
                 >
-                  {file ? "Cambiar archivo" : "Seleccionar archivo"}
+                  {file
+                    ? i18n.t("smartDocuments.buttons.changeFile")
+                    : i18n.t("smartDocuments.buttons.selectFile")}
                 </Button>
               </label>
               <Button
@@ -2317,7 +2301,7 @@ const SmartDocuments = () => {
                 disabled={saving || !file}
                 onClick={handleUpload}
               >
-                Guardar
+                {i18n.t("smartDocuments.buttons.save")}
               </Button>
               {file && (
                 <Typography variant="caption" display="block">
@@ -2336,15 +2320,19 @@ const SmartDocuments = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Documento</TableCell>
-                  <TableCell>Categoría</TableCell>
-                  <TableCell>Uso</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell>Cliente</TableCell>
-                  <TableCell>Subido por</TableCell>
-                  <TableCell>Tamaño</TableCell>
-                  <TableCell>Fecha</TableCell>
-                  <TableCell align="center">Acciones</TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.document")}</TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.category")}</TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.usage")}</TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.status")}</TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.client")}</TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.uploadedBy")}
+                  </TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.size")}</TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.date")}</TableCell>
+                  <TableCell align="center">
+                    {i18n.t("smartDocuments.table.actions")}
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -2362,7 +2350,7 @@ const SmartDocuments = () => {
                       {document.category ? (
                         <Chip size="small" label={document.category} />
                       ) : (
-                        "General"
+                        i18n.t("smartDocuments.common.general")
                       )}
                     </TableCell>
                     <TableCell>{purposeLabel(document.purpose)}</TableCell>
@@ -2370,7 +2358,9 @@ const SmartDocuments = () => {
                       <Chip
                         size="small"
                         variant="outlined"
-                        label={getDocumentStatus(document.status).label}
+                        label={documentStatusLabel(
+                          getDocumentStatus(document.status).value
+                        )}
                         style={{
                           color: getDocumentStatus(document.status).color,
                           borderColor: getDocumentStatus(document.status).color,
@@ -2378,7 +2368,8 @@ const SmartDocuments = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      {document.businessClient?.displayName || "Sin asociar"}
+                      {document.businessClient?.displayName ||
+                        i18n.t("smartDocuments.table.unassigned")}
                     </TableCell>
                     <TableCell>{document.uploadedBy?.name || "-"}</TableCell>
                     <TableCell>{formatSize(document.size)}</TableCell>
@@ -2388,7 +2379,7 @@ const SmartDocuments = () => {
                     <TableCell align="center">
                       <IconButton
                         size="small"
-                        title="Ver historial"
+                        title={i18n.t("smartDocuments.actions.viewHistory")}
                         onClick={() => openDocumentHistory(document)}
                       >
                         <HistoryOutlinedIcon />
@@ -2396,7 +2387,7 @@ const SmartDocuments = () => {
                       {canCreateDocuments && (
                         <IconButton
                           size="small"
-                          title="Cambiar estado"
+                          title={i18n.t("smartDocuments.actions.changeStatus")}
                           onClick={() => openStatusDialog(document)}
                         >
                           <SwapHorizOutlinedIcon />
@@ -2409,7 +2400,9 @@ const SmartDocuments = () => {
                         ].includes(document.mimeType)) && (
                         <IconButton
                           size="small"
-                          title="Descargar documento"
+                          title={i18n.t(
+                            "smartDocuments.actions.downloadDocument"
+                          )}
                           onClick={() => setDownloadingDocument(document)}
                         >
                           <GetAppOutlinedIcon />
@@ -2436,7 +2429,7 @@ const SmartDocuments = () => {
                       <TableCell colSpan={9}>
                       <div className={classes.emptyState}>
                         <Typography color="textSecondary">
-                          No hay documentos para mostrar.
+                          {i18n.t("smartDocuments.emptyDocuments")}
                         </Typography>
                       </div>
                     </TableCell>
@@ -2464,7 +2457,7 @@ const SmartDocuments = () => {
                 <Tab
                   key={purpose.value || "all"}
                   value={purpose.value}
-                  label={purpose.label}
+                  label={purposeLabel(purpose.value)}
                 />
               ))}
             </Tabs>
@@ -2475,21 +2468,21 @@ const SmartDocuments = () => {
             variant="outlined"
           >
             <TextField
-              label="Nombre de la plantilla"
+              label={i18n.t("smartDocuments.fields.templateName")}
               variant="outlined"
               size="small"
               value={templateName}
               onChange={(event) => setTemplateName(event.target.value)}
             />
             <TextField
-              label="Categoría"
+              label={i18n.t("smartDocuments.fields.category")}
               variant="outlined"
               size="small"
               value={templateCategory}
               onChange={(event) => setTemplateCategory(event.target.value)}
             />
             <FormControl variant="outlined" size="small">
-              <InputLabel>Propósito</InputLabel>
+              <InputLabel>{i18n.t("smartDocuments.fields.purpose")}</InputLabel>
               <Select
                 value={templatePurpose}
                 onChange={(event) => {
@@ -2514,19 +2507,21 @@ const SmartDocuments = () => {
                     setTemplateEcosystemId(ecosystem?.id || "");
                   }
                 }}
-                label="Propósito"
+                label={i18n.t("smartDocuments.fields.purpose")}
               >
                 {documentPurposes
                   .filter((purpose) => purpose.value)
                   .map((purpose) => (
                     <MenuItem key={purpose.value} value={purpose.value}>
-                      {purpose.label}
+                      {purposeLabel(purpose.value)}
                     </MenuItem>
                   ))}
               </Select>
             </FormControl>
             <FormControl variant="outlined" size="small">
-              <InputLabel>Tipo de documento</InputLabel>
+              <InputLabel>
+                {i18n.t("smartDocuments.fields.documentType")}
+              </InputLabel>
               <Select
                 value={templateDocumentType}
                 onChange={(event) => {
@@ -2550,36 +2545,40 @@ const SmartDocuments = () => {
                     setTemplateEcosystemId(ecosystem?.id || "");
                   }
                 }}
-                label="Tipo de documento"
+                label={i18n.t("smartDocuments.fields.documentType")}
               >
                 {documentTypes
                   .filter((item) => item.purpose === templatePurpose)
                   .map((item) => (
                     <MenuItem key={item.value} value={item.value}>
-                      {item.label}
+                      {documentTypeLabel(item.value)}
                     </MenuItem>
                   ))}
               </Select>
             </FormControl>
             {templatePurpose === "nda" ? (
               <TextField
-                label="Ecosistema"
-                value="General, no requiere ecosistema"
+                label={i18n.t("smartDocuments.fields.ecosystem")}
+                value={i18n.t("smartDocuments.template.ndaEcosystem")}
                 variant="outlined"
                 size="small"
                 disabled
               />
             ) : (
               <FormControl variant="outlined" size="small">
-                <InputLabel>Ecosistema</InputLabel>
+                <InputLabel>
+                  {i18n.t("smartDocuments.fields.ecosystem")}
+                </InputLabel>
                 <Select
                   value={templateEcosystemId}
                   onChange={(event) =>
                     setTemplateEcosystemId(event.target.value)
                   }
-                  label="Ecosistema"
+                  label={i18n.t("smartDocuments.fields.ecosystem")}
                 >
-                  <MenuItem value="">General</MenuItem>
+                  <MenuItem value="">
+                    {i18n.t("smartDocuments.common.general")}
+                  </MenuItem>
                   {ecosystems.map((ecosystem) => (
                     <MenuItem key={ecosystem.id} value={ecosystem.id}>
                       {ecosystem.name}
@@ -2589,7 +2588,7 @@ const SmartDocuments = () => {
               </FormControl>
             )}
             <TextField
-              label="Variables requeridas"
+              label={i18n.t("smartDocuments.fields.requiredVariables")}
               placeholder="NOMBRE_CLIENTE, CEDULA_CLIENTE"
               variant="outlined"
               size="small"
@@ -2597,8 +2596,8 @@ const SmartDocuments = () => {
               onChange={(event) => setTemplateRequiredVariables(event.target.value)}
               helperText={
                 getTypeVariables(templateDocumentType).length
-                  ? "Estas variables se validarán según el tipo documental. Si faltan en el DOCX, se mostrará un aviso."
-                  : "Si se deja vacío, se usarán las variables detectadas en el DOCX."
+                  ? i18n.t("smartDocuments.template.requiredVariablesHelperTyped")
+                  : i18n.t("smartDocuments.template.requiredVariablesHelperEmpty")
               }
             />
             <div className={classes.templateActions}>
@@ -2615,7 +2614,7 @@ const SmartDocuments = () => {
                     }
                   />
                 }
-                label="Requiere cliente"
+                label={i18n.t("smartDocuments.template.requiresClient")}
               />
               <FormControlLabel
                 control={
@@ -2630,7 +2629,7 @@ const SmartDocuments = () => {
                     }
                   />
                 }
-                label="Permitir destinatario genérico"
+                label={i18n.t("smartDocuments.template.allowGenericRecipient")}
               />
             </div>
             <div className={classes.templateActions}>
@@ -2649,7 +2648,9 @@ const SmartDocuments = () => {
                   variant="outlined"
                   startIcon={<CloudUploadOutlinedIcon />}
                 >
-                  {templateFile ? "Cambiar DOCX" : "Seleccionar DOCX"}
+                  {templateFile
+                    ? i18n.t("smartDocuments.buttons.changeDocx")
+                    : i18n.t("smartDocuments.buttons.selectDocx")}
                 </Button>
               </label>
               <Button
@@ -2659,7 +2660,7 @@ const SmartDocuments = () => {
                 onClick={handleUploadTemplate}
                 style={{ marginLeft: 8 }}
               >
-                Guardar
+                {i18n.t("smartDocuments.buttons.save")}
               </Button>
               {templateFile && (
                 <Typography variant="caption" display="block">
@@ -2678,14 +2679,24 @@ const SmartDocuments = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Plantilla</TableCell>
-                  <TableCell>Uso y tipo</TableCell>
-                  <TableCell>Ecosistema</TableCell>
-                  <TableCell>Categoría</TableCell>
-                  <TableCell>Variables</TableCell>
-                  <TableCell>Creada por</TableCell>
-                  <TableCell>Actualización</TableCell>
-                  <TableCell align="center">Acciones</TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.template")}</TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.usageAndType")}
+                  </TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.ecosystem")}
+                  </TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.category")}</TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.variables")}
+                  </TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.createdBy")}
+                  </TableCell>
+                  <TableCell>{i18n.t("smartDocuments.table.updated")}</TableCell>
+                  <TableCell align="center">
+                    {i18n.t("smartDocuments.table.actions")}
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -2707,17 +2718,25 @@ const SmartDocuments = () => {
                   );
                   const variablesExpanded =
                     expandedVariableTemplateId === template.id;
+                  const missingCountLabel = i18n.t(
+                    missingVariables.length === 1
+                      ? "smartDocuments.template.missingCountOne"
+                      : "smartDocuments.template.missingCountMany",
+                    { count: missingVariables.length }
+                  );
+                  const additionalCountLabel = i18n.t(
+                    additionalVariables.length === 1
+                      ? "smartDocuments.template.additionalCountOne"
+                      : "smartDocuments.template.additionalCountMany",
+                    { count: additionalVariables.length }
+                  );
                   const variableStatus = missingVariables.length
-                    ? `${missingVariables.length} faltante${
-                        missingVariables.length === 1 ? "" : "s"
-                      }`
-                    : `Completo${
-                        additionalVariables.length
-                          ? ` · ${additionalVariables.length} adicional${
-                              additionalVariables.length === 1 ? "" : "es"
-                            }`
-                          : ""
-                      }`;
+                    ? missingCountLabel
+                    : additionalVariables.length
+                    ? `${i18n.t(
+                        "smartDocuments.template.complete"
+                      )} · ${additionalCountLabel}`
+                    : i18n.t("smartDocuments.template.complete");
                   return (
                     <TableRow key={template.id}>
                       <TableCell>
@@ -2725,31 +2744,40 @@ const SmartDocuments = () => {
                           {template.name}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
-                          Versión {activeVersion?.version || "-"}
+                          {i18n.t("smartDocuments.template.version", {
+                            version: activeVersion?.version || "-",
+                          })}
                         </Typography>
                         {template.missingExpectedVariables?.length > 0 && (
                           <Typography variant="caption" color="error" display="block">
-                            Faltan {template.missingExpectedVariables.length}{" "}
-                            variables esperadas en el DOCX
+                            {i18n.t(
+                              template.missingExpectedVariables.length === 1
+                                ? "smartDocuments.template.missingExpectedOne"
+                                : "smartDocuments.template.missingExpectedMany",
+                              {
+                                count:
+                                  template.missingExpectedVariables.length,
+                              }
+                            )}
                           </Typography>
                         )}
                       </TableCell>
                       <TableCell>
                         <Typography>{purposeLabel(template.purpose)}</Typography>
                         <Typography variant="caption" color="textSecondary">
-                          {documentTypes.find(
-                            (item) => item.value === template.documentType
-                          )?.label || "Sin tipo específico"}
+                          {documentTypeLabel(template.documentType) ||
+                            i18n.t("smartDocuments.template.noSpecificType")}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {template.ecosystem?.name || "General"}
+                        {template.ecosystem?.name ||
+                          i18n.t("smartDocuments.common.general")}
                       </TableCell>
                       <TableCell>
                         {template.category ? (
                           <Chip size="small" label={template.category} />
                         ) : (
-                          "General"
+                          i18n.t("smartDocuments.common.general")
                         )}
                       </TableCell>
                       <TableCell>
@@ -2764,36 +2792,40 @@ const SmartDocuments = () => {
                               )
                             }
                           >
-                            Revisar variables · {variableStatus}
+                            {i18n.t("smartDocuments.template.reviewVariables")} ·{" "}
+                            {variableStatus}
                           </Button>
                           {variablesExpanded && (
                             <div className={classes.variableReviewPanel}>
                               {[
-                                ["Variables usadas", variables],
-                                ["Variables completas", completeVariables],
-                                ["Variables faltantes", missingVariables],
-                                ["Variables adicionales", additionalVariables],
-                              ].map(([label, items]) => (
-                                <div key={label}>
+                                { key: "varUsed", items: variables },
+                                { key: "varComplete", items: completeVariables },
+                                { key: "varMissing", items: missingVariables },
+                                {
+                                  key: "varAdditional",
+                                  items: additionalVariables,
+                                },
+                              ].map(({ key, items }) => (
+                                <div key={key}>
                                   <Typography
                                     variant="caption"
                                     color="textSecondary"
                                     display="block"
                                   >
-                                    {label}
+                                    {i18n.t(`smartDocuments.template.${key}`)}
                                   </Typography>
                                   <div className={classes.variableList}>
                                     {items.length ? (
                                       items.map((variable) => (
                                         <Chip
-                                          key={`${label}-${variable}`}
+                                          key={`${key}-${variable}`}
                                           size="small"
                                           label={variable}
                                         />
                                       ))
                                     ) : (
                                       <Typography variant="caption">
-                                        Ninguna
+                                        {i18n.t("smartDocuments.common.none")}
                                       </Typography>
                                     )}
                                   </div>
@@ -2818,7 +2850,9 @@ const SmartDocuments = () => {
                         {canManageTemplates && (
                           <IconButton
                             size="small"
-                            title="Eliminar plantilla"
+                            title={i18n.t(
+                              "smartDocuments.actions.deleteTemplate"
+                            )}
                             onClick={() => {
                               setDeletingTemplate(template);
                               setTemplateConfirmOpen(true);
@@ -2836,7 +2870,7 @@ const SmartDocuments = () => {
                     <TableCell colSpan={8}>
                       <div className={classes.emptyState}>
                         <Typography color="textSecondary">
-                          No hay plantillas para mostrar.
+                          {i18n.t("smartDocuments.emptyTemplates")}
                         </Typography>
                       </div>
                     </TableCell>

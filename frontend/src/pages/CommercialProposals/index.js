@@ -43,6 +43,7 @@ import { useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -137,16 +138,19 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const statuses = [
-  ["draft", "Borrador"],
-  ["in_review", "En revisión"],
-  ["sent", "Enviada"],
-  ["accepted", "Aceptada"],
-  ["rejected", "Rechazada"],
-  ["expired", "Vencida"],
-  ["converted_to_contract", "Convertida a contrato"],
-  ["archived", "Archivada"],
+const statusValues = [
+  "draft",
+  "in_review",
+  "sent",
+  "accepted",
+  "rejected",
+  "expired",
+  "converted_to_contract",
+  "archived",
 ];
+
+const statusLabel = (value) =>
+  i18n.t(`commercialProposals.statuses.${value}`);
 
 const emptyItem = () => ({
   title: "",
@@ -195,13 +199,21 @@ const initialForm = () => ({
   queueId: "",
   items: [emptyItem()],
   milestones: [
-    { name: "Pago inicial", percentage: 40, description: "" },
     {
-      name: "Segundo pago contra avance funcional",
+      name: i18n.t("commercialProposals.defaults.milestoneInitial"),
+      percentage: 40,
+      description: "",
+    },
+    {
+      name: i18n.t("commercialProposals.defaults.milestoneSecond"),
       percentage: 30,
       description: "",
     },
-    { name: "Pago final contra entrega", percentage: 30, description: "" },
+    {
+      name: i18n.t("commercialProposals.defaults.milestoneFinal"),
+      percentage: 30,
+      description: "",
+    },
   ],
 });
 
@@ -434,9 +446,7 @@ const CommercialProposals = () => {
     setSaving(true);
     try {
       if (totals.invalid) {
-        toast.warn(
-          "La comisión y el margen adicional deben sumar menos de 100%.",
-        );
+        toast.warn(i18n.t("commercialProposals.toasts.commissionMargin"));
         return;
       }
       const payload = serializeForm(form);
@@ -445,7 +455,7 @@ const CommercialProposals = () => {
       } else {
         await api.post("/commercial-proposals", payload);
       }
-      toast.success("Propuesta guardada correctamente.");
+      toast.success(i18n.t("commercialProposals.toasts.saved"));
       setEditorOpen(false);
       await load();
     } catch (error) {
@@ -475,8 +485,8 @@ const CommercialProposals = () => {
       });
       toast.success(
         variant === "quick"
-          ? "Cotización rápida generada con el machote oficial."
-          : "Propuesta comercial generada con el machote oficial.",
+          ? i18n.t("commercialProposals.toasts.quickGenerated")
+          : i18n.t("commercialProposals.toasts.formalGenerated"),
       );
       await load();
       if (detail?.id === proposalId) await openDetail(proposalId);
@@ -525,7 +535,7 @@ const CommercialProposals = () => {
         comment: statusComment,
         notificationUserIds,
       });
-      toast.success("Estado comercial actualizado.");
+      toast.success(i18n.t("commercialProposals.toasts.statusUpdated"));
       setStatusProposal(null);
       await load();
     } catch (error) {
@@ -537,7 +547,7 @@ const CommercialProposals = () => {
     if (!proposalToDelete) return;
     try {
       await api.delete(`/commercial-proposals/${proposalToDelete.id}`);
-      toast.success("Propuesta eliminada correctamente.");
+      toast.success(i18n.t("commercialProposals.toasts.deleted"));
       setProposalToDelete(null);
       if (detail?.id === proposalToDelete.id) setDetail(null);
       await load();
@@ -549,13 +559,13 @@ const CommercialProposals = () => {
   return (
     <MainContainer>
       <MainHeader>
-        <Title>Propuestas comerciales</Title>
+        <Title>{i18n.t("commercialProposals.title")}</Title>
         <MainHeaderButtonsWrapper>
           <div className={classes.headerActions}>
           <TextField
             size="small"
             variant="outlined"
-            placeholder="Buscar propuesta"
+            placeholder={i18n.t("commercialProposals.search.placeholder")}
             value={searchParam}
             onChange={(event) => setSearchParam(event.target.value)}
           />
@@ -566,7 +576,7 @@ const CommercialProposals = () => {
               startIcon={<AddIcon />}
               onClick={openCreate}
             >
-              Nueva propuesta
+              {i18n.t("commercialProposals.buttons.newProposal")}
             </Button>
           )}
           </div>
@@ -575,28 +585,32 @@ const CommercialProposals = () => {
 
       <div className={classes.filters}>
         <FormControl variant="outlined" size="small">
-          <InputLabel>Estado</InputLabel>
+          <InputLabel>{i18n.t("commercialProposals.filters.status")}</InputLabel>
           <Select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
-            label="Estado"
+            label={i18n.t("commercialProposals.filters.status")}
           >
-            <MenuItem value="">Todos</MenuItem>
-            {statuses.map(([value, label]) => (
+            <MenuItem value="">
+              {i18n.t("commercialProposals.options.all")}
+            </MenuItem>
+            {statusValues.map((value) => (
               <MenuItem value={value} key={value}>
-                {label}
+                {statusLabel(value)}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
         <FormControl variant="outlined" size="small">
-          <InputLabel>Cliente</InputLabel>
+          <InputLabel>{i18n.t("commercialProposals.filters.client")}</InputLabel>
           <Select
             value={clientFilter}
             onChange={(event) => setClientFilter(event.target.value)}
-            label="Cliente"
+            label={i18n.t("commercialProposals.filters.client")}
           >
-            <MenuItem value="">Todos</MenuItem>
+            <MenuItem value="">
+              {i18n.t("commercialProposals.options.all")}
+            </MenuItem>
             {clients.map((client) => (
               <MenuItem key={client.id} value={client.id}>
                 {client.displayName}
@@ -608,7 +622,7 @@ const CommercialProposals = () => {
           size="small"
           variant="outlined"
           type="date"
-          label="Desde"
+          label={i18n.t("commercialProposals.filters.dateFrom")}
           InputLabelProps={{ shrink: true }}
           value={dateFrom}
           onChange={(event) => setDateFrom(event.target.value)}
@@ -617,19 +631,23 @@ const CommercialProposals = () => {
           size="small"
           variant="outlined"
           type="date"
-          label="Hasta"
+          label={i18n.t("commercialProposals.filters.dateTo")}
           InputLabelProps={{ shrink: true }}
           value={dateTo}
           onChange={(event) => setDateTo(event.target.value)}
         />
         <FormControl variant="outlined" size="small">
-          <InputLabel>Moneda</InputLabel>
+          <InputLabel>
+            {i18n.t("commercialProposals.filters.currency")}
+          </InputLabel>
           <Select
             value={currencyFilter}
             onChange={(event) => setCurrencyFilter(event.target.value)}
-            label="Moneda"
+            label={i18n.t("commercialProposals.filters.currency")}
           >
-            <MenuItem value="">Todas</MenuItem>
+            <MenuItem value="">
+              {i18n.t("commercialProposals.options.allCurrencies")}
+            </MenuItem>
             <MenuItem value="CRC">CRC</MenuItem>
             <MenuItem value="USD">USD</MenuItem>
           </Select>
@@ -640,14 +658,16 @@ const CommercialProposals = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Número</TableCell>
-              <TableCell>Cliente</TableCell>
-              <TableCell>Título</TableCell>
-              <TableCell>Total</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell>Fecha</TableCell>
-              <TableCell>Creador</TableCell>
-              <TableCell align="center">Acciones</TableCell>
+              <TableCell>{i18n.t("commercialProposals.table.number")}</TableCell>
+              <TableCell>{i18n.t("commercialProposals.table.client")}</TableCell>
+              <TableCell>{i18n.t("commercialProposals.table.title")}</TableCell>
+              <TableCell>{i18n.t("commercialProposals.table.total")}</TableCell>
+              <TableCell>{i18n.t("commercialProposals.table.status")}</TableCell>
+              <TableCell>{i18n.t("commercialProposals.table.date")}</TableCell>
+              <TableCell>{i18n.t("commercialProposals.table.creator")}</TableCell>
+              <TableCell align="center">
+                {i18n.t("commercialProposals.table.actions")}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -666,9 +686,9 @@ const CommercialProposals = () => {
                   <Chip
                     size="small"
                     label={
-                      statuses.find(
-                        ([value]) => value === proposal.status,
-                      )?.[1] || proposal.status
+                      statusValues.includes(proposal.status)
+                        ? statusLabel(proposal.status)
+                        : proposal.status
                     }
                   />
                 </TableCell>
@@ -698,8 +718,10 @@ const CommercialProposals = () => {
                       {canArchive && (
                         <IconButton
                           size="small"
-                          title="Eliminar propuesta"
-                          aria-label={`Eliminar ${proposal.proposalNumber}`}
+                          title={i18n.t("commercialProposals.confirm.deleteTitle")}
+                          aria-label={i18n.t("commercialProposals.table.deleteAria", {
+                            number: proposal.proposalNumber,
+                          })}
                           onClick={() => setProposalToDelete(proposal)}
                         >
                           <DeleteOutlineIcon />
@@ -713,7 +735,7 @@ const CommercialProposals = () => {
             {!proposals.length && (
               <TableRow>
                 <TableCell colSpan={8} align="center">
-                  No hay propuestas para mostrar.
+                  {i18n.t("commercialProposals.table.empty")}
                 </TableCell>
               </TableRow>
             )}
@@ -728,12 +750,16 @@ const CommercialProposals = () => {
         fullWidth
       >
         <DialogTitle>
-          {editingId ? "Editar propuesta" : "Nueva propuesta comercial"}
+          {editingId
+            ? i18n.t("commercialProposals.editor.editTitle")
+            : i18n.t("commercialProposals.editor.createTitle")}
         </DialogTitle>
         <DialogContent dividers>
           <ExpansionPanel defaultExpanded className={classes.section}>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>Datos del cliente y encabezado</Typography>
+              <Typography>
+                {i18n.t("commercialProposals.sections.clientHeader")}
+              </Typography>
             </ExpansionPanelSummary>
             <ExpansionPanelDetails>
               <div className={classes.grid}>
@@ -748,17 +774,19 @@ const CommercialProposals = () => {
                       }
                     />
                   }
-                  label="Propuesta rápida con cliente manual"
+                  label={i18n.t("commercialProposals.fields.manualMode")}
                 />
                 {!form.manualMode ? (
                   <FormControl variant="outlined">
-                    <InputLabel>Cliente registrado</InputLabel>
+                    <InputLabel>
+                      {i18n.t("commercialProposals.fields.registeredClient")}
+                    </InputLabel>
                     <Select
                       value={form.businessClientId}
                       onChange={(event) =>
                         change("businessClientId", event.target.value)
                       }
-                      label="Cliente registrado"
+                      label={i18n.t("commercialProposals.fields.registeredClient")}
                     >
                       {clients.map((client) => (
                         <MenuItem key={client.id} value={client.id}>
@@ -770,7 +798,7 @@ const CommercialProposals = () => {
                 ) : (
                   <>
                     <TextField
-                      label="Nombre del cliente"
+                      label={i18n.t("commercialProposals.fields.clientName")}
                       variant="outlined"
                       value={form.manualClientName}
                       onChange={(event) =>
@@ -778,7 +806,7 @@ const CommercialProposals = () => {
                       }
                     />
                     <TextField
-                      label="Identificación"
+                      label={i18n.t("commercialProposals.fields.identification")}
                       variant="outlined"
                       value={form.manualClientIdentification}
                       onChange={(event) =>
@@ -786,7 +814,7 @@ const CommercialProposals = () => {
                       }
                     />
                     <TextField
-                      label="Correo"
+                      label={i18n.t("commercialProposals.fields.email")}
                       variant="outlined"
                       value={form.manualClientEmail}
                       onChange={(event) =>
@@ -794,7 +822,7 @@ const CommercialProposals = () => {
                       }
                     />
                     <TextField
-                      label="Teléfono"
+                      label={i18n.t("commercialProposals.fields.phone")}
                       variant="outlined"
                       value={form.manualClientPhone}
                       onChange={(event) =>
@@ -805,16 +833,20 @@ const CommercialProposals = () => {
                 )}
                 {(form.manualMode || user.profile === "admin") && (
                   <FormControl variant="outlined">
-                    <InputLabel>Departamento</InputLabel>
+                    <InputLabel>
+                      {i18n.t("commercialProposals.fields.department")}
+                    </InputLabel>
                     <Select
                       value={form.queueId}
                       onChange={(event) =>
                         change("queueId", event.target.value)
                       }
-                      label="Departamento"
+                      label={i18n.t("commercialProposals.fields.department")}
                     >
                       {user.profile === "admin" && (
-                        <MenuItem value="">Global</MenuItem>
+                        <MenuItem value="">
+                          {i18n.t("commercialProposals.options.global")}
+                        </MenuItem>
                       )}
                       {queues.map((queue) => (
                         <MenuItem key={queue.id} value={queue.id}>
@@ -825,7 +857,7 @@ const CommercialProposals = () => {
                   </FormControl>
                 )}
                 <TextField
-                  label="Número de cliente"
+                  label={i18n.t("commercialProposals.fields.clientNumber")}
                   variant="outlined"
                   value={form.clientNumber}
                   onChange={(event) =>
@@ -833,7 +865,7 @@ const CommercialProposals = () => {
                   }
                 />
                 <TextField
-                  label="Número de presupuesto"
+                  label={i18n.t("commercialProposals.fields.proposalNumber")}
                   variant="outlined"
                   value={
                     editingId
@@ -843,12 +875,12 @@ const CommercialProposals = () => {
                   disabled
                   helperText={
                     editingId
-                      ? "El consecutivo no se puede modificar."
-                      : "Se asignará automáticamente al guardar."
+                      ? i18n.t("commercialProposals.helpers.proposalNumberEditing")
+                      : i18n.t("commercialProposals.helpers.proposalNumberNew")
                   }
                 />
                 <TextField
-                  label="Fecha de oferta"
+                  label={i18n.t("commercialProposals.fields.offerDate")}
                   type="date"
                   variant="outlined"
                   InputLabelProps={{ shrink: true }}
@@ -856,7 +888,7 @@ const CommercialProposals = () => {
                   onChange={(event) => change("offerDate", event.target.value)}
                 />
                 <TextField
-                  label="Título de la propuesta"
+                  label={i18n.t("commercialProposals.fields.title")}
                   variant="outlined"
                   value={form.title}
                   onChange={(event) => change("title", event.target.value)}
@@ -867,15 +899,17 @@ const CommercialProposals = () => {
 
           <ExpansionPanel className={classes.section}>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>Carta introductoria y alcance</Typography>
+              <Typography>
+                {i18n.t("commercialProposals.sections.introduction")}
+              </Typography>
             </ExpansionPanelSummary>
             <ExpansionPanelDetails>
               <div className={classes.grid}>
                 {[
-                  ["introduction", "Introducción"],
-                  ["identifiedNeed", "Necesidad identificada"],
-                  ["generalScope", "Alcance general"],
-                  ["investmentAnalysis", "Análisis de inversión recomendada"],
+                  ["introduction", i18n.t("commercialProposals.fields.introductionText")],
+                  ["identifiedNeed", i18n.t("commercialProposals.fields.identifiedNeed")],
+                  ["generalScope", i18n.t("commercialProposals.fields.generalScope")],
+                  ["investmentAnalysis", i18n.t("commercialProposals.fields.investmentAnalysis")],
                 ].map(([field, label]) => (
                   <TextField
                     key={field}
@@ -894,14 +928,18 @@ const CommercialProposals = () => {
 
           <ExpansionPanel defaultExpanded className={classes.section}>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>Rubros y fases</Typography>
+              <Typography>
+                {i18n.t("commercialProposals.sections.items")}
+              </Typography>
             </ExpansionPanelSummary>
             <ExpansionPanelDetails style={{ display: "block" }}>
               {form.items.map((item, index) => (
                 <div className={classes.itemCard} key={`item-${index}`}>
                   <div className={classes.grid}>
                     <TextField
-                      label={`Rubro ${index + 1}`}
+                      label={i18n.t("commercialProposals.fields.itemTitle", {
+                        number: index + 1,
+                      })}
                       variant="outlined"
                       value={item.title}
                       onChange={(event) =>
@@ -909,7 +947,7 @@ const CommercialProposals = () => {
                       }
                     />
                     <TextField
-                      label="Subtotal"
+                      label={i18n.t("commercialProposals.fields.subtotal")}
                       type="number"
                       variant="outlined"
                       value={item.subtotal}
@@ -919,7 +957,7 @@ const CommercialProposals = () => {
                     />
                     <TextField
                       className={classes.full}
-                      label="Descripción"
+                      label={i18n.t("commercialProposals.fields.description")}
                       variant="outlined"
                       multiline
                       value={item.description}
@@ -929,7 +967,7 @@ const CommercialProposals = () => {
                     />
                     <TextField
                       className={classes.full}
-                      label="Incluye, un elemento por línea"
+                      label={i18n.t("commercialProposals.fields.includedItems")}
                       variant="outlined"
                       multiline
                       value={item.includedItemsText}
@@ -955,7 +993,7 @@ const CommercialProposals = () => {
                           }
                         />
                       }
-                      label="Incluido"
+                      label={i18n.t("commercialProposals.fields.isIncluded")}
                     />
                     {form.items.length > 1 && (
                       <IconButton
@@ -978,37 +1016,41 @@ const CommercialProposals = () => {
                 startIcon={<AddIcon />}
                 onClick={() => change("items", [...form.items, emptyItem()])}
               >
-                Agregar rubro
+                {i18n.t("commercialProposals.buttons.addItem")}
               </Button>
             </ExpansionPanelDetails>
           </ExpansionPanel>
 
           <ExpansionPanel defaultExpanded className={classes.section}>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>Calculadora de rentabilidad</Typography>
+              <Typography>
+                {i18n.t("commercialProposals.sections.calculator")}
+              </Typography>
             </ExpansionPanelSummary>
             <ExpansionPanelDetails>
               <div className={classes.grid}>
                 <FormControl variant="outlined">
-                  <InputLabel>Moneda</InputLabel>
+                  <InputLabel>
+                    {i18n.t("commercialProposals.fields.currency")}
+                  </InputLabel>
                   <Select
                     value={form.currency}
                     onChange={(event) => change("currency", event.target.value)}
-                    label="Moneda"
+                    label={i18n.t("commercialProposals.fields.currency")}
                   >
                     <MenuItem value="CRC">CRC</MenuItem>
                     <MenuItem value="USD">USD</MenuItem>
                   </Select>
                 </FormControl>
                 {[
-                  ["desiredNetAmount", "Neto deseado Techkepper"],
-                  ["sellerCommissionRate", "Comisión vendedor %"],
-                  ["externalCosts", "Costos externos"],
-                  ["thirdPartyLicenses", "Licencias / terceros"],
-                  ["additionalMarginRate", "Margen adicional %"],
-                  ["discountAmount", "Descuento comercial"],
-                  ["ivaRate", "IVA %"],
-                  ["manualSubtotal", "Subtotal manual opcional"],
+                  ["desiredNetAmount", i18n.t("commercialProposals.fields.desiredNetAmount")],
+                  ["sellerCommissionRate", i18n.t("commercialProposals.fields.sellerCommissionRate")],
+                  ["externalCosts", i18n.t("commercialProposals.fields.externalCosts")],
+                  ["thirdPartyLicenses", i18n.t("commercialProposals.fields.thirdPartyLicenses")],
+                  ["additionalMarginRate", i18n.t("commercialProposals.fields.additionalMarginRate")],
+                  ["discountAmount", i18n.t("commercialProposals.fields.discountAmount")],
+                  ["ivaRate", i18n.t("commercialProposals.fields.ivaRate")],
+                  ["manualSubtotal", i18n.t("commercialProposals.fields.manualSubtotal")],
                 ].map(([field, label]) => (
                   <TextField
                     key={field}
@@ -1029,7 +1071,7 @@ const CommercialProposals = () => {
                       }
                     />
                   }
-                  label="Redondear precio recomendado"
+                  label={i18n.t("commercialProposals.fields.roundFinalPrice")}
                 />
                 <FormControlLabel
                   control={
@@ -1041,38 +1083,48 @@ const CommercialProposals = () => {
                       }
                     />
                   }
-                  label="Mostrar IVI"
+                  label={i18n.t("commercialProposals.fields.showIvi")}
                 />
                 <div className={`${classes.totals} ${classes.full}`}>
                   {totals.invalid ? (
                     <Typography className={classes.warning}>
-                      Comisión + margen debe ser menor de 100%.
+                      {i18n.t("commercialProposals.totals.invalid")}
                     </Typography>
                   ) : (
                     <>
                       <Typography>
-                        Subtotal recomendado:{" "}
-                        {money(totals.recommendedSubtotal, form.currency)}
+                        {i18n.t("commercialProposals.totals.recommendedSubtotal", {
+                          value: money(totals.recommendedSubtotal, form.currency),
+                        })}
                       </Typography>
                       <Typography>
-                        Subtotal final: {money(totals.subtotal, form.currency)}
+                        {i18n.t("commercialProposals.totals.finalSubtotal", {
+                          value: money(totals.subtotal, form.currency),
+                        })}
                       </Typography>
                       <Typography>
-                        Comisión estimada:{" "}
-                        {money(totals.commission, form.currency)}
+                        {i18n.t("commercialProposals.totals.estimatedCommission", {
+                          value: money(totals.commission, form.currency),
+                        })}
                       </Typography>
                       <Typography>
-                        Neto Techkepper: {money(totals.net, form.currency)}
+                        {i18n.t("commercialProposals.totals.netTechkepper", {
+                          value: money(totals.net, form.currency),
+                        })}
                       </Typography>
                       <Typography>
-                        IVA: {money(totals.iva, form.currency)}
+                        {i18n.t("commercialProposals.totals.iva", {
+                          value: money(totals.iva, form.currency),
+                        })}
                       </Typography>
                       <Typography variant="h6">
-                        Total cliente: {money(totals.total, form.currency)}
+                        {i18n.t("commercialProposals.totals.clientTotal", {
+                          value: money(totals.total, form.currency),
+                        })}
                       </Typography>
                       {totals.belowDesired && (
                         <Typography className={classes.warning}>
-                          El neto final queda por debajo de la meta deseada.
+                          {i18n.t("commercialProposals.totals.belowDesired")}
                         </Typography>
                       )}
                     </>
@@ -1084,14 +1136,16 @@ const CommercialProposals = () => {
 
           <ExpansionPanel className={classes.section}>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>Condiciones de pago</Typography>
+              <Typography>
+                {i18n.t("commercialProposals.sections.payment")}
+              </Typography>
             </ExpansionPanelSummary>
             <ExpansionPanelDetails style={{ display: "block" }}>
               {form.milestones.map((milestone, index) => (
                 <div className={classes.itemCard} key={`milestone-${index}`}>
                   <div className={classes.grid}>
                     <TextField
-                      label="Hito"
+                      label={i18n.t("commercialProposals.fields.milestoneName")}
                       variant="outlined"
                       value={milestone.name}
                       onChange={(event) =>
@@ -1099,7 +1153,7 @@ const CommercialProposals = () => {
                       }
                     />
                     <TextField
-                      label="Porcentaje"
+                      label={i18n.t("commercialProposals.fields.percentage")}
                       type="number"
                       variant="outlined"
                       value={milestone.percentage}
@@ -1114,7 +1168,7 @@ const CommercialProposals = () => {
                     />
                     <TextField
                       className={classes.full}
-                      label="Descripción"
+                      label={i18n.t("commercialProposals.fields.description")}
                       variant="outlined"
                       value={milestone.description}
                       onChange={(event) =>
@@ -1140,12 +1194,12 @@ const CommercialProposals = () => {
                     : ""
                 }
               >
-                Total porcentajes:{" "}
-                {form.milestones.reduce(
-                  (sum, item) => sum + Number(item.percentage || 0),
-                  0,
-                )}
-                %
+                {i18n.t("commercialProposals.totals.totalPercentages", {
+                  value: form.milestones.reduce(
+                    (sum, item) => sum + Number(item.percentage || 0),
+                    0,
+                  ),
+                })}
               </Typography>
               <Button
                 startIcon={<AddIcon />}
@@ -1153,19 +1207,21 @@ const CommercialProposals = () => {
                   change("milestones", [...form.milestones, emptyMilestone()])
                 }
               >
-                Agregar hito
+                {i18n.t("commercialProposals.buttons.addMilestone")}
               </Button>
             </ExpansionPanelDetails>
           </ExpansionPanel>
 
           <ExpansionPanel className={classes.section}>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography>Plazos, términos y recomendación</Typography>
+              <Typography>
+                {i18n.t("commercialProposals.sections.terms")}
+              </Typography>
             </ExpansionPanelSummary>
             <ExpansionPanelDetails>
               <div className={classes.grid}>
                 <TextField
-                  label="Plazo estimado"
+                  label={i18n.t("commercialProposals.fields.projectTimeline")}
                   variant="outlined"
                   value={form.projectTimeline}
                   onChange={(event) =>
@@ -1173,9 +1229,9 @@ const CommercialProposals = () => {
                   }
                 />
                 {[
-                  ["paymentTermsText", "Condiciones generales de pago"],
-                  ["termsText", "Términos"],
-                  ["futureRecommendation", "Recomendación posterior"],
+                  ["paymentTermsText", i18n.t("commercialProposals.fields.paymentTermsText")],
+                  ["termsText", i18n.t("commercialProposals.fields.termsText")],
+                  ["futureRecommendation", i18n.t("commercialProposals.fields.futureRecommendation")],
                 ].map(([field, label]) => (
                   <TextField
                     key={field}
@@ -1193,14 +1249,16 @@ const CommercialProposals = () => {
           </ExpansionPanel>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditorOpen(false)}>Cancelar</Button>
+          <Button onClick={() => setEditorOpen(false)}>
+            {i18n.t("commercialProposals.buttons.cancel")}
+          </Button>
           <Button
             color="primary"
             variant="contained"
             disabled={saving}
             onClick={save}
           >
-            Guardar borrador
+            {i18n.t("commercialProposals.buttons.saveDraft")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1225,31 +1283,37 @@ const CommercialProposals = () => {
               {canManage && detail.estimatedNetAmount !== undefined && (
                 <div className={classes.totals}>
                   <Typography variant="subtitle2">
-                    Rentabilidad interna
+                    {i18n.t("commercialProposals.detail.internalProfitability")}
                   </Typography>
                   <Typography>
-                    Comisión estimada:{" "}
-                    {money(detail.estimatedCommission, detail.currency)}
+                    {i18n.t("commercialProposals.totals.estimatedCommission", {
+                      value: money(detail.estimatedCommission, detail.currency),
+                    })}
                   </Typography>
                   <Typography>
-                    Neto Techkepper:{" "}
-                    {money(detail.estimatedNetAmount, detail.currency)}
+                    {i18n.t("commercialProposals.totals.netTechkepper", {
+                      value: money(detail.estimatedNetAmount, detail.currency),
+                    })}
                   </Typography>
                 </div>
               )}
-              <Typography variant="subtitle2">Rubros</Typography>
+              <Typography variant="subtitle2">
+                {i18n.t("commercialProposals.detail.items")}
+              </Typography>
               {detail.items.map((item) => (
                 <Typography key={item.id}>
                   {item.title}: {money(item.subtotal, detail.currency)}
                 </Typography>
               ))}
               <Typography variant="subtitle2" style={{ marginTop: 16 }}>
-                Historial
+                {i18n.t("commercialProposals.detail.history")}
               </Typography>
               {events.map((event) => (
                 <div className={classes.event} key={event.id}>
                   <Typography variant="body2">
-                    {event.eventType} · {event.user?.name || "Sistema"}
+                    {event.eventType} ·{" "}
+                    {event.user?.name ||
+                      i18n.t("commercialProposals.detail.system")}
                   </Typography>
                   <Typography variant="caption">
                     {new Date(event.createdAt).toLocaleString()}
@@ -1264,10 +1328,10 @@ const CommercialProposals = () => {
           {canManage && (
             <>
               <Button onClick={() => generate(detail.id, "formal")}>
-                Generar propuesta formal
+                {i18n.t("commercialProposals.buttons.generateFormal")}
               </Button>
               <Button onClick={() => generate(detail.id, "quick")}>
-                Generar cotización rápida
+                {i18n.t("commercialProposals.buttons.generateQuick")}
               </Button>
             </>
           )}
@@ -1290,7 +1354,9 @@ const CommercialProposals = () => {
               </Button>
             </>
           )}
-          <Button onClick={() => setDetail(null)}>Cerrar</Button>
+          <Button onClick={() => setDetail(null)}>
+            {i18n.t("commercialProposals.buttons.close")}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -1300,30 +1366,32 @@ const CommercialProposals = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Cambiar estado comercial</DialogTitle>
+        <DialogTitle>{i18n.t("commercialProposals.status.title")}</DialogTitle>
         <DialogContent>
           <FormControl variant="outlined" margin="dense" fullWidth>
-            <InputLabel>Nuevo estado</InputLabel>
+            <InputLabel>
+              {i18n.t("commercialProposals.status.newStatus")}
+            </InputLabel>
             <Select
               value={nextStatus}
               onChange={(event) => setNextStatus(event.target.value)}
-              label="Nuevo estado"
+              label={i18n.t("commercialProposals.status.newStatus")}
             >
-              {statuses
+              {statusValues
                 .filter(
-                  ([value]) =>
+                  (value) =>
                     user.profile === "admin" ||
                     (value !== "archived" && value !== "converted_to_contract"),
                 )
-                .map(([value, label]) => (
+                .map((value) => (
                   <MenuItem key={value} value={value}>
-                    {label}
+                    {statusLabel(value)}
                   </MenuItem>
                 ))}
             </Select>
           </FormControl>
           <TextField
-            label="Comentario"
+            label={i18n.t("commercialProposals.status.comment")}
             variant="outlined"
             margin="dense"
             multiline
@@ -1332,12 +1400,14 @@ const CommercialProposals = () => {
             onChange={(event) => setStatusComment(event.target.value)}
           />
           <FormControl variant="outlined" margin="dense" fullWidth>
-            <InputLabel>Notificar usuarios internos</InputLabel>
+            <InputLabel>
+              {i18n.t("commercialProposals.status.notifyUsers")}
+            </InputLabel>
             <Select
               multiple
               value={notificationUserIds}
               onChange={(event) => setNotificationUserIds(event.target.value)}
-              label="Notificar usuarios internos"
+              label={i18n.t("commercialProposals.status.notifyUsers")}
             >
               {users.map((recipient) => (
                 <MenuItem key={recipient.id} value={recipient.id}>
@@ -1348,14 +1418,16 @@ const CommercialProposals = () => {
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusProposal(null)}>Cancelar</Button>
+          <Button onClick={() => setStatusProposal(null)}>
+            {i18n.t("commercialProposals.buttons.cancel")}
+          </Button>
           <Button
             color="primary"
             variant="contained"
             disabled={nextStatus === statusProposal?.status}
             onClick={submitStatus}
           >
-            Guardar estado
+            {i18n.t("commercialProposals.buttons.saveStatus")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1366,25 +1438,28 @@ const CommercialProposals = () => {
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Eliminar propuesta</DialogTitle>
+        <DialogTitle>
+          {i18n.t("commercialProposals.confirm.deleteTitle")}
+        </DialogTitle>
         <DialogContent dividers>
           <Typography>
-            ¿Desea eliminar la propuesta{" "}
+            {i18n.t("commercialProposals.confirm.deleteMessage")}{" "}
             <strong>{proposalToDelete?.proposalNumber}</strong>?
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            Dejará de aparecer en el listado, pero se conservará un registro
-            recuperable para auditoría.
+            {i18n.t("commercialProposals.confirm.deleteHelper")}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setProposalToDelete(null)}>Cancelar</Button>
+          <Button onClick={() => setProposalToDelete(null)}>
+            {i18n.t("commercialProposals.buttons.cancel")}
+          </Button>
           <Button
             color="secondary"
             variant="contained"
             onClick={removeProposal}
           >
-            Eliminar
+            {i18n.t("commercialProposals.buttons.delete")}
           </Button>
         </DialogActions>
       </Dialog>
