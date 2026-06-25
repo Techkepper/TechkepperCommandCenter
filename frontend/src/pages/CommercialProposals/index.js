@@ -33,7 +33,6 @@ import {
   Typography,
 } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
-import ArchiveOutlinedIcon from "@material-ui/icons/ArchiveOutlined";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditOutlinedIcon from "@material-ui/icons/EditOutlined";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
@@ -53,11 +52,61 @@ import api from "../../services/api";
 
 const useStyles = makeStyles((theme) => ({
   paper: { flex: 1, overflow: "auto", ...theme.scrollbarStyles },
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    flex: "1 1 420px",
+    "& .MuiTextField-root": {
+      flex: "1 1 260px",
+      minWidth: 220,
+      maxWidth: 360,
+    },
+    "& .MuiButton-root": {
+      minWidth: 168,
+      whiteSpace: "nowrap",
+    },
+    [theme.breakpoints.down("xs")]: {
+      flexBasis: "100%",
+      "& .MuiTextField-root, & .MuiButton-root": {
+        flex: "1 1 100%",
+        minWidth: "100%",
+        maxWidth: "100%",
+      },
+    },
+  },
   filters: {
     display: "flex",
     flexWrap: "wrap",
-    gap: theme.spacing(1),
+    alignItems: "center",
+    gap: theme.spacing(1.25),
+    padding: theme.spacing(1.25),
     marginBottom: theme.spacing(2),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 12,
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.025)"
+        : theme.palette.background.paper,
+    "& .MuiFormControl-root": {
+      flex: "1 1 150px",
+      minWidth: 150,
+      maxWidth: 220,
+    },
+    "& .MuiTextField-root": {
+      flex: "1 1 165px",
+      minWidth: 165,
+      maxWidth: 210,
+    },
+    [theme.breakpoints.down("xs")]: {
+      "& .MuiFormControl-root, & .MuiTextField-root": {
+        flex: "1 1 100%",
+        minWidth: "100%",
+        maxWidth: "100%",
+      },
+    },
   },
   section: { marginBottom: theme.spacing(1) },
   grid: {
@@ -121,7 +170,7 @@ const initialForm = () => ({
   manualClientPhone: "",
   manualClientIdentification: "",
   clientNumber: "",
-  proposalNumber: `PROP-${new Date().getFullYear()}-`,
+  proposalNumber: "",
   offerDate: new Date().toISOString().slice(0, 10),
   title: "",
   introduction: "",
@@ -274,6 +323,7 @@ const CommercialProposals = () => {
   const [nextStatus, setNextStatus] = useState("");
   const [statusComment, setStatusComment] = useState("");
   const [notificationUserIds, setNotificationUserIds] = useState([]);
+  const [proposalToDelete, setProposalToDelete] = useState(null);
   const [saving, setSaving] = useState(false);
   const totals = useMemo(() => calculate(form), [form]);
 
@@ -331,6 +381,11 @@ const CommercialProposals = () => {
   useEffect(() => {
     const proposalId = new URLSearchParams(location.search).get("proposalId");
     if (proposalId) openDetail(proposalId);
+    const editProposalId = new URLSearchParams(location.search).get(
+      "editProposalId"
+    );
+    if (editProposalId && canManage) openEdit(editProposalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
   const change = (field, value) =>
@@ -413,10 +468,16 @@ const CommercialProposals = () => {
     }
   };
 
-  const generate = async (proposalId) => {
+  const generate = async (proposalId, variant) => {
     try {
-      await api.post(`/commercial-proposals/${proposalId}/generate`);
-      toast.success("DOCX generado y registrado en Documentos inteligentes.");
+      await api.post(`/commercial-proposals/${proposalId}/generate`, {
+        variant,
+      });
+      toast.success(
+        variant === "quick"
+          ? "Cotización rápida generada con el machote oficial."
+          : "Propuesta comercial generada con el machote oficial.",
+      );
       await load();
       if (detail?.id === proposalId) await openDetail(proposalId);
     } catch (error) {
@@ -472,11 +533,25 @@ const CommercialProposals = () => {
     }
   };
 
+  const removeProposal = async () => {
+    if (!proposalToDelete) return;
+    try {
+      await api.delete(`/commercial-proposals/${proposalToDelete.id}`);
+      toast.success("Propuesta eliminada correctamente.");
+      setProposalToDelete(null);
+      if (detail?.id === proposalToDelete.id) setDetail(null);
+      await load();
+    } catch (error) {
+      toastError(error);
+    }
+  };
+
   return (
     <MainContainer>
       <MainHeader>
         <Title>Propuestas comerciales</Title>
         <MainHeaderButtonsWrapper>
+          <div className={classes.headerActions}>
           <TextField
             size="small"
             variant="outlined"
@@ -494,6 +569,7 @@ const CommercialProposals = () => {
               Nueva propuesta
             </Button>
           )}
+          </div>
         </MainHeaderButtonsWrapper>
       </MainHeader>
 
@@ -513,7 +589,7 @@ const CommercialProposals = () => {
             ))}
           </Select>
         </FormControl>
-        <FormControl variant="outlined" size="small" style={{ minWidth: 180 }}>
+        <FormControl variant="outlined" size="small">
           <InputLabel>Cliente</InputLabel>
           <Select
             value={clientFilter}
@@ -622,14 +698,11 @@ const CommercialProposals = () => {
                       {canArchive && (
                         <IconButton
                           size="small"
-                          onClick={() =>
-                            api
-                              .delete(`/commercial-proposals/${proposal.id}`)
-                              .then(load)
-                              .catch(toastError)
-                          }
+                          title="Eliminar propuesta"
+                          aria-label={`Eliminar ${proposal.proposalNumber}`}
+                          onClick={() => setProposalToDelete(proposal)}
                         >
-                          <ArchiveOutlinedIcon />
+                          <DeleteOutlineIcon />
                         </IconButton>
                       )}
                     </>
@@ -762,9 +835,16 @@ const CommercialProposals = () => {
                 <TextField
                   label="Número de presupuesto"
                   variant="outlined"
-                  value={form.proposalNumber}
-                  onChange={(event) =>
-                    change("proposalNumber", event.target.value)
+                  value={
+                    editingId
+                      ? form.proposalNumber
+                      : `PROP-${new Date().getFullYear()}-###`
+                  }
+                  disabled
+                  helperText={
+                    editingId
+                      ? "El consecutivo no se puede modificar."
+                      : "Se asignará automáticamente al guardar."
                   }
                 />
                 <TextField
@@ -1182,7 +1262,14 @@ const CommercialProposals = () => {
         </DialogContent>
         <DialogActions>
           {canManage && (
-            <Button onClick={() => generate(detail.id)}>Generar DOCX</Button>
+            <>
+              <Button onClick={() => generate(detail.id, "formal")}>
+                Generar propuesta formal
+              </Button>
+              <Button onClick={() => generate(detail.id, "quick")}>
+                Generar cotización rápida
+              </Button>
+            </>
           )}
           {detail?.generatedDocumentId && (
             <>
@@ -1269,6 +1356,35 @@ const CommercialProposals = () => {
             onClick={submitStatus}
           >
             Guardar estado
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(proposalToDelete)}
+        onClose={() => setProposalToDelete(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Eliminar propuesta</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            ¿Desea eliminar la propuesta{" "}
+            <strong>{proposalToDelete?.proposalNumber}</strong>?
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Dejará de aparecer en el listado, pero se conservará un registro
+            recuperable para auditoría.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProposalToDelete(null)}>Cancelar</Button>
+          <Button
+            color="secondary"
+            variant="contained"
+            onClick={removeProposal}
+          >
+            Eliminar
           </Button>
         </DialogActions>
       </Dialog>

@@ -62,7 +62,7 @@ routes.delete(
   "/commercial-proposals/:proposalId",
   isAuth,
   requireRole("admin"),
-  CommercialProposalController.archive
+  CommercialProposalController.remove
 );
 
 export default routes;

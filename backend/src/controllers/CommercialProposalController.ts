@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 
 import {
-  archiveProposal,
   calculateProposalProfitability,
   createProposal,
+  deleteProposal,
   downloadProposal,
   generateProposalDocument,
   listProposalEvents,
@@ -105,7 +105,8 @@ export const generate = async (
   res.status(201).json(
     await generateProposalDocument({
       proposalId: Number(req.params.proposalId),
-      actor: req.user
+      actor: req.user,
+      variant: req.body.variant === "quick" ? "quick" : "formal"
     })
   );
 
@@ -150,10 +151,13 @@ export const notificationRecipients = async (
     })
   });
 
-export const archive = async (req: Request, res: Response): Promise<Response> =>
-  res.json(
-    await archiveProposal({
-      proposalId: Number(req.params.proposalId),
-      actor: req.user
-    })
-  );
+export const remove = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  await deleteProposal({
+    proposalId: Number(req.params.proposalId),
+    actor: req.user
+  });
+  return res.status(204).send();
+};

@@ -26,6 +26,7 @@ import SearchIcon from "@material-ui/icons/Search";
 import EditOutlinedIcon from "@material-ui/icons/EditOutlined";
 import PowerSettingsNewOutlinedIcon from "@material-ui/icons/PowerSettingsNewOutlined";
 import ReplayOutlinedIcon from "@material-ui/icons/ReplayOutlined";
+import VisibilityOutlinedIcon from "@material-ui/icons/VisibilityOutlined";
 import { toast } from "react-toastify";
 
 import MainContainer from "../../components/MainContainer";
@@ -35,6 +36,7 @@ import Title from "../../components/Title";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import EntityDossierDialog from "../../components/EntityDossierDialog";
 
 const useStyles = makeStyles((theme) => ({
   paper: { flex: 1, padding: theme.spacing(1), overflowY: "auto" },
@@ -77,6 +79,7 @@ const Collaborators = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [dossier, setDossier] = useState(null);
 
   const loadCollaborators = async () => {
     setLoading(true);
@@ -172,8 +175,29 @@ const Collaborators = () => {
     }
   };
 
+  const openDossier = async (collaboratorId) => {
+    try {
+      const { data } = await api.get(
+        `/collaborators/${collaboratorId}/dossier`
+      );
+      setDossier(data);
+    } catch (error) {
+      toastError(error);
+    }
+  };
+
+  const reloadDossier = async () => {
+    if (dossier?.entity?.id) await openDossier(dossier.entity.id);
+  };
+
   return (
     <MainContainer>
+      <EntityDossierDialog
+        open={Boolean(dossier)}
+        dossier={dossier}
+        onClose={() => setDossier(null)}
+        onReload={reloadDossier}
+      />
       <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -393,6 +417,13 @@ const Collaborators = () => {
                     />
                   </TableCell>
                   <TableCell align="center">
+                    <IconButton
+                      size="small"
+                      title="Ver expediente"
+                      onClick={() => openDossier(collaborator.id)}
+                    >
+                      <VisibilityOutlinedIcon />
+                    </IconButton>
                     {canManage && (
                       <>
                         <IconButton

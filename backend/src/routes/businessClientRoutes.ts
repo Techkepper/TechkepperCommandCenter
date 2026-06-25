@@ -12,6 +12,11 @@ businessClientRoutes.get(
   BusinessClientController.index
 );
 businessClientRoutes.get(
+  "/business-clients/:clientId/dossier",
+  isAuth,
+  BusinessClientController.dossier
+);
+businessClientRoutes.get(
   "/business-clients/:clientId",
   isAuth,
   BusinessClientController.show

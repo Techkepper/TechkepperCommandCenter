@@ -8,10 +8,6 @@ import React, {
 import {
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControl,
   IconButton,
   InputAdornment,
@@ -39,6 +35,7 @@ import { toast } from "react-toastify";
 
 import BusinessClientModal from "../../components/BusinessClientModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import EntityDossierDialog from "../../components/EntityDossierDialog";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
@@ -66,25 +63,6 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(3),
     borderColor: "rgba(255, 193, 7, 0.35)",
     background: "rgba(255, 193, 7, 0.08)",
-  },
-  detailGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: theme.spacing(2),
-    [theme.breakpoints.down("xs")]: {
-      gridTemplateColumns: "1fr",
-    },
-  },
-  detailItem: {
-    padding: theme.spacing(1.5),
-    borderRadius: 10,
-    background:
-      theme.palette.type === "dark"
-        ? "rgba(255, 255, 255, 0.04)"
-        : "rgba(0, 0, 0, 0.03)",
-  },
-  notes: {
-    gridColumn: "1 / -1",
   },
 }));
 
@@ -136,25 +114,6 @@ const clientMatchesFilters = (client, status, searchParam, type) => {
   return statusMatches && typeMatches && searchMatches;
 };
 
-const detailFields = [
-  ["Tipo", (client) => (client.type === "legal" ? "Persona jurídica" : "Persona física")],
-  ["Identificación", (client) => `${client.identificationType}: ${client.identificationNumber}`],
-  ["Razón social", (client) => client.legalName],
-  ["Nombre comercial", (client) => client.tradeName],
-  ["Representante legal", (client) => client.legalRepresentativeName],
-  ["Identificación representante", (client) => client.legalRepresentativeId],
-  ["Cargo del representante", (client) => client.legalRepresentativePosition],
-  ["Correo", (client) => client.email],
-  ["Teléfono", (client) => client.phone],
-  ["Departamento", (client) => client.queue?.name || "Global"],
-  ["Ubicación", (client) =>
-    [client.district, client.canton, client.province, client.country]
-      .filter(Boolean)
-      .join(", ")],
-  ["Dirección", (client) => client.address],
-  ["Creado por", (client) => client.createdBy?.name],
-];
-
 const BusinessClients = () => {
   const classes = useStyles();
   const { user } = useContext(AuthContext);
@@ -170,10 +129,7 @@ const BusinessClients = () => {
   const [installRequired, setInstallRequired] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
-  const [detailClient, setDetailClient] = useState(null);
-  const [detailDocuments, setDetailDocuments] = useState([]);
-  const [documentAssociationInstalled, setDocumentAssociationInstalled] =
-    useState(true);
+  const [dossier, setDossier] = useState(null);
   const [statusClient, setStatusClient] = useState(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const closeModal = useCallback(() => {
@@ -243,16 +199,15 @@ const BusinessClients = () => {
 
   const openDetail = async (clientId) => {
     try {
-      const [clientResponse, documentsResponse] = await Promise.all([
-        api.get(`/business-clients/${clientId}`),
-        api.get(`/business-clients/${clientId}/documents`),
-      ]);
-      setDetailClient(clientResponse.data);
-      setDetailDocuments(documentsResponse.data.documents);
-      setDocumentAssociationInstalled(documentsResponse.data.installed);
+      const { data } = await api.get(`/business-clients/${clientId}/dossier`);
+      setDossier(data);
     } catch (error) {
       toastError(error);
     }
+  };
+
+  const reloadDossier = async () => {
+    if (dossier?.entity?.id) await openDetail(dossier.entity.id);
   };
 
   const changeStatus = async () => {
@@ -323,69 +278,12 @@ const BusinessClients = () => {
           : "El cliente volverá a estar disponible para la gestión comercial."}
       </ConfirmationModal>
 
-      <Dialog
-        open={Boolean(detailClient)}
-        onClose={() => {
-          setDetailClient(null);
-          setDetailDocuments([]);
-        }}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>{detailClient?.displayName}</DialogTitle>
-        <DialogContent dividers>
-          {detailClient && (
-            <div className={classes.detailGrid}>
-              {detailFields.map(([label, getValue]) => (
-                <div className={classes.detailItem} key={label}>
-                  <Typography variant="caption" color="textSecondary">
-                    {label}
-                  </Typography>
-                  <Typography>{getValue(detailClient) || "No indicado"}</Typography>
-                </div>
-              ))}
-              <div className={`${classes.detailItem} ${classes.notes}`}>
-                <Typography variant="caption" color="textSecondary">
-                  Notas internas
-                </Typography>
-                <Typography>{detailClient.notes || "Sin notas"}</Typography>
-              </div>
-              <div className={`${classes.detailItem} ${classes.notes}`}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Documentos asociados
-                </Typography>
-                {!documentAssociationInstalled && (
-                  <Typography color="textSecondary">
-                    Instalación pendiente para asociar documentos.
-                  </Typography>
-                )}
-                {documentAssociationInstalled &&
-                  detailDocuments.length === 0 && (
-                    <Typography color="textSecondary">
-                      No hay documentos asociados.
-                    </Typography>
-                  )}
-                {detailDocuments.map((document) => (
-                  <Typography key={document.id}>
-                    {document.title} ·{" "}
-                    {new Date(document.createdAt).toLocaleDateString()}
-                  </Typography>
-                ))}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setDetailClient(null);
-              setDetailDocuments([]);
-            }}
-          >
-            Cerrar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <EntityDossierDialog
+        open={Boolean(dossier)}
+        dossier={dossier}
+        onClose={() => setDossier(null)}
+        onReload={reloadDossier}
+      />
 
       <MainHeader>
         <Title>Clientes</Title>

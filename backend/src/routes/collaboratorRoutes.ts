@@ -8,6 +8,11 @@ const collaboratorRoutes = Router();
 
 collaboratorRoutes.get("/collaborators", isAuth, CollaboratorController.index);
 collaboratorRoutes.get(
+  "/collaborators/:collaboratorId/dossier",
+  isAuth,
+  CollaboratorController.dossier
+);
+collaboratorRoutes.get(
   "/collaborators/:collaboratorId",
   isAuth,
   CollaboratorController.show

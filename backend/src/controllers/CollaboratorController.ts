@@ -10,6 +10,7 @@ import {
   showCollaborator,
   updateCollaborator
 } from "../services/CollaboratorServices";
+import { showCollaboratorDossier } from "../services/DossierServices";
 
 const schema = Yup.object().shape({
   fullName: Yup.string().trim().min(2).max(255).required(),
@@ -67,6 +68,22 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   try {
     return res.json(
       await showCollaborator(req.params.collaboratorId, req.user)
+    );
+  } catch (err) {
+    return rethrowDbError(err);
+  }
+};
+
+export const dossier = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    return res.json(
+      await showCollaboratorDossier({
+        collaboratorId: Number(req.params.collaboratorId),
+        actor: req.user
+      })
     );
   } catch (err) {
     return rethrowDbError(err);

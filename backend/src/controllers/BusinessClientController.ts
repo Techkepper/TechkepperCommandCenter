@@ -9,6 +9,7 @@ import SetBusinessClientStatusService from "../services/BusinessClientServices/S
 import ShowBusinessClientService from "../services/BusinessClientServices/ShowBusinessClientService";
 import UpdateBusinessClientService from "../services/BusinessClientServices/UpdateBusinessClientService";
 import { BusinessClientData } from "../services/BusinessClientServices/businessClientTypes";
+import { showBusinessClientDossier } from "../services/DossierServices";
 
 type IndexQuery = {
   searchParam?: string;
@@ -93,6 +94,22 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
       actor: req.user
     });
     return res.json(client);
+  } catch (err) {
+    return rethrowBusinessClientDbError(err);
+  }
+};
+
+export const dossier = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    return res.json(
+      await showBusinessClientDossier({
+        clientId: Number(req.params.clientId),
+        actor: req.user
+      })
+    );
   } catch (err) {
     return rethrowBusinessClientDbError(err);
   }

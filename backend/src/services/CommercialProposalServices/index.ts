@@ -1,7 +1,11 @@
 import path from "path";
 import { promises as fs } from "fs";
-import { Op, Transaction, WhereOptions } from "sequelize";
-import PizZip from "pizzip";
+import {
+  Op,
+  Transaction,
+  UniqueConstraintError,
+  WhereOptions
+} from "sequelize";
 
 import sequelize from "../../database";
 import AppError from "../../errors/AppError";
@@ -24,6 +28,7 @@ import {
   resolveDocumentPath,
   saveDocumentBuffer
 } from "../DocumentServices/documentStorage";
+import { renderDocxTemplate } from "../DocumentServices/docxTemplateEngine";
 import { recordDocumentEvent } from "../DocumentServices/DocumentLifecycleService";
 
 export const proposalStatuses = [
@@ -39,6 +44,7 @@ export const proposalStatuses = [
 
 type ProposalStatus = (typeof proposalStatuses)[number];
 type Actor = { id: string; profile: string };
+export type ProposalDocumentVariant = "formal" | "quick";
 
 interface ProposalItemData {
   title: string;
@@ -78,7 +84,7 @@ export interface ProposalData {
   manualClientPhone?: string | null;
   manualClientIdentification?: string | null;
   clientNumber: string;
-  proposalNumber: string;
+  proposalNumber?: string;
   offerDate: string;
   title: string;
   introduction?: string | null;
@@ -191,6 +197,7 @@ const proposalIncludes = [
       "displayName",
       "legalName",
       "identificationNumber",
+      "legalRepresentativeName",
       "email",
       "phone",
       "queueId"
@@ -300,11 +307,8 @@ const resolveClientAndQueue = async (
 };
 
 const validateProposalData = (data: ProposalData): void => {
-  if (!data.clientNumber?.trim() || !data.proposalNumber?.trim()) {
-    throw new AppError(
-      "El número de cliente y número de presupuesto son obligatorios.",
-      400
-    );
+  if (!data.clientNumber?.trim()) {
+    throw new AppError("El número de cliente es obligatorio.", 400);
   }
   if (!data.offerDate || !data.title?.trim()) {
     throw new AppError("La fecha y el título son obligatorios.", 400);
@@ -370,7 +374,8 @@ const persistChildren = async (
 const normalizedProposalData = (
   data: ProposalData,
   actor: Actor,
-  queueId: number | null
+  queueId: number | null,
+  proposalNumber: string
 ) => {
   const includedItemsSubtotal = (data.items || [])
     .filter(item => item.isIncluded !== false)
@@ -404,7 +409,7 @@ const normalizedProposalData = (
     manualClientPhone: data.manualClientPhone?.trim() || null,
     manualClientIdentification: data.manualClientIdentification?.trim() || null,
     clientNumber: data.clientNumber.trim(),
-    proposalNumber: data.proposalNumber.trim(),
+    proposalNumber,
     offerDate: data.offerDate,
     title: data.title.trim(),
     introduction: data.introduction?.trim() || null,
@@ -424,6 +429,28 @@ const normalizedProposalData = (
   };
 };
 
+const buildNextProposalNumber = async (
+  transaction: Transaction
+): Promise<string> => {
+  const year = new Date().getFullYear();
+  const prefix = `PROP-${year}-`;
+  const existing = await CommercialProposal.findAll({
+    attributes: ["proposalNumber"],
+    where: { proposalNumber: { [Op.like]: `${prefix}%` } },
+    paranoid: false,
+    transaction,
+    lock: transaction.LOCK.UPDATE
+  });
+  const highestSequence = existing.reduce((highest, proposal) => {
+    const match = proposal.proposalNumber.match(
+      new RegExp(`^${prefix}(\\d+)$`)
+    );
+    return match ? Math.max(highest, Number(match[1])) : highest;
+  }, 0);
+
+  return `${prefix}${String(highestSequence + 1).padStart(3, "0")}`;
+};
+
 export const createProposal = async ({
   data,
   actor
@@ -434,39 +461,50 @@ export const createProposal = async ({
   ensureProposalWriteRole(actor);
   validateProposalData(data);
   const { queueId } = await resolveClientAndQueue(data, actor);
-  let proposalId = 0;
-  await sequelize.transaction(async transaction => {
-    const proposal = await CommercialProposal.create(
-      {
-        ...normalizedProposalData(data, actor, queueId),
-        status: "draft",
-        createdById: Number(actor.id)
-      } as unknown as CommercialProposal,
-      { transaction }
-    );
-    proposalId = proposal.id;
-    await persistChildren(
-      proposal.id,
-      data.items || [],
-      data.milestones || [],
-      proposal.total,
-      transaction
-    );
-    await recordEvent({
-      proposalId: proposal.id,
-      userId: actor.id,
-      eventType: "proposal_created",
-      newStatus: "draft",
-      transaction
-    });
-    await recordEvent({
-      proposalId: proposal.id,
-      userId: actor.id,
-      eventType: "items_added",
-      metadata: { itemCount: data.items?.length || 0 },
-      transaction
-    });
-  });
+  const createWithConsecutive = async (attempt = 1): Promise<number> => {
+    try {
+      return await sequelize.transaction(async transaction => {
+        const proposalNumber = await buildNextProposalNumber(transaction);
+        const proposal = await CommercialProposal.create(
+          {
+            ...normalizedProposalData(data, actor, queueId, proposalNumber),
+            status: "draft",
+            createdById: Number(actor.id)
+          } as unknown as CommercialProposal,
+          { transaction }
+        );
+        await persistChildren(
+          proposal.id,
+          data.items || [],
+          data.milestones || [],
+          proposal.total,
+          transaction
+        );
+        await recordEvent({
+          proposalId: proposal.id,
+          userId: actor.id,
+          eventType: "proposal_created",
+          newStatus: "draft",
+          metadata: { proposalNumber },
+          transaction
+        });
+        await recordEvent({
+          proposalId: proposal.id,
+          userId: actor.id,
+          eventType: "items_added",
+          metadata: { itemCount: data.items?.length || 0 },
+          transaction
+        });
+        return proposal.id;
+      });
+    } catch (error) {
+      if (!(error instanceof UniqueConstraintError) || attempt >= 3) {
+        throw error;
+      }
+      return createWithConsecutive(attempt + 1);
+    }
+  };
+  const proposalId = await createWithConsecutive();
   // eslint-disable-next-line no-use-before-define
   return showProposal({ proposalId, actor });
 };
@@ -487,9 +525,10 @@ export const updateProposal = async ({
   await ensureProposalAccess(proposal, actor, true);
   const { queueId } = await resolveClientAndQueue(data, actor);
   await sequelize.transaction(async transaction => {
-    await proposal.update(normalizedProposalData(data, actor, queueId), {
-      transaction
-    });
+    await proposal.update(
+      normalizedProposalData(data, actor, queueId, proposal.proposalNumber),
+      { transaction }
+    );
     await persistChildren(
       proposal.id,
       data.items || [],
@@ -614,172 +653,168 @@ export const listProposals = async ({
   return { proposals };
 };
 
-const xmlEscape = (value: unknown): string =>
-  Array.from(String(value ?? ""))
-    .map(character => {
-      if (character === "&") return "&amp;";
-      if (character === "<") return "&lt;";
-      if (character === ">") return "&gt;";
-      if (character === '"') return "&quot;";
-      const codePoint = character.codePointAt(0) || 0;
-      return codePoint > 127 ? `&#${codePoint};` : character;
-    })
-    .join("");
-
-const paragraph = (text: unknown, bold = false): string =>
-  `<w:p><w:r>${
-    bold ? "<w:rPr><w:b/></w:rPr>" : ""
-  }<w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r></w:p>`;
-
 const formatMoney = (value: unknown, currency: string): string =>
   `${currency} ${Number(value || 0).toLocaleString("es-CR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })}`;
 
-const buildProposalDocx = (proposal: CommercialProposal): Buffer => {
+const formatOfferDate = (value: string): string => {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return value;
+  return new Intl.DateTimeFormat("es-CR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+};
+
+const proposalTemplatePaths: Record<ProposalDocumentVariant, string> = {
+  formal: path.resolve(
+    process.cwd(),
+    "assets",
+    "document-templates",
+    "commercial-proposals",
+    "commercial-proposal-formal.docx"
+  ),
+  quick: path.resolve(
+    process.cwd(),
+    "assets",
+    "document-templates",
+    "commercial-proposals",
+    "commercial-proposal-quick.docx"
+  )
+};
+
+const buildProposalTemplateData = (
+  proposal: CommercialProposal
+): Record<string, string> => {
   const clientName =
     proposal.businessClient?.displayName || proposal.manualClientName || "";
   const clientEmail =
     proposal.businessClient?.email || proposal.manualClientEmail || "";
   const clientPhone =
     proposal.businessClient?.phone || proposal.manualClientPhone || "";
-  const clientId =
-    proposal.businessClient?.identificationNumber ||
-    proposal.manualClientIdentification ||
-    "";
-  const itemParagraphs = proposal.items
+  const clientContact =
+    proposal.businessClient?.legalRepresentativeName || clientName;
+  const proposalItems = proposal.items
     .filter(item => item.isIncluded)
-    .reduce<string[]>(
-      (paragraphs, item) => [
-        ...paragraphs,
-        paragraph(
-          `${item.sortOrder}. ${item.title} - ${formatMoney(
-            item.subtotal,
-            proposal.currency
-          )}`,
-          true
-        ),
-        paragraph(item.description),
-        ...JSON.parse(item.includedItems || "[]").map((entry: string) =>
-          paragraph(`- ${entry}`)
-        )
-      ],
-      []
-    );
-  const milestoneParagraphs = proposal.milestones.reduce<string[]>(
-    (paragraphs, milestone) => [
-      ...paragraphs,
-      paragraph(
+    .map(item => {
+      let entries: string[] = [];
+      try {
+        const parsedEntries: unknown = JSON.parse(item.includedItems || "[]");
+        entries = Array.isArray(parsedEntries)
+          ? parsedEntries.filter(
+              (entry): entry is string => typeof entry === "string"
+            )
+          : [];
+      } catch {
+        entries = [];
+      }
+      return [
+        `${item.sortOrder}. ${item.title}`,
+        item.description || "",
+        ...entries.map(entry => `- ${entry}`),
+        `Subtotal: ${formatMoney(item.subtotal, proposal.currency)}`
+      ]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .join("\n\n");
+  const paymentConditions = [
+    ...proposal.milestones.map(
+      milestone =>
         `${milestone.name}: ${Number(milestone.percentage)}% - ${formatMoney(
           milestone.amount,
           proposal.currency
-        )}`,
-        true
-      ),
-      paragraph(milestone.description)
-    ],
-    []
-  );
-  const sections = [
-    paragraph("TECHKEPPER - PROPUESTA COMERCIAL", true),
-    paragraph(proposal.title, true),
-    paragraph(`Número de cliente: ${proposal.clientNumber}`),
-    paragraph(`Número de presupuesto: ${proposal.proposalNumber}`),
-    paragraph(`Fecha de oferta: ${proposal.offerDate}`),
-    paragraph(`Cliente: ${clientName}`),
-    paragraph(`Identificación: ${clientId}`),
-    paragraph(`Contacto: ${clientEmail} ${clientPhone}`),
-    paragraph("Carta introductoria", true),
-    paragraph(proposal.introduction),
-    paragraph("Necesidad identificada", true),
-    paragraph(proposal.identifiedNeed),
-    paragraph("Alcance general", true),
-    paragraph(proposal.generalScope),
-    paragraph("Presupuesto", true),
-    ...itemParagraphs,
-    paragraph("Análisis de inversión recomendada", true),
-    paragraph(proposal.investmentAnalysis),
-    paragraph(
-      `Subtotal: ${formatMoney(proposal.subtotal, proposal.currency)}`,
-      true
+        )}${milestone.description ? `\n${milestone.description}` : ""}`
     ),
-    paragraph(
-      `IVA (${Number(proposal.ivaRate)}%): ${formatMoney(
-        proposal.ivaAmount,
-        proposal.currency
-      )}`
-    ),
-    paragraph(
-      `Total${proposal.showIvi ? " IVI" : ""}: ${formatMoney(
-        proposal.total,
-        proposal.currency
-      )}`,
-      true
-    ),
-    paragraph("Condiciones de pago", true),
-    ...milestoneParagraphs,
-    paragraph(proposal.paymentTermsText),
-    paragraph("Plazo estimado", true),
-    paragraph(proposal.projectTimeline),
-    paragraph("Términos", true),
-    paragraph(proposal.termsText),
-    paragraph("Recomendación posterior", true),
-    paragraph(proposal.futureRecommendation)
-  ];
-  const zip = new PizZip();
-  zip.file(
-    "[Content_Types].xml",
-    "<?xml version='1.0' encoding='UTF-8' standalone='yes'?><Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'><Default Extension='rels' ContentType='application/vnd.openxmlformats-package.relationships+xml'/><Default Extension='xml' ContentType='application/xml'/><Override PartName='/word/document.xml' ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'/></Types>"
-  );
-  zip
-    .folder("_rels")
-    ?.file(
-      ".rels",
-      "<?xml version='1.0' encoding='UTF-8' standalone='yes'?><Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'><Relationship Id='rId1' Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument' Target='word/document.xml'/></Relationships>"
-    );
-  zip
-    .folder("word")
-    ?.file(
-      "document.xml",
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${sections.join(
-        ""
-      )}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"/></w:sectPr></w:body></w:document>`
-    );
-  return zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+    proposal.paymentTermsText || ""
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return {
+    NUMERO_CLIENTE: proposal.clientNumber,
+    NUMERO_PRESUPUESTO: proposal.proposalNumber,
+    FECHA_OFERTA: formatOfferDate(proposal.offerDate),
+    CLIENTE_NOMBRE: clientName,
+    CLIENTE_CONTACTO: clientContact,
+    CLIENTE_CORREO: clientEmail,
+    CLIENTE_TELEFONO: clientPhone,
+    TITULO_PROPUESTA: proposal.title,
+    INTRODUCCION: proposal.introduction || "",
+    ALCANCE_GENERAL: proposal.generalScope || "",
+    MENSAJE_CIERRE:
+      "Agradecemos la oportunidad de presentar esta propuesta y quedamos atentos para revisar cualquier ajuste requerido.",
+    MONEDA: proposal.currency,
+    TITULO_PRESUPUESTO: proposal.title,
+    DESCRIPCION_COTIZACION:
+      proposal.identifiedNeed || proposal.generalScope || "",
+    RUBROS_PROPUESTA: proposalItems,
+    ANALISIS_INVERSION: proposal.investmentAnalysis || "",
+    SUBTOTAL: formatMoney(proposal.subtotal, proposal.currency),
+    IVA_PORCENTAJE: `${Number(proposal.ivaRate)}%`,
+    IVA_MONTO: formatMoney(proposal.ivaAmount, proposal.currency),
+    DESCUENTO: formatMoney(proposal.discountAmount, proposal.currency),
+    TOTAL: `${formatMoney(proposal.total, proposal.currency)}${
+      proposal.showIvi ? " IVI" : ""
+    }`,
+    CONDICIONES_PAGO: paymentConditions,
+    PLAZO_PROYECTO: proposal.projectTimeline || "",
+    NOTA_COMERCIAL: proposal.showIvi
+      ? "Los montos indicados incluyen el impuesto de valor agregado."
+      : "",
+    TERMINOS: proposal.termsText || "",
+    RECOMENDACION_POSTERIOR: proposal.futureRecommendation || ""
+  };
 };
 
 export const generateProposalDocument = async ({
   proposalId,
-  actor
+  actor,
+  variant = "formal"
 }: {
   proposalId: number;
   actor: Actor;
+  variant?: ProposalDocumentVariant;
 }): Promise<SmartDocument> => {
   ensureProposalWriteRole(actor);
+  if (variant !== "formal" && variant !== "quick") {
+    throw new AppError(
+      "La variante de cotización seleccionada no es válida.",
+      400
+    );
+  }
   const proposal = await showProposal({ proposalId, actor });
   await ensureProposalAccess(proposal, actor, true);
-  const buffer = buildProposalDocx(proposal);
+  const buffer = await renderDocxTemplate(
+    proposalTemplatePaths[variant],
+    buildProposalTemplateData(proposal)
+  );
   const mimeType =
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   const saved = await saveDocumentBuffer(buffer, mimeType, "generated");
+  const variantLabel =
+    variant === "formal" ? "Propuesta comercial" : "Cotización rápida";
   let document: SmartDocument | null = null;
   try {
     document = await SmartDocument.create({
-      title: proposal.title,
-      description: `Propuesta comercial ${proposal.proposalNumber}`,
+      title: `${variantLabel} - ${proposal.title}`,
+      description: `${variantLabel} ${proposal.proposalNumber}, generada desde el machote oficial Techkepper`,
       originalName: `${proposal.proposalNumber.replace(
         /[^a-z0-9_-]/gi,
         "_"
-      )}.docx`,
+      )}-${variant}.docx`,
       storedName: saved.storedName,
       storagePath: saved.storagePath,
       mimeType,
       size: buffer.length,
-      category: "Propuesta comercial",
+      category: variantLabel,
       purpose: "quotations",
       status: "generated",
-      tags: `commercial-proposal:${proposal.id}`,
+      tags: `commercial-proposal:${proposal.id};variant:${variant}`,
       uploadedById: Number(actor.id),
       contactId: null,
       ticketId: null,
@@ -802,13 +837,13 @@ export const generateProposalDocument = async ({
       userId: actor.id,
       eventType: "generated",
       newStatus: "generated",
-      metadata: { commercialProposalId: proposal.id }
+      metadata: { commercialProposalId: proposal.id, variant }
     });
     await recordEvent({
       proposalId: proposal.id,
       userId: actor.id,
       eventType: "docx_generated",
-      metadata: { documentId: document.id }
+      metadata: { documentId: document.id, variant }
     });
     return document.reload();
   } catch (error) {
@@ -1046,4 +1081,32 @@ export const archiveProposal = async ({
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
   return updateProposalStatus({ proposalId, status: "archived", actor });
+};
+
+export const deleteProposal = async ({
+  proposalId,
+  actor
+}: {
+  proposalId: number;
+  actor: Actor;
+}): Promise<void> => {
+  if (actor.profile !== "admin") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+  const proposal = await CommercialProposal.findByPk(proposalId);
+  if (!proposal) {
+    throw new AppError("ERR_NO_PROPOSAL_FOUND", 404);
+  }
+
+  await sequelize.transaction(async transaction => {
+    await recordEvent({
+      proposalId: proposal.id,
+      userId: actor.id,
+      eventType: "proposal_deleted",
+      previousStatus: proposal.status,
+      metadata: { proposalNumber: proposal.proposalNumber },
+      transaction
+    });
+    await proposal.destroy({ transaction });
+  });
 };
