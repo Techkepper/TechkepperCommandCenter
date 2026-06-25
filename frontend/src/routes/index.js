@@ -19,6 +19,7 @@ import Queues from "../pages/Queues/";
 import { AuthProvider } from "../context/Auth/AuthContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
 import { ThemeProvider } from "../context/DarkMode";
+import { LanguageProvider } from "../context/Language";
 import Route from "./Route";
 import AgentHistory from "../pages/AgentHistory";
 import { AuthContext } from "../context/Auth/AuthContext";
@@ -127,11 +128,13 @@ const Routes = () => {
     <BrowserRouter>
       <AuthProvider>
         <ThemeProvider>
-          <Switch>
-            <Route exact path={ROUTES.login} component={Login} />
-            <Route path="/" component={AuthenticatedRoutes} isPrivate />
-          </Switch>
-          <ToastContainer autoClose={3000} />
+          <LanguageProvider>
+            <Switch>
+              <Route exact path={ROUTES.login} component={Login} />
+              <Route path="/" component={AuthenticatedRoutes} isPrivate />
+            </Switch>
+            <ToastContainer autoClose={3000} />
+          </LanguageProvider>
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -288,7 +288,7 @@ export const handleMessage = async (
     if (mediaPayload && processedMessage.hasMedia) {
       const filename = await saveMediaFile(mediaPayload);
       messageData.mediaUrl = filename;
-      messageData.body = processedMessage.body || filename;
+      messageData.body = processedMessage.body || "";
       const [mediaType] = mediaPayload.mimetype.split("/");
       messageData.mediaType = mediaType;
     }
@@ -299,7 +299,7 @@ export const handleMessage = async (
         ? processedMessage.body
         : "Localization";
     } else {
-      lastMessageText = processedMessage.body || mediaPayload?.filename || "";
+      lastMessageText = processedMessage.body || "";
     }
 
     const ticketUpdates: Record<string, string> = {

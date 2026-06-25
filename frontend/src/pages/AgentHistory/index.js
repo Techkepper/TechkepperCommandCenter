@@ -23,6 +23,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import { useHistory } from "react-router-dom";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles((theme) => ({
@@ -43,15 +44,14 @@ const initialFilters = {
   ecosystemId: "",
 };
 
-const statusLabels = {
-  open: "En atención",
-  pending: "Pendiente",
-  closed: "Resuelta",
-};
-
 const AgentHistory = () => {
   const classes = useStyles();
   const history = useHistory();
+  const statusLabels = {
+    open: i18n.t("agentHistory.statuses.open"),
+    pending: i18n.t("agentHistory.statuses.pending"),
+    closed: i18n.t("agentHistory.statuses.closed"),
+  };
   const { user } = useContext(AuthContext);
   const canReviewTeam = user.profile === "admin" || user.profile === "supervisor";
   const [filters, setFilters] = useState(initialFilters);
@@ -83,11 +83,20 @@ const AgentHistory = () => {
 
   const metrics = useMemo(
     () => [
-      ["Clientes", result.metrics.customers],
-      ["Conversaciones", result.metrics.conversations],
-      ["Cerradas", result.metrics.closed],
-      ["Reasignaciones", result.metrics.reassignments],
-      ["Tomadas manualmente", result.metrics.manualTakes],
+      [i18n.t("agentHistory.metrics.customers"), result.metrics.customers],
+      [
+        i18n.t("agentHistory.metrics.conversations"),
+        result.metrics.conversations,
+      ],
+      [i18n.t("agentHistory.metrics.closed"), result.metrics.closed],
+      [
+        i18n.t("agentHistory.metrics.reassignments"),
+        result.metrics.reassignments,
+      ],
+      [
+        i18n.t("agentHistory.metrics.manualTakes"),
+        result.metrics.manualTakes,
+      ],
     ],
     [result.metrics]
   );
@@ -116,9 +125,9 @@ const AgentHistory = () => {
     <Container maxWidth="xl" className={classes.root}>
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <div>
-          <Typography variant="h4">Historial por agente</Typography>
+          <Typography variant="h4">{i18n.t("agentHistory.title")}</Typography>
           <Typography color="textSecondary">
-            Clientes atendidos, carga operativa y trazabilidad del equipo.
+            {i18n.t("agentHistory.subtitle")}
           </Typography>
         </div>
         <Button
@@ -127,7 +136,7 @@ const AgentHistory = () => {
           startIcon={<GetAppOutlined />}
           onClick={exportCsv}
         >
-          Exportar CSV
+          {i18n.t("agentHistory.exportCsv")}
         </Button>
       </Box>
 
@@ -138,12 +147,14 @@ const AgentHistory = () => {
               select
               fullWidth
               variant="outlined"
-              label="Agente"
+              label={i18n.t("agentHistory.filters.agent")}
               value={canReviewTeam ? filters.agentId : user.id || ""}
               onChange={setFilter("agentId")}
               disabled={!canReviewTeam}
             >
-              {canReviewTeam && <MenuItem value="">Todos</MenuItem>}
+              {canReviewTeam && (
+                <MenuItem value="">{i18n.t("agentHistory.filters.all")}</MenuItem>
+              )}
               {users.map((user) => (
                 <MenuItem value={user.id} key={user.id}>
                   {user.name}
@@ -155,7 +166,7 @@ const AgentHistory = () => {
             <TextField
               fullWidth
               variant="outlined"
-              label="Cliente o número"
+              label={i18n.t("agentHistory.filters.customerOrNumber")}
               value={filters.searchParam}
               onChange={setFilter("searchParam")}
             />
@@ -165,7 +176,7 @@ const AgentHistory = () => {
               fullWidth
               type="date"
               variant="outlined"
-              label="Desde"
+              label={i18n.t("agentHistory.filters.from")}
               InputLabelProps={{ shrink: true }}
               value={filters.startDate}
               onChange={setFilter("startDate")}
@@ -176,7 +187,7 @@ const AgentHistory = () => {
               fullWidth
               type="date"
               variant="outlined"
-              label="Hasta"
+              label={i18n.t("agentHistory.filters.to")}
               InputLabelProps={{ shrink: true }}
               value={filters.endDate}
               onChange={setFilter("endDate")}
@@ -191,7 +202,7 @@ const AgentHistory = () => {
               startIcon={<FilterListOutlined />}
               onClick={() => setAppliedFilters(filters)}
             >
-              Aplicar
+              {i18n.t("agentHistory.filters.apply")}
             </Button>
           </Grid>
           <Grid item xs={12} md={4}>
@@ -199,11 +210,11 @@ const AgentHistory = () => {
               select
               fullWidth
               variant="outlined"
-              label="Departamento"
+              label={i18n.t("agentHistory.filters.queue")}
               value={filters.queueId}
               onChange={setFilter("queueId")}
             >
-              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="">{i18n.t("agentHistory.filters.all")}</MenuItem>
               {queues.map((queue) => (
                 <MenuItem value={queue.id} key={queue.id}>
                   {queue.name}
@@ -216,14 +227,20 @@ const AgentHistory = () => {
               select
               fullWidth
               variant="outlined"
-              label="Estado"
+              label={i18n.t("agentHistory.filters.status")}
               value={filters.status}
               onChange={setFilter("status")}
             >
-              <MenuItem value="">Todos</MenuItem>
-              <MenuItem value="open">En atención</MenuItem>
-              <MenuItem value="pending">Pendiente</MenuItem>
-              <MenuItem value="closed">Cerrado</MenuItem>
+              <MenuItem value="">{i18n.t("agentHistory.filters.all")}</MenuItem>
+              <MenuItem value="open">
+                {i18n.t("agentHistory.statuses.open")}
+              </MenuItem>
+              <MenuItem value="pending">
+                {i18n.t("agentHistory.statuses.pending")}
+              </MenuItem>
+              <MenuItem value="closed">
+                {i18n.t("agentHistory.statuses.closedFilter")}
+              </MenuItem>
             </TextField>
           </Grid>
           <Grid item xs={12} md={4}>
@@ -231,11 +248,11 @@ const AgentHistory = () => {
               select
               fullWidth
               variant="outlined"
-              label="Ecosistema"
+              label={i18n.t("agentHistory.filters.ecosystem")}
               value={filters.ecosystemId}
               onChange={setFilter("ecosystemId")}
             >
-              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="">{i18n.t("agentHistory.filters.all")}</MenuItem>
               {ecosystems.map((ecosystem) => (
                 <MenuItem value={ecosystem.id} key={ecosystem.id}>
                   {ecosystem.name}
@@ -264,15 +281,23 @@ const AgentHistory = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Cliente</TableCell>
-                <TableCell>WhatsApp</TableCell>
-                <TableCell>Agente</TableCell>
-                <TableCell>Última conversación</TableCell>
-                <TableCell>Departamento</TableCell>
-                <TableCell>Ecosistema</TableCell>
-                <TableCell align="right">Conversaciones</TableCell>
-                <TableCell>Última interacción</TableCell>
-                <TableCell align="right">Conversación</TableCell>
+                <TableCell>{i18n.t("agentHistory.table.customer")}</TableCell>
+                <TableCell>{i18n.t("agentHistory.table.whatsapp")}</TableCell>
+                <TableCell>{i18n.t("agentHistory.table.agent")}</TableCell>
+                <TableCell>
+                  {i18n.t("agentHistory.table.lastConversation")}
+                </TableCell>
+                <TableCell>{i18n.t("agentHistory.table.queue")}</TableCell>
+                <TableCell>{i18n.t("agentHistory.table.ecosystem")}</TableCell>
+                <TableCell align="right">
+                  {i18n.t("agentHistory.table.conversations")}
+                </TableCell>
+                <TableCell>
+                  {i18n.t("agentHistory.table.lastInteraction")}
+                </TableCell>
+                <TableCell align="right">
+                  {i18n.t("agentHistory.table.conversation")}
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -283,7 +308,8 @@ const AgentHistory = () => {
                   <TableCell>{row.agent}</TableCell>
                   <TableCell>
                     #{row.lastTicket?.id} ·{" "}
-                    {statusLabels[row.lastTicket?.status] || "Sin estado"}
+                    {statusLabels[row.lastTicket?.status] ||
+                      i18n.t("agentHistory.statuses.none")}
                   </TableCell>
                   <TableCell>{row.lastTicket?.queue || "—"}</TableCell>
                   <TableCell>{row.lastTicket?.ecosystem || "—"}</TableCell>
@@ -301,7 +327,7 @@ const AgentHistory = () => {
                         history.push(`/tickets/${row.lastTicket.id}`)
                       }
                     >
-                      Abrir
+                      {i18n.t("agentHistory.open")}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -311,7 +337,7 @@ const AgentHistory = () => {
         ) : (
           <div className={classes.empty}>
             <Typography color="textSecondary">
-              No hay datos para los filtros seleccionados.
+              {i18n.t("agentHistory.noData")}
             </Typography>
           </div>
         )}

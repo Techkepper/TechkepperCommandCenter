@@ -17,6 +17,7 @@ import {
 } from "@material-ui/icons";
 import { makeStyles } from "@material-ui/core/styles";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -108,18 +109,19 @@ const Login = () => {
         <div className={classes.heroCopy}>
           <Chip
             icon={<SecurityOutlined />}
-            label="Operación interna protegida"
+            label={i18n.t("login.protectedChip")}
             color="primary"
             variant="outlined"
           />
           <Typography variant="h2" component="h1">
-            Atención inteligente.
+            {i18n.t("login.heroTitle1")}
             <br />
-            <span className={classes.accent}>Control operativo real.</span>
+            <span className={classes.accent}>
+              {i18n.t("login.heroTitle2")}
+            </span>
           </Typography>
           <Typography variant="h6" color="textSecondary">
-            Ventas, soporte, desarrollo y ciberseguridad coordinados desde un
-            único centro multiagente para WhatsApp Business.
+            {i18n.t("login.heroSubtitle")}
           </Typography>
         </div>
         <Typography variant="body2" color="textSecondary">
@@ -141,7 +143,7 @@ const Login = () => {
             </Box>
           </Box>
           <Typography color="textSecondary">
-            Ingrese con las credenciales asignadas por administración.
+            {i18n.t("login.credentialsHint")}
           </Typography>
 
           <form className={classes.form} onSubmit={handleSubmit}>
@@ -150,7 +152,7 @@ const Login = () => {
               variant="outlined"
               required
               fullWidth
-              label="Correo corporativo"
+              label={i18n.t("login.emailLabel")}
               name="email"
               value={credentials.email}
               onChange={(event) =>
@@ -165,7 +167,7 @@ const Login = () => {
               required
               fullWidth
               name="password"
-              label="Contraseña"
+              label={i18n.t("login.passwordLabel")}
               value={credentials.password}
               onChange={(event) =>
                 setCredentials({ ...credentials, password: event.target.value })
@@ -189,7 +191,7 @@ const Login = () => {
               color="primary"
               className={classes.submit}
             >
-              Ingresar al centro de comando
+              {i18n.t("login.submit")}
             </Button>
           </form>
           <Typography
@@ -198,8 +200,7 @@ const Login = () => {
             color="textSecondary"
             display="block"
           >
-            El registro público está deshabilitado. Solicite acceso a un
-            administrador de Techkepper.
+            {i18n.t("login.footer")}
           </Typography>
         </Paper>
       </section>

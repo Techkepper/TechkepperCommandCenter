@@ -249,7 +249,9 @@ const Users = () => {
               <TableCell align="center">
                 {i18n.t("users.table.whatsapp")}
               </TableCell>
-              <TableCell align="center">Estado</TableCell>
+              <TableCell align="center">
+                {i18n.t("users.table.status")}
+              </TableCell>
               <TableCell align="center">
                 {i18n.t("users.table.actions")}
               </TableCell>
@@ -268,7 +270,11 @@ const Users = () => {
                       size="small"
                       variant="outlined"
                       color={user.isActive ? "primary" : "default"}
-                      label={user.isActive ? "Activo" : "Inactivo"}
+                      label={
+                        user.isActive
+                          ? i18n.t("users.statuses.active")
+                          : i18n.t("users.statuses.inactive")
+                      }
                     />
                   </TableCell>
                   <TableCell align="center">

@@ -45,6 +45,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import openSocket from "../../services/socket-io";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -226,8 +227,8 @@ const BusinessClients = () => {
       });
       toast.success(
         data.isActive
-          ? "Cliente reactivado correctamente."
-          : "Cliente desactivado correctamente."
+          ? i18n.t("businessClients.toasts.reactivated")
+          : i18n.t("businessClients.toasts.deactivated")
       );
     } catch (error) {
       toastError(error);
@@ -270,12 +271,14 @@ const BusinessClients = () => {
         onClose={setConfirmationOpen}
         onConfirm={changeStatus}
         title={
-          statusClient?.isActive ? "Desactivar cliente" : "Reactivar cliente"
+          statusClient?.isActive
+            ? i18n.t("businessClients.confirm.deactivateTitle")
+            : i18n.t("businessClients.confirm.reactivateTitle")
         }
       >
         {statusClient?.isActive
-          ? "El cliente dejará de aparecer entre los clientes activos, pero conservará su historial."
-          : "El cliente volverá a estar disponible para la gestión comercial."}
+          ? i18n.t("businessClients.confirm.deactivateMessage")
+          : i18n.t("businessClients.confirm.reactivateMessage")}
       </ConfirmationModal>
 
       <EntityDossierDialog
@@ -286,10 +289,10 @@ const BusinessClients = () => {
       />
 
       <MainHeader>
-        <Title>Clientes</Title>
+        <Title>{i18n.t("businessClients.title")}</Title>
         <MainHeaderButtonsWrapper>
           <TextField
-            placeholder="Buscar cliente"
+            placeholder={i18n.t("businessClients.search.placeholder")}
             type="search"
             variant="outlined"
             size="small"
@@ -308,20 +311,26 @@ const BusinessClients = () => {
             variant="outlined"
             size="small"
           >
-            <InputLabel>Estado</InputLabel>
+            <InputLabel>{i18n.t("businessClients.filters.statusLabel")}</InputLabel>
             <Select
               value={status}
               onChange={(event) => setStatus(event.target.value)}
-              label="Estado"
+              label={i18n.t("businessClients.filters.statusLabel")}
             >
-              <MenuItem value="active">Activos</MenuItem>
-              <MenuItem value="inactive">Inactivos</MenuItem>
-              <MenuItem value="all">Todos</MenuItem>
+              <MenuItem value="active">
+                {i18n.t("businessClients.filters.statusOptions.active")}
+              </MenuItem>
+              <MenuItem value="inactive">
+                {i18n.t("businessClients.filters.statusOptions.inactive")}
+              </MenuItem>
+              <MenuItem value="all">
+                {i18n.t("businessClients.filters.statusOptions.all")}
+              </MenuItem>
             </Select>
           </FormControl>
           {canManage && !installRequired && (
             <Button color="primary" variant="contained" onClick={openCreate}>
-              Nuevo cliente
+              {i18n.t("businessClients.buttons.newClient")}
             </Button>
           )}
         </MainHeaderButtonsWrapper>
@@ -336,19 +345,19 @@ const BusinessClients = () => {
           variant="scrollable"
           scrollButtons="auto"
         >
-          <Tab value="" label="Todos" />
-          <Tab value="legal" label="Jurídicos" />
-          <Tab value="physical" label="Físicos" />
+          <Tab value="" label={i18n.t("businessClients.tabs.all")} />
+          <Tab value="legal" label={i18n.t("businessClients.tabs.legal")} />
+          <Tab value="physical" label={i18n.t("businessClients.tabs.physical")} />
         </Tabs>
       </Paper>
 
       {installRequired ? (
         <Paper className={classes.installWarning} variant="outlined">
-          <Typography variant="h6">Instalación pendiente</Typography>
+          <Typography variant="h6">
+            {i18n.t("businessClients.install.title")}
+          </Typography>
           <Typography color="textSecondary">
-            El módulo Clientes está integrado, pero la tabla BusinessClients
-            todavía no existe. Revise SQL_MANUAL_STEPS.md y ejecute únicamente
-            el bloque correspondiente en la base correcta.
+            {i18n.t("businessClients.install.description")}
           </Typography>
         </Paper>
       ) : (
@@ -360,13 +369,19 @@ const BusinessClients = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Cliente</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Identificación</TableCell>
-                <TableCell>Departamento</TableCell>
-                <TableCell>Contacto</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell align="center">Acciones</TableCell>
+                <TableCell>{i18n.t("businessClients.table.client")}</TableCell>
+                <TableCell>{i18n.t("businessClients.table.type")}</TableCell>
+                <TableCell>
+                  {i18n.t("businessClients.table.identification")}
+                </TableCell>
+                <TableCell>
+                  {i18n.t("businessClients.table.department")}
+                </TableCell>
+                <TableCell>{i18n.t("businessClients.table.contact")}</TableCell>
+                <TableCell>{i18n.t("businessClients.table.status")}</TableCell>
+                <TableCell align="center">
+                  {i18n.t("businessClients.table.actions")}
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -381,16 +396,21 @@ const BusinessClients = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    {client.type === "legal" ? "Jurídico" : "Físico"}
+                    {client.type === "legal"
+                      ? i18n.t("businessClients.type.legal")
+                      : i18n.t("businessClients.type.physical")}
                   </TableCell>
                   <TableCell>{client.identificationNumber}</TableCell>
-                  <TableCell>{client.queue?.name || "Global"}</TableCell>
+                  <TableCell>
+                    {client.queue?.name ||
+                      i18n.t("businessClients.defaults.global")}
+                  </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {client.email || "Sin correo"}
+                      {client.email || i18n.t("businessClients.defaults.noEmail")}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
-                      {client.phone || "Sin teléfono"}
+                      {client.phone || i18n.t("businessClients.defaults.noPhone")}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -398,13 +418,17 @@ const BusinessClients = () => {
                       size="small"
                       variant="outlined"
                       color={client.isActive ? "primary" : "default"}
-                      label={client.isActive ? "Activo" : "Inactivo"}
+                      label={
+                        client.isActive
+                          ? i18n.t("businessClients.chip.active")
+                          : i18n.t("businessClients.chip.inactive")
+                      }
                     />
                   </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"
-                      title="Ver detalle"
+                      title={i18n.t("businessClients.actions.view")}
                       onClick={() => openDetail(client.id)}
                     >
                       <VisibilityOutlinedIcon />
@@ -413,14 +437,18 @@ const BusinessClients = () => {
                       <>
                         <IconButton
                           size="small"
-                          title="Editar"
+                          title={i18n.t("businessClients.actions.edit")}
                           onClick={() => openEdit(client.id)}
                         >
                           <EditOutlinedIcon />
                         </IconButton>
                         <IconButton
                           size="small"
-                          title={client.isActive ? "Desactivar" : "Reactivar"}
+                          title={
+                            client.isActive
+                              ? i18n.t("businessClients.actions.deactivate")
+                              : i18n.t("businessClients.actions.reactivate")
+                          }
                           onClick={() => {
                             setStatusClient(client);
                             setConfirmationOpen(true);
@@ -441,7 +469,7 @@ const BusinessClients = () => {
                 <TableRow>
                   <TableCell colSpan={7} align="center">
                     <Typography color="textSecondary">
-                      No hay clientes para mostrar.
+                      {i18n.t("businessClients.empty")}
                     </Typography>
                   </TableCell>
                 </TableRow>

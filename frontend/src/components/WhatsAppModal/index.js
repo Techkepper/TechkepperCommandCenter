@@ -22,6 +22,7 @@ import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import QueueSelect from "../QueueSelect";
+import { WhatsAppMetaInfo } from "../WhatsAppMetaInfo";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -52,9 +53,9 @@ const useStyles = makeStyles(theme => ({
 
 const SessionSchema = Yup.object().shape({
 	name: Yup.string()
-		.min(2, "Ingrese al menos 2 caracteres.")
-		.max(50, "Ingrese como máximo 50 caracteres.")
-		.required("El nombre es obligatorio."),
+		.min(2, i18n.t("validation.min2"))
+		.max(50, i18n.t("validation.max50"))
+		.required(i18n.t("validation.nameRequired")),
 });
 
 const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
@@ -134,6 +135,14 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 					{({ values, touched, errors, isSubmitting }) => (
 						<Form>
 							<DialogContent dividers>
+								{whatsAppId && (
+									<div style={{ marginBottom: 8 }}>
+										<WhatsAppMetaInfo
+											whatsAppId={whatsAppId}
+											open={open}
+										/>
+									</div>
+								)}
 								<div className={classes.multFieldLine}>
 									<Field
 										as={TextField}

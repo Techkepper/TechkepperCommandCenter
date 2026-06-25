@@ -68,6 +68,7 @@ const messages = {
           disconnect: "desconectar",
           tryAgain: "Tentar novamente",
           connecting: "Conectando",
+          metaInfo: "Ver verificação do número",
         },
         toolTips: {
           error: {
@@ -112,6 +113,17 @@ const messages = {
           okAdd: "Adicionar",
           okEdit: "Salvar",
           cancel: "Cancelar",
+        },
+        meta: {
+          title: "Conexão com a Meta (Cloud API)",
+          loading: "Consultando a Meta...",
+          error:
+            "Não foi possível obter as informações da Meta. Verifique o token e o ID do número no servidor.",
+          number: "Número",
+          verifiedName: "Nome verificado",
+          phoneNumberId: "ID do número (phone_number_id)",
+          apiVersion: "Versão da API",
+          webhook: "Webhook configurado",
         },
         success: "WhatsApp salvo com sucesso.",
       },
@@ -288,16 +300,25 @@ const messages = {
           connections: "Conexões",
           tickets: "Tickets",
           contacts: "Contatos",
+          businessClients: "Clientes",
+          collaborators: "Colaboradores",
+          smartDocuments: "Documentos inteligentes",
+          commercialProposals: "Propostas",
           quickAnswers: "Respostas Rápidas",
           queues: "Filas",
           administration: "Administração",
+          agentHistory: "Histórico por agente",
           users: "Usuários",
           settings: "Configurações",
+        },
+        listSubheaders: {
+          supervision: "Supervisão",
         },
         appBar: {
           user: {
             profile: "Perfil",
             logout: "Sair",
+            language: "Idioma",
           },
         },
       },
@@ -310,6 +331,7 @@ const messages = {
           name: "Nome",
           color: "Cor",
           greeting: "Mensagem de saudação",
+          status: "Status",
           actions: "Ações",
         },
         buttons: {
@@ -409,7 +431,8 @@ const messages = {
         delete: "Deletar",
         transfer: "Transferir",
         confirmationModal: {
-          title: "Deletar o ticket do contato",
+          title: "Excluir conversa #",
+          titleFrom: "do contato ",
           message:
             "Atenção! Todas as mensagens relacionadas ao ticket serão perdidas.",
         },
@@ -469,6 +492,32 @@ const messages = {
         ERR_USER_CREATION_DISABLED:
           "A criação do usuário foi desabilitada pelo administrador.",
         ERR_NO_PERMISSION: "Você não tem permissão para acessar este recurso.",
+        ERR_USER_INACTIVE:
+          "Seu usuário está inativo. Entre em contato com um administrador.",
+        ERR_USER_EMAIL_ALREADY_EXISTS: "Já existe um usuário com este email.",
+        ERR_ASSIGNED_USER_INACTIVE:
+          "Não é possível atribuir a conversa a um usuário inativo.",
+        ERR_CORS_ORIGIN_NOT_ALLOWED: "A origem da solicitação não é permitida.",
+        ERR_ECOSYSTEM_NAME_REQUIRED: "O nome do ecossistema é obrigatório.",
+        ERR_NO_API_TOKEN_FOUND: "O token de API solicitado não foi encontrado.",
+        ERR_NO_ECOSYSTEM_FOUND: "O ecossistema solicitado não foi encontrado.",
+        ERR_NO_MEDIA_DATA: "Nenhum dado de mídia encontrado para processar.",
+        ERR_NO_MESSAGE_FOUND: "A mensagem solicitada não foi encontrada.",
+        ERR_NO_QUICK_ANSWER_FOUND:
+          "A resposta rápida solicitada não foi encontrada.",
+        ERR_NO_QUICK_ANSWERS_FOUND: "Não há respostas rápidas disponíveis.",
+        ERR_NUMBER_NOT_ON_WHATSAPP:
+          "O número informado não está registrado no WhatsApp.",
+        ERR_QUEUE_INVALID_COLOR: "Selecione uma cor válida para a fila.",
+        ERR_QUEUE_INVALID_NAME: "Informe um nome válido para a fila.",
+        ERR_QUEUE_NAME_ALREADY_EXISTS: "Já existe uma fila com este nome.",
+        ERR_QUEUE_NOT_FOUND: "A fila solicitada não foi encontrada.",
+        ERR_SENDING_WAPP_MEDIA_MSG:
+          "Não foi possível enviar o arquivo de mídia pelo WhatsApp.",
+        ERR_TICKET_NO_WHATSAPP:
+          "A conversa não tem uma conexão de WhatsApp atribuída.",
+        ERR__SHORTCUT_DUPLICATED:
+          "Já existe uma resposta rápida com este atalho.",
         ERR_DUPLICATED_CONTACT: "Já existe um contato com este número.",
         ERR_TICKET_ALREADY_ASSIGNED:
           "Esta conversa já foi atribuída a outro responsável.",

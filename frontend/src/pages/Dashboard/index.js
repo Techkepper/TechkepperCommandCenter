@@ -24,6 +24,7 @@ import {
 } from "@material-ui/icons";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { i18n } from "../../translate/i18n";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 
 const useStyles = makeStyles((theme) => ({
@@ -97,18 +98,19 @@ const Dashboard = () => {
     connections.find((item) => item.isDefault) ||
     connections[0];
   const connectionLabels = {
-    CONNECTED: "Conectada",
-    OPENING: "Conectando",
-    CONFIG_REQUIRED: "Configuración oficial requerida",
-    ERROR: "Error de conexión",
-    TIMEOUT: "Sin respuesta",
-    DISCONNECTED: "Desconectada",
+    CONNECTED: i18n.t("dashboard.operational.statuses.connected"),
+    OPENING: i18n.t("dashboard.operational.statuses.connecting"),
+    CONFIG_REQUIRED: i18n.t("dashboard.operational.statuses.configRequired"),
+    ERROR: i18n.t("dashboard.operational.statuses.error"),
+    TIMEOUT: i18n.t("dashboard.operational.statuses.timeout"),
+    DISCONNECTED: i18n.t("dashboard.operational.statuses.disconnected"),
   };
   const connectionStatus = connection
-    ? connectionLabels[connection.status] || "Estado desconocido"
+    ? connectionLabels[connection.status] ||
+      i18n.t("dashboard.operational.statuses.unknown")
     : loading
-    ? "Cargando"
-    : "Sin configurar";
+    ? i18n.t("dashboard.operational.statuses.loading")
+    : i18n.t("dashboard.operational.statuses.notConfigured");
 
   return (
     <Container maxWidth="xl" className={classes.container}>
@@ -120,9 +122,11 @@ const Dashboard = () => {
         flexWrap="wrap"
       >
         <div>
-          <Typography variant="h4">Centro operativo</Typography>
+          <Typography variant="h4">
+            {i18n.t("dashboard.operational.title")}
+          </Typography>
           <Typography color="textSecondary">
-            Estado en tiempo real de la atención Techkepper.
+            {i18n.t("dashboard.operational.subtitle")}
           </Typography>
         </div>
         <Chip
@@ -131,8 +135,8 @@ const Dashboard = () => {
             connection
               ? `${connection.name}: ${connectionStatus}`
               : loading
-              ? "Cargando conexión"
-              : "Sin conexión configurada"
+              ? i18n.t("dashboard.operational.loadingConnection")
+              : i18n.t("dashboard.operational.noConnectionConfigured")
           }
           color={connection?.status === "CONNECTED" ? "primary" : "default"}
           variant="outlined"
@@ -142,42 +146,42 @@ const Dashboard = () => {
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6} lg={4}>
           <MetricCard
-            title="En atención"
+            title={i18n.t("dashboard.operational.metrics.inService")}
             value={data.totals.open}
             icon={<ForumOutlined />}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={4}>
           <MetricCard
-            title="Pendientes"
+            title={i18n.t("dashboard.operational.metrics.pending")}
             value={data.totals.pending}
             icon={<HourglassEmptyOutlined />}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={4}>
           <MetricCard
-            title="Resueltas"
+            title={i18n.t("dashboard.operational.metrics.resolved")}
             value={data.totals.closed}
             icon={<CheckCircleOutline />}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={4}>
           <MetricCard
-            title="Agentes activos"
+            title={i18n.t("dashboard.operational.metrics.activeAgents")}
             value={data.totals.activeAgents}
             icon={<PeopleOutline />}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={4}>
           <MetricCard
-            title="Estado de WhatsApp"
+            title={i18n.t("dashboard.operational.metrics.whatsappStatus")}
             value={connectionStatus}
             icon={<WifiOutlined />}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={4}>
           <MetricCard
-            title="Departamentos activos"
+            title={i18n.t("dashboard.operational.metrics.activeQueues")}
             value={data.queues.length}
             icon={<AccountTreeOutlined />}
           />
@@ -185,9 +189,11 @@ const Dashboard = () => {
 
         <Grid item xs={12} md={4}>
           <Paper className={classes.section}>
-            <Typography variant="h6">Carga por departamento</Typography>
+            <Typography variant="h6">
+              {i18n.t("dashboard.operational.queueLoad")}
+            </Typography>
             <Typography variant="body2" color="textSecondary">
-              Conversaciones visibles según su rol y departamentos asignados.
+              {i18n.t("dashboard.operational.queueLoadHint")}
             </Typography>
             {data.queues.length === 0 && (
               <Typography
@@ -195,7 +201,7 @@ const Dashboard = () => {
                 color="textSecondary"
                 className={classes.queueRow}
               >
-                No hay departamentos activos para mostrar.
+                {i18n.t("dashboard.operational.noQueues")}
               </Typography>
             )}
             {data.queues.map((queue) => (
@@ -216,27 +222,38 @@ const Dashboard = () => {
 
         <Grid item xs={12} md={8}>
           <Paper className={classes.section}>
-            <Typography variant="h6">Rendimiento del equipo</Typography>
+            <Typography variant="h6">
+              {i18n.t("dashboard.operational.teamPerformance")}
+            </Typography>
             <Typography variant="body2" color="textSecondary">
-              Ranking interno por cierres; el tiempo de respuesta se muestra
-              cuando existen marcas suficientes.
+              {i18n.t("dashboard.operational.teamPerformanceHint")}
             </Typography>
             <div className={classes.tableWrap}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Agente</TableCell>
-                    <TableCell align="right">Abiertas</TableCell>
-                    <TableCell align="right">Pendientes</TableCell>
-                    <TableCell align="right">Cerradas</TableCell>
-                    <TableCell align="right">Resp. promedio</TableCell>
+                    <TableCell>
+                      {i18n.t("dashboard.operational.table.agent")}
+                    </TableCell>
+                    <TableCell align="right">
+                      {i18n.t("dashboard.operational.table.open")}
+                    </TableCell>
+                    <TableCell align="right">
+                      {i18n.t("dashboard.operational.table.pending")}
+                    </TableCell>
+                    <TableCell align="right">
+                      {i18n.t("dashboard.operational.table.closed")}
+                    </TableCell>
+                    <TableCell align="right">
+                      {i18n.t("dashboard.operational.table.avgResponse")}
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {data.agents.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} align="center">
-                        No hay actividad de agentes para mostrar.
+                        {i18n.t("dashboard.operational.noAgents")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -253,8 +270,10 @@ const Dashboard = () => {
                       <TableCell align="right">{agent.closed}</TableCell>
                       <TableCell align="right">
                         {agent.averageResponseMinutes == null
-                          ? "Sin datos"
-                          : `${agent.averageResponseMinutes} min`}
+                          ? i18n.t("dashboard.operational.noData")
+                          : i18n.t("dashboard.operational.minutes", {
+                              value: agent.averageResponseMinutes,
+                            })}
                       </TableCell>
                     </TableRow>
                   ))}

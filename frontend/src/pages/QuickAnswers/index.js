@@ -255,8 +255,12 @@ const QuickAnswers = () => {
               <TableCell align="center">
                 {i18n.t("quickAnswers.table.message")}
               </TableCell>
-              <TableCell align="center">Departamento</TableCell>
-              <TableCell align="center">Estado</TableCell>
+              <TableCell align="center">
+                {i18n.t("quickAnswers.table.queue")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("quickAnswers.table.status")}
+              </TableCell>
               <TableCell align="center">
                 {i18n.t("quickAnswers.table.actions")}
               </TableCell>
@@ -269,14 +273,19 @@ const QuickAnswers = () => {
                   <TableCell align="center">{quickAnswer.shortcut}</TableCell>
                   <TableCell align="center">{quickAnswer.message}</TableCell>
                   <TableCell align="center">
-                    {quickAnswer.queue?.name || "General"}
+                    {quickAnswer.queue?.name ||
+                      i18n.t("quickAnswers.defaultQueue")}
                   </TableCell>
                   <TableCell align="center">
                     <Chip
                       size="small"
                       variant="outlined"
                       color={quickAnswer.isActive ? "primary" : "default"}
-                      label={quickAnswer.isActive ? "Activa" : "Inactiva"}
+                      label={
+                        quickAnswer.isActive
+                          ? i18n.t("quickAnswers.statuses.active")
+                          : i18n.t("quickAnswers.statuses.inactive")
+                      }
                     />
                   </TableCell>
                   <TableCell align="center">

@@ -54,13 +54,13 @@ const useStyles = makeStyles(theme => ({
 
 const ContactSchema = Yup.object().shape({
 	name: Yup.string()
-		.min(2, "Ingrese al menos 2 caracteres.")
-		.max(50, "Ingrese como máximo 50 caracteres.")
-		.required("El nombre es obligatorio."),
+		.min(2, i18n.t("validation.min2"))
+		.max(50, i18n.t("validation.max50"))
+		.required(i18n.t("validation.nameRequired")),
 	number: Yup.string()
-		.min(8, "Ingrese al menos 8 dígitos.")
-		.max(50, "El número es demasiado largo."),
-	email: Yup.string().email("Ingrese un correo electrónico válido."),
+		.min(8, i18n.t("validation.min8digits"))
+		.max(50, i18n.t("validation.numberTooLong")),
+	email: Yup.string().email(i18n.t("validation.invalidEmail")),
 });
 
 const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {

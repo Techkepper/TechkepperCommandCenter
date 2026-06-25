@@ -46,16 +46,6 @@ const useStyles = makeStyles((theme) => ({
   submit: { position: "relative" },
 }));
 
-const schema = Yup.object().shape({
-  name: Yup.string().min(2).max(50).required("Requerido"),
-  password: Yup.string().test(
-    "secure-password",
-    "Use al menos 10 caracteres",
-    (value) => !value || value.length >= 10
-  ),
-  email: Yup.string().email("Correo inválido").required("Requerido"),
-});
-
 const emptyUser = {
   name: "",
   email: "",
@@ -74,6 +64,21 @@ const UserModal = ({ open, onClose, userId }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [whatsappId, setWhatsappId] = useState("");
   const { loading, whatsApps } = useWhatsApps();
+
+  const schema = Yup.object().shape({
+    name: Yup.string()
+      .min(2)
+      .max(50)
+      .required(i18n.t("userModal.extra.required")),
+    password: Yup.string().test(
+      "secure-password",
+      i18n.t("userModal.extra.passwordRule"),
+      (value) => !value || value.length >= 10
+    ),
+    email: Yup.string()
+      .email(i18n.t("userModal.extra.invalidEmail"))
+      .required(i18n.t("userModal.extra.required")),
+  });
 
   useEffect(() => {
     if (!userId || !open) return;
@@ -100,7 +105,7 @@ const UserModal = ({ open, onClose, userId }) => {
     try {
       if (userId) await api.put(`/users/${userId}`, userData);
       else await api.post("/users", userData);
-      toast.success("Usuario guardado correctamente.");
+      toast.success(i18n.t("userModal.extra.saved"));
       handleClose();
     } catch (error) {
       toastError(error);
@@ -110,7 +115,9 @@ const UserModal = ({ open, onClose, userId }) => {
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        {userId ? "Editar agente o usuario" : "Registrar nuevo agente"}
+        {userId
+          ? i18n.t("userModal.extra.titleEdit")
+          : i18n.t("userModal.extra.titleAdd")}
       </DialogTitle>
       <Formik
         initialValues={user}
@@ -124,7 +131,7 @@ const UserModal = ({ open, onClose, userId }) => {
               <div className={classes.row}>
                 <Field
                   as={TextField}
-                  label="Nombre"
+                  label={i18n.t("userModal.extra.name")}
                   name="name"
                   variant="outlined"
                   margin="dense"
@@ -134,7 +141,7 @@ const UserModal = ({ open, onClose, userId }) => {
                 />
                 <Field
                   as={TextField}
-                  label="Correo"
+                  label={i18n.t("userModal.extra.email")}
                   name="email"
                   variant="outlined"
                   margin="dense"
@@ -149,7 +156,11 @@ const UserModal = ({ open, onClose, userId }) => {
                   name="password"
                   variant="outlined"
                   margin="dense"
-                  label={userId ? "Nueva contraseña (opcional)" : "Contraseña"}
+                  label={
+                    userId
+                      ? i18n.t("userModal.extra.passwordEdit")
+                      : i18n.t("userModal.extra.password")
+                  }
                   error={touched.password && Boolean(errors.password)}
                   helperText={touched.password && errors.password}
                   type={showPassword ? "text" : "password"}
@@ -174,7 +185,7 @@ const UserModal = ({ open, onClose, userId }) => {
                     setShowPassword(true);
                   }}
                 >
-                  Generar temporal
+                  {i18n.t("userModal.extra.generateTemp")}
                 </Button>
               </div>
 
@@ -182,22 +193,36 @@ const UserModal = ({ open, onClose, userId }) => {
                 <>
                   <div className={classes.row}>
                     <FormControl variant="outlined" margin="dense" fullWidth>
-                      <InputLabel>Rol</InputLabel>
-                      <Field as={Select} name="profile" label="Rol">
-                        <MenuItem value="admin">Administrador</MenuItem>
-                        <MenuItem value="supervisor">Supervisor</MenuItem>
-                        <MenuItem value="agent">Agente</MenuItem>
+                      <InputLabel>{i18n.t("userModal.extra.role")}</InputLabel>
+                      <Field
+                        as={Select}
+                        name="profile"
+                        label={i18n.t("userModal.extra.role")}
+                      >
+                        <MenuItem value="admin">
+                          {i18n.t("userModal.extra.roleAdmin")}
+                        </MenuItem>
+                        <MenuItem value="supervisor">
+                          {i18n.t("userModal.extra.roleSupervisor")}
+                        </MenuItem>
+                        <MenuItem value="agent">
+                          {i18n.t("userModal.extra.roleAgent")}
+                        </MenuItem>
                       </Field>
                     </FormControl>
                     {!loading && (
                       <FormControl variant="outlined" margin="dense" fullWidth>
-                        <InputLabel>Conexión WhatsApp</InputLabel>
+                        <InputLabel>
+                          {i18n.t("userModal.extra.whatsappConnection")}
+                        </InputLabel>
                         <Select
                           value={whatsappId}
                           onChange={(event) => setWhatsappId(event.target.value)}
-                          label="Conexión WhatsApp"
+                          label={i18n.t("userModal.extra.whatsappConnection")}
                         >
-                          <MenuItem value="">Predeterminada</MenuItem>
+                          <MenuItem value="">
+                            {i18n.t("userModal.extra.defaultConnection")}
+                          </MenuItem>
                           {whatsApps.map((whatsapp) => (
                             <MenuItem key={whatsapp.id} value={whatsapp.id}>
                               {whatsapp.name}
@@ -221,7 +246,7 @@ const UserModal = ({ open, onClose, userId }) => {
                         color="primary"
                       />
                     }
-                    label="Usuario activo"
+                    label={i18n.t("userModal.extra.activeUser")}
                   />
                 </>
               )}
@@ -237,7 +262,7 @@ const UserModal = ({ open, onClose, userId }) => {
                 disabled={isSubmitting}
                 className={classes.submit}
               >
-                Guardar usuario
+                {i18n.t("userModal.extra.saveUser")}
                 {isSubmitting && (
                   <CircularProgress size={24} className={classes.buttonProgress} />
                 )}

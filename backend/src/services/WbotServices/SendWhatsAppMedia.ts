@@ -48,7 +48,7 @@ const SendWhatsAppMedia = async ({
       mediaOptions
     );
 
-    await ticket.update({ lastMessage: body || media.filename });
+    await ticket.update({ lastMessage: body || "" });
 
     return sentMessage;
   } catch (err) {

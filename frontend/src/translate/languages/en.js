@@ -67,6 +67,7 @@ const messages = {
           disconnect: "Disconnect",
           tryAgain: "Try Again",
           connecting: "Connecting",
+          metaInfo: "View number verification",
         },
         toolTips: {
           error: {
@@ -105,11 +106,23 @@ const messages = {
         form: {
           name: "Name",
           default: "Default",
+          farewellMessage: "Farewell message",
         },
         buttons: {
           okAdd: "Add",
           okEdit: "Save",
           cancel: "Cancel",
+        },
+        meta: {
+          title: "Meta connection (Cloud API)",
+          loading: "Querying Meta...",
+          error:
+            "Could not fetch the Meta info. Check the token and phone number ID on the server.",
+          number: "Number",
+          verifiedName: "Verified name",
+          phoneNumberId: "Phone number ID (phone_number_id)",
+          apiVersion: "API version",
+          webhook: "Configured webhook",
         },
         success: "WhatsApp saved successfully.",
       },
@@ -285,16 +298,25 @@ const messages = {
           connections: "Connections",
           tickets: "Tickets",
           contacts: "Contacts",
+          businessClients: "Clients",
+          collaborators: "Collaborators",
+          smartDocuments: "Smart documents",
+          commercialProposals: "Proposals",
           quickAnswers: "Quick Answers",
           queues: "Queues",
           administration: "Administration",
+          agentHistory: "History by agent",
           users: "Users",
           settings: "Settings",
+        },
+        listSubheaders: {
+          supervision: "Supervision",
         },
         appBar: {
           user: {
             profile: "Profile",
             logout: "Logout",
+            language: "Language",
           },
         },
       },
@@ -307,6 +329,7 @@ const messages = {
           name: "Name",
           color: "Color",
           greeting: "Greeting message",
+          status: "Status",
           actions: "Actions",
         },
         buttons: {
@@ -465,6 +488,32 @@ const messages = {
         ERR_USER_CREATION_DISABLED:
           "User creation was disabled by administrator.",
         ERR_NO_PERMISSION: "You don't have permission to access this resource.",
+        ERR_USER_INACTIVE:
+          "Your user is inactive. Please contact an administrator.",
+        ERR_USER_EMAIL_ALREADY_EXISTS:
+          "A user with this email already exists.",
+        ERR_ASSIGNED_USER_INACTIVE:
+          "The conversation cannot be assigned to an inactive user.",
+        ERR_CORS_ORIGIN_NOT_ALLOWED: "The request origin is not allowed.",
+        ERR_ECOSYSTEM_NAME_REQUIRED: "The ecosystem name is required.",
+        ERR_NO_API_TOKEN_FOUND: "The requested API token was not found.",
+        ERR_NO_ECOSYSTEM_FOUND: "The requested ecosystem was not found.",
+        ERR_NO_MEDIA_DATA: "No media data was found to process.",
+        ERR_NO_MESSAGE_FOUND: "The requested message was not found.",
+        ERR_NO_QUICK_ANSWER_FOUND: "The requested quick reply was not found.",
+        ERR_NO_QUICK_ANSWERS_FOUND: "No quick replies are available.",
+        ERR_NUMBER_NOT_ON_WHATSAPP:
+          "The provided number is not registered on WhatsApp.",
+        ERR_QUEUE_INVALID_COLOR: "Select a valid color for the queue.",
+        ERR_QUEUE_INVALID_NAME: "Enter a valid name for the queue.",
+        ERR_QUEUE_NAME_ALREADY_EXISTS: "A queue with this name already exists.",
+        ERR_QUEUE_NOT_FOUND: "The requested queue was not found.",
+        ERR_SENDING_WAPP_MEDIA_MSG:
+          "The media file could not be sent via WhatsApp.",
+        ERR_TICKET_NO_WHATSAPP:
+          "The conversation has no WhatsApp connection assigned.",
+        ERR__SHORTCUT_DUPLICATED:
+          "A quick reply with this shortcut already exists.",
         ERR_TICKET_ALREADY_ASSIGNED:
           "This conversation has already been assigned to another owner.",
         ERR_DUPLICATED_CONTACT: "A contact with this number already exists.",

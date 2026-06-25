@@ -22,6 +22,7 @@ import {
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   sectionTitle: {
@@ -59,22 +60,28 @@ const emptyClient = {
 };
 
 const buildValidationSchema = (isAdmin) => Yup.object().shape({
-  type: Yup.string().oneOf(["physical", "legal"]).required("Requerido"),
+  type: Yup.string()
+    .oneOf(["physical", "legal"])
+    .required(i18n.t("businessClients.modal.validation.required")),
   displayName: Yup.string()
-    .min(2, "Ingrese al menos 2 caracteres.")
-    .max(255, "Máximo 255 caracteres.")
-    .required("El nombre es obligatorio."),
+    .min(2, i18n.t("businessClients.modal.validation.minName"))
+    .max(255, i18n.t("businessClients.modal.validation.maxName"))
+    .required(i18n.t("businessClients.modal.validation.nameRequired")),
   legalName: Yup.string().when("type", {
     is: "legal",
-    then: Yup.string().required("La razón social es obligatoria."),
+    then: Yup.string().required(
+      i18n.t("businessClients.modal.validation.legalNameRequired")
+    ),
   }),
   identificationType: Yup.string().required(
-    "Seleccione el tipo de identificación."
+    i18n.t("businessClients.modal.validation.identificationTypeRequired")
   ),
   identificationNumber: Yup.string().required(
-    "La identificación es obligatoria."
+    i18n.t("businessClients.modal.validation.identificationRequired")
   ),
-  email: Yup.string().email("Ingrese un correo válido."),
+  email: Yup.string().email(
+    i18n.t("businessClients.modal.validation.invalidEmail")
+  ),
   queueId: isAdmin
     ? Yup.mixed().nullable()
     : Yup.number()
@@ -82,7 +89,9 @@ const buildValidationSchema = (isAdmin) => Yup.object().shape({
           originalValue === "" ? null : value
         )
         .nullable()
-        .required("Seleccione un departamento."),
+        .required(
+          i18n.t("businessClients.modal.validation.departmentRequired")
+        ),
 });
 
 const BusinessClientModal = ({
@@ -153,7 +162,7 @@ const BusinessClientModal = ({
         ? await api.put(`/business-clients/${clientId}`, payload)
         : await api.post("/business-clients", payload);
       onSaved(response.data);
-      toast.success("Cliente guardado correctamente.");
+      toast.success(i18n.t("businessClients.toasts.saved"));
       close();
     } catch (error) {
       if (
@@ -164,7 +173,7 @@ const BusinessClientModal = ({
       } else if (
         error.response?.data?.error === "ERR_DUPLICATED_BUSINESS_CLIENT"
       ) {
-        toast.error("Ya existe un cliente con esa identificación.");
+        toast.error(i18n.t("businessClients.toasts.duplicated"));
       } else {
         toastError(error);
       }
@@ -174,7 +183,9 @@ const BusinessClientModal = ({
   return (
     <Dialog open={open} onClose={close} maxWidth="md" fullWidth scroll="paper">
       <DialogTitle>
-        {clientId ? "Editar cliente" : "Nuevo cliente"}
+        {clientId
+          ? i18n.t("businessClients.modal.title.edit")
+          : i18n.t("businessClients.modal.title.add")}
       </DialogTitle>
       <Formik
         initialValues={client}
@@ -196,16 +207,18 @@ const BusinessClientModal = ({
               ) : (
                 <>
                   <Typography className={classes.sectionTitle} variant="subtitle1">
-                    Identificación
+                    {i18n.t("businessClients.modal.sections.identification")}
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={4}>
                       <FormControl variant="outlined" margin="dense" fullWidth>
-                        <InputLabel>Tipo de cliente</InputLabel>
+                        <InputLabel>
+                          {i18n.t("businessClients.modal.fields.clientType")}
+                        </InputLabel>
                         <Field
                           as={Select}
                           name="type"
-                          label="Tipo de cliente"
+                          label={i18n.t("businessClients.modal.fields.clientType")}
                           onChange={(event) => {
                             const value = event.target.value;
                             setFieldValue("type", value);
@@ -217,8 +230,12 @@ const BusinessClientModal = ({
                             );
                           }}
                         >
-                          <MenuItem value="physical">Persona física</MenuItem>
-                          <MenuItem value="legal">Persona jurídica</MenuItem>
+                          <MenuItem value="physical">
+                            {i18n.t("businessClients.modal.options.physical")}
+                          </MenuItem>
+                          <MenuItem value="legal">
+                            {i18n.t("businessClients.modal.options.legal")}
+                          </MenuItem>
                         </Field>
                       </FormControl>
                     </Grid>
@@ -228,8 +245,8 @@ const BusinessClientModal = ({
                         name="displayName"
                         label={
                           values.type === "legal"
-                            ? "Nombre para mostrar"
-                            : "Nombre completo"
+                            ? i18n.t("businessClients.modal.fields.displayNameLegal")
+                            : i18n.t("businessClients.modal.fields.displayNamePhysical")
                         }
                         variant="outlined"
                         margin="dense"
@@ -246,7 +263,7 @@ const BusinessClientModal = ({
                           <Field
                             as={TextField}
                             name="legalName"
-                            label="Razón social"
+                            label={i18n.t("businessClients.modal.fields.legalName")}
                             variant="outlined"
                             margin="dense"
                             fullWidth
@@ -258,7 +275,7 @@ const BusinessClientModal = ({
                           <Field
                             as={TextField}
                             name="tradeName"
-                            label="Nombre comercial"
+                            label={i18n.t("businessClients.modal.fields.tradeName")}
                             variant="outlined"
                             margin="dense"
                             fullWidth
@@ -270,7 +287,7 @@ const BusinessClientModal = ({
                       <Field
                         as={TextField}
                         name="identificationType"
-                        label="Tipo de identificación"
+                        label={i18n.t("businessClients.modal.fields.identificationType")}
                         variant="outlined"
                         margin="dense"
                         fullWidth
@@ -288,7 +305,7 @@ const BusinessClientModal = ({
                       <Field
                         as={TextField}
                         name="identificationNumber"
-                        label="Número de identificación"
+                        label={i18n.t("businessClients.modal.fields.identificationNumber")}
                         variant="outlined"
                         margin="dense"
                         fullWidth
@@ -310,14 +327,14 @@ const BusinessClientModal = ({
                         className={classes.sectionTitle}
                         variant="subtitle1"
                       >
-                        Representación legal
+                        {i18n.t("businessClients.modal.sections.legalRepresentation")}
                       </Typography>
                       <Grid container spacing={2}>
                         <Grid item xs={12} sm={5}>
                           <Field
                             as={TextField}
                             name="legalRepresentativeName"
-                            label="Representante legal"
+                            label={i18n.t("businessClients.modal.fields.legalRepresentativeName")}
                             variant="outlined"
                             margin="dense"
                             fullWidth
@@ -327,7 +344,7 @@ const BusinessClientModal = ({
                           <Field
                             as={TextField}
                             name="legalRepresentativeId"
-                            label="Identificación del representante"
+                            label={i18n.t("businessClients.modal.fields.legalRepresentativeId")}
                             variant="outlined"
                             margin="dense"
                             fullWidth
@@ -337,7 +354,7 @@ const BusinessClientModal = ({
                           <Field
                             as={TextField}
                             name="legalRepresentativePosition"
-                            label="Cargo del representante"
+                            label={i18n.t("businessClients.modal.fields.legalRepresentativePosition")}
                             variant="outlined"
                             margin="dense"
                             fullWidth
@@ -348,14 +365,14 @@ const BusinessClientModal = ({
                   )}
 
                   <Typography className={classes.sectionTitle} variant="subtitle1">
-                    Contacto y ubicación
+                    {i18n.t("businessClients.modal.sections.contactLocation")}
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
                       <Field
                         as={TextField}
                         name="email"
-                        label="Correo electrónico"
+                        label={i18n.t("businessClients.modal.fields.email")}
                         variant="outlined"
                         margin="dense"
                         fullWidth
@@ -367,7 +384,7 @@ const BusinessClientModal = ({
                       <Field
                         as={TextField}
                         name="phone"
-                        label="Teléfono"
+                        label={i18n.t("businessClients.modal.fields.phone")}
                         variant="outlined"
                         margin="dense"
                         fullWidth
@@ -377,7 +394,7 @@ const BusinessClientModal = ({
                       <Field
                         as={TextField}
                         name="address"
-                        label="Dirección"
+                        label={i18n.t("businessClients.modal.fields.address")}
                         variant="outlined"
                         margin="dense"
                         fullWidth
@@ -391,10 +408,10 @@ const BusinessClientModal = ({
                             name={fieldName}
                             label={
                               {
-                                country: "País",
-                                province: "Provincia",
-                                canton: "Cantón",
-                                district: "Distrito",
+                                country: i18n.t("businessClients.modal.fields.country"),
+                                province: i18n.t("businessClients.modal.fields.province"),
+                                canton: i18n.t("businessClients.modal.fields.canton"),
+                                district: i18n.t("businessClients.modal.fields.district"),
                               }[fieldName]
                             }
                             variant="outlined"
@@ -407,7 +424,7 @@ const BusinessClientModal = ({
                   </Grid>
 
                   <Typography className={classes.sectionTitle} variant="subtitle1">
-                    Gestión interna
+                    {i18n.t("businessClients.modal.sections.internalManagement")}
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
@@ -417,10 +434,18 @@ const BusinessClientModal = ({
                         fullWidth
                         error={touched.queueId && Boolean(errors.queueId)}
                       >
-                        <InputLabel>Departamento</InputLabel>
-                        <Field as={Select} name="queueId" label="Departamento">
+                        <InputLabel>
+                          {i18n.t("businessClients.modal.fields.department")}
+                        </InputLabel>
+                        <Field
+                          as={Select}
+                          name="queueId"
+                          label={i18n.t("businessClients.modal.fields.department")}
+                        >
                           {isAdmin && (
-                            <MenuItem value="">Cliente global</MenuItem>
+                            <MenuItem value="">
+                              {i18n.t("businessClients.modal.fields.globalClient")}
+                            </MenuItem>
                           )}
                           {queues.map((queue) => (
                             <MenuItem key={queue.id} value={queue.id}>
@@ -437,7 +462,7 @@ const BusinessClientModal = ({
                       <Field
                         as={TextField}
                         name="notes"
-                        label="Notas internas"
+                        label={i18n.t("businessClients.modal.fields.notes")}
                         variant="outlined"
                         margin="dense"
                         multiline
@@ -451,7 +476,7 @@ const BusinessClientModal = ({
             </DialogContent>
             <DialogActions>
               <Button onClick={close} variant="outlined">
-                Cancelar
+                {i18n.t("businessClients.buttons.cancel")}
               </Button>
               <Button
                 type="submit"
@@ -460,7 +485,7 @@ const BusinessClientModal = ({
                 disabled={isSubmitting || loading}
                 className={classes.submit}
               >
-                Guardar
+                {i18n.t("businessClients.buttons.save")}
                 {isSubmitting && (
                   <CircularProgress size={24} className={classes.progress} />
                 )}

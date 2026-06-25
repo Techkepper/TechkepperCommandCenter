@@ -36,12 +36,40 @@ import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessa
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
+import { toast } from "react-toastify";
 
 let Mp3Recorder = null;
+
+// `mic-recorder-to-mp3` empaqueta `lamejs`, que al evaluarse asigna estas
+// variables globales SIN declararlas. Bajo el build de Vite (módulos ES en
+// modo estricto) eso lanza "ReferenceError: assignment to undeclared
+// variable Lame". Predeclararlas en globalThis permite que la asignación
+// funcione y el grabador se inicialice.
+const LAMEJS_GLOBALS = [
+  "Lame",
+  "Presets",
+  "GainAnalysis",
+  "QuantizePVT",
+  "Quantize",
+  "Takehiro",
+  "Reservoir",
+  "MPEGMode",
+  "BitStream",
+];
+
+const ensureLamejsGlobals = () => {
+  if (typeof globalThis === "undefined") return;
+  LAMEJS_GLOBALS.forEach((name) => {
+    if (!(name in globalThis)) {
+      globalThis[name] = undefined;
+    }
+  });
+};
 
 const initRecorder = async () => {
   if (!Mp3Recorder) {
     try {
+      ensureLamejsGlobals();
       const MicRecorder = (await import("mic-recorder-to-mp3")).default;
       Mp3Recorder = new MicRecorder({ bitRate: 128 });
     } catch (error) {
@@ -400,16 +428,33 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
   const handleStartRecording = async () => {
     setLoading(true);
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        toast.error(i18n.t("messageInput.recorder.insecure"));
+        setLoading(false);
+        return;
+      }
       const recorder = await initRecorder();
       if (!recorder) {
-        throw new Error("Recorder not available");
+        toast.error(i18n.t("messageInput.recorder.unavailable"));
+        setLoading(false);
+        return;
       }
       await navigator.mediaDevices.getUserMedia({ audio: true });
       await recorder.start();
       setRecording(true);
       setLoading(false);
     } catch (err) {
-      toastError(err);
+      const name = err?.name;
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        toast.error(i18n.t("messageInput.recorder.denied"));
+      } else if (
+        name === "NotFoundError" ||
+        name === "DevicesNotFoundError"
+      ) {
+        toast.error(i18n.t("messageInput.recorder.noDevice"));
+      } else {
+        toastError(err);
+      }
       setLoading(false);
     }
   };
@@ -451,7 +496,6 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
       const formData = new FormData();
       const filename = `${new Date().getTime()}.mp3`;
       formData.append("medias", blob, filename);
-      formData.append("body", filename);
       formData.append("fromMe", true);
 
       await api.post(`/messages/${ticketId}`, formData);

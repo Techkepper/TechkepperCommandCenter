@@ -61,13 +61,13 @@ const useStyles = makeStyles(theme => ({
 
 const QueueSchema = Yup.object().shape({
 	name: Yup.string()
-		.min(2, "Ingrese al menos 2 caracteres.")
-		.max(50, "Ingrese como máximo 50 caracteres.")
-		.required("El nombre es obligatorio."),
+		.min(2, i18n.t("validation.min2"))
+		.max(50, i18n.t("validation.max50"))
+		.required(i18n.t("validation.nameRequired")),
 	color: Yup.string()
-		.min(4, "Seleccione un color válido.")
-		.max(7, "Seleccione un color válido.")
-		.required("El color es obligatorio."),
+		.min(4, i18n.t("validation.colorInvalid"))
+		.max(7, i18n.t("validation.colorInvalid"))
+		.required(i18n.t("validation.colorRequired")),
 	greetingMessage: Yup.string(),
 });
 
@@ -120,7 +120,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
 			} else {
 				await api.post("/queue", values);
 			}
-			toast.success("Departamento guardado correctamente.");
+			toast.success(i18n.t("queueModalExtra.saved"));
 			handleClose();
 		} catch (err) {
 			toastError(err);
@@ -234,8 +234,8 @@ const QueueModal = ({ open, onClose, queueId }) => {
 									}
 									label={
 										values.isActive
-											? "Departamento activo"
-											: "Departamento inactivo"
+											? i18n.t("queueModalExtra.active")
+											: i18n.t("queueModalExtra.inactive")
 									}
 								/>
 							</DialogContent>

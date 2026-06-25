@@ -10,6 +10,7 @@ const mediaExtensions: Record<string, string> = {
   "image/gif": ".gif",
   "image/webp": ".webp",
   "audio/mpeg": ".mp3",
+  "audio/mp3": ".mp3",
   "audio/mp4": ".m4a",
   "audio/ogg": ".ogg",
   "audio/webm": ".webm",

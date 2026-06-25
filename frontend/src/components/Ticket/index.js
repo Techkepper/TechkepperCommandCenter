@@ -18,6 +18,7 @@ import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMess
 import toastError from "../../errors/toastError";
 import AssignmentAudit from "../AssignmentAudit";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { i18n } from "../../translate/i18n";
 
 const drawerWidth = 320;
 
@@ -132,7 +133,7 @@ const Ticket = () => {
       }
 
       if (data.action === "delete") {
-        toast.success("Conversación eliminada correctamente.");
+        toast.success(i18n.t("ticketView.deleted"));
         history.push("/tickets");
       }
     });
@@ -193,10 +194,9 @@ const Ticket = () => {
             justifyContent="space-between"
           >
             <Typography variant="body2" color="textSecondary">
-              Consulta historica: esta conversacion esta disponible en modo
-              solo lectura.
+              {i18n.t("ticketView.readOnlyNotice")}
             </Typography>
-            <Chip size="small" label="Solo lectura" />
+            <Chip size="small" label={i18n.t("ticketView.readOnly")} />
           </Box>
         )}
         {isObserver && (
@@ -208,10 +208,9 @@ const Ticket = () => {
             justifyContent="space-between"
           >
             <Typography variant="body2" color="textSecondary">
-              Modo observador: puedes ver esta conversacion en tiempo real sin
-              participar ni notificar al cliente.
+              {i18n.t("ticketView.observerNotice")}
             </Typography>
-            <Chip size="small" label="Observador" />
+            <Chip size="small" label={i18n.t("ticketView.observer")} />
           </Box>
         )}
         <AssignmentAudit ticketId={ticketId} />
