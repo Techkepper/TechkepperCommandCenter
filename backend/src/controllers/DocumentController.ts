@@ -15,6 +15,7 @@ import {
   updateDocumentStatus
 } from "../services/DocumentServices/DocumentLifecycleService";
 import { listEligibleDocumentNotificationUsers } from "../services/DocumentServices/InternalDocumentNotificationService";
+import UploadExistingDocumentService from "../services/DocumentServices/UploadExistingDocumentService";
 
 type IndexQuery = {
   searchParam?: string;
@@ -81,6 +82,48 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     return rethrowDocumentDbError(err);
   }
 };
+
+const uploadExisting = async (
+  req: Request,
+  res: Response,
+  entityType: "businessClient" | "collaborator"
+): Promise<Response> => {
+  try {
+    const entityId = Number(
+      entityType === "businessClient"
+        ? req.params.clientId
+        : req.params.collaboratorId
+    );
+    if (!Number.isSafeInteger(entityId) || entityId <= 0) {
+      throw new AppError("El expediente seleccionado no es válido.", 400);
+    }
+    const document = await UploadExistingDocumentService({
+      file: req.file,
+      title: req.body.title,
+      documentType: req.body.documentType,
+      status: req.body.status,
+      documentDate: req.body.documentDate,
+      comment: req.body.comment,
+      actor: req.user,
+      target: { entityType, entityId } as
+        | { entityType: "businessClient"; entityId: number }
+        | { entityType: "collaborator"; entityId: number }
+    });
+    return res.status(201).json(document);
+  } catch (err) {
+    return rethrowDocumentDbError(err);
+  }
+};
+
+export const uploadExistingForClient = (
+  req: Request,
+  res: Response
+): Promise<Response> => uploadExisting(req, res, "businessClient");
+
+export const uploadExistingForCollaborator = (
+  req: Request,
+  res: Response
+): Promise<Response> => uploadExisting(req, res, "collaborator");
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { documentId } = req.params;

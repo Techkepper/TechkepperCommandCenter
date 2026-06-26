@@ -14,7 +14,8 @@ export interface CollaboratorData {
   fullName: string;
   identificationType: string;
   identificationNumber: string;
-  contractualDenomination: "LA CONTRATISTA" | "EL CONTRATISTA";
+  contractualDenomination?: "LA CONTRATISTA" | "EL CONTRATISTA" | null;
+  sex?: "female" | "male" | "unspecified";
   email?: string | null;
   phone?: string | null;
   address?: string | null;
@@ -66,23 +67,54 @@ const ensureReadAccess = async (
   }
 };
 
-const normalizeData = (data: CollaboratorData) => ({
-  fullName: data.fullName.trim(),
-  identificationType: data.identificationType.trim(),
-  identificationNumber: data.identificationNumber.trim(),
-  normalizedIdentificationNumber: normalizeIdentification(
-    data.identificationNumber
-  ),
-  contractualDenomination: data.contractualDenomination,
-  email: nullableText(data.email)?.toLowerCase() || null,
-  phone: nullableText(data.phone),
-  address: nullableText(data.address),
-  notes: nullableText(data.notes),
-  queueId:
-    data.queueId === undefined || data.queueId === null
-      ? null
-      : Number(data.queueId)
-});
+const normalizeSex = (value?: string): "female" | "male" | "unspecified" =>
+  value === "female" || value === "male" ? value : "unspecified";
+
+const resolveContractualDenomination = (
+  sex: "female" | "male" | "unspecified",
+  requested?: string | null,
+  current?: string | null
+): "LA CONTRATISTA" | "EL CONTRATISTA" => {
+  if (sex === "female") return "LA CONTRATISTA";
+  if (sex === "male") return "EL CONTRATISTA";
+  const preserved = requested || current;
+  if (preserved === "LA CONTRATISTA" || preserved === "EL CONTRATISTA") {
+    return preserved;
+  }
+  throw new AppError(
+    "Complete el sexo o denominación contractual del colaborador.",
+    400
+  );
+};
+
+const normalizeData = (
+  data: CollaboratorData,
+  currentDenomination?: string | null
+) => {
+  const sex = normalizeSex(data.sex);
+  return {
+    fullName: data.fullName.trim(),
+    identificationType: data.identificationType.trim(),
+    identificationNumber: data.identificationNumber.trim(),
+    normalizedIdentificationNumber: normalizeIdentification(
+      data.identificationNumber
+    ),
+    contractualDenomination: resolveContractualDenomination(
+      sex,
+      data.contractualDenomination,
+      currentDenomination
+    ),
+    sex,
+    email: nullableText(data.email)?.toLowerCase() || null,
+    phone: nullableText(data.phone),
+    address: nullableText(data.address),
+    notes: nullableText(data.notes),
+    queueId:
+      data.queueId === undefined || data.queueId === null
+        ? null
+        : Number(data.queueId)
+  };
+};
 
 const include = [
   { model: Queue, as: "queue", attributes: ["id", "name", "color"] }
@@ -174,7 +206,7 @@ export const updateCollaborator = async (
   actor: CollaboratorActor
 ): Promise<Collaborator> => {
   const collaborator = await showCollaborator(collaboratorId, actor);
-  const normalized = normalizeData(data);
+  const normalized = normalizeData(data, collaborator.contractualDenomination);
   await ensureQueueWriteAccess(actor, normalized.queueId);
   const duplicate = await Collaborator.findOne({
     where: {

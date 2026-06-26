@@ -60,10 +60,72 @@ const useStyles = makeStyles((theme) => ({
   tabsPaper: {
     marginBottom: theme.spacing(2),
   },
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    flexWrap: "wrap",
+    gap: theme.spacing(1.25),
+    width: "100%",
+    "& .MuiOutlinedInput-root": {
+      minHeight: 42,
+      borderRadius: 12,
+      backgroundColor:
+        theme.palette.type === "dark"
+          ? "rgba(255, 255, 255, 0.04)"
+          : theme.palette.background.paper,
+    },
+    "& .MuiOutlinedInput-input": {
+      padding: theme.spacing(1.25, 1.75),
+    },
+    "& .MuiInputBase-inputAdornedStart": {
+      paddingLeft: 0,
+    },
+    "& .MuiInputLabel-outlined": {
+      backgroundColor: theme.palette.background.default,
+      padding: theme.spacing(0, 0.5),
+    },
+    [theme.breakpoints.down("sm")]: {
+      justifyContent: "flex-start",
+    },
+  },
+  headerSearch: {
+    flex: "1 1 300px",
+    minWidth: 280,
+    maxWidth: 380,
+    [theme.breakpoints.down("xs")]: {
+      flexBasis: "100%",
+      minWidth: "100%",
+      maxWidth: "100%",
+    },
+  },
+  headerStatusFilter: {
+    flex: "0 0 156px",
+    minWidth: 156,
+    maxWidth: 190,
+    "& .MuiSelect-select": {
+      paddingRight: theme.spacing(4),
+    },
+    [theme.breakpoints.down("xs")]: {
+      flex: "1 1 160px",
+      maxWidth: "100%",
+    },
+  },
+  headerPrimaryAction: {
+    flex: "0 0 auto",
+    minWidth: 168,
+    paddingLeft: theme.spacing(2.25),
+    paddingRight: theme.spacing(2.25),
+    whiteSpace: "nowrap",
+    [theme.breakpoints.down("xs")]: {
+      flex: "1 1 100%",
+      width: "100%",
+    },
+  },
   uploadPanel: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: theme.spacing(1.5),
+    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+    gap: theme.spacing(2),
     alignItems: "center",
     padding: theme.spacing(2),
     marginBottom: theme.spacing(2),
@@ -71,10 +133,28 @@ const useStyles = makeStyles((theme) => ({
     "& > *": {
       minWidth: 0,
     },
-    [theme.breakpoints.down("md")]: {
-      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    "& .MuiTextField-root, & .MuiFormControl-root": {
+      width: "100%",
     },
-    [theme.breakpoints.down("sm")]: {
+    "& .MuiOutlinedInput-root": {
+      minHeight: 42,
+      borderRadius: 12,
+      backgroundColor:
+        theme.palette.type === "dark"
+          ? "rgba(255, 255, 255, 0.04)"
+          : theme.palette.background.paper,
+    },
+    "& .MuiOutlinedInput-input": {
+      padding: theme.spacing(1.25, 1.75),
+    },
+    "& .MuiSelect-select": {
+      paddingRight: theme.spacing(4),
+    },
+    "& .MuiInputLabel-outlined": {
+      backgroundColor: theme.palette.background.default,
+      padding: theme.spacing(0, 0.5),
+    },
+    [theme.breakpoints.down("xs")]: {
       gridTemplateColumns: "1fr",
     },
   },
@@ -89,10 +169,7 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   templatePanel: {
-    gridTemplateColumns: "repeat(3, minmax(180px, 1fr))",
-    [theme.breakpoints.down("sm")]: {
-      gridTemplateColumns: "1fr",
-    },
+    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
   },
   templateActions: {
     display: "flex",
@@ -205,6 +282,7 @@ const knownVisualDocumentTypes = [
   "nda_mutual",
   "nda_unilateral",
   "freelance_sales_contract",
+  "contract_addendum",
 ];
 
 const getRequiredRecipientMode = (documentType) => {
@@ -216,6 +294,7 @@ const getRequiredRecipientMode = (documentType) => {
       "automate_contract",
       "nda_mutual",
       "nda_unilateral",
+      "contract_addendum",
     ].includes(documentType)
   ) {
     return "client";
@@ -241,6 +320,7 @@ const documentTypes = [
   { value: "automate_contract", purpose: "contracts" },
   { value: "service_contract", purpose: "contracts" },
   { value: "freelance_sales_contract", purpose: "contracts" },
+  { value: "contract_addendum", purpose: "contracts" },
   { value: "nda_mutual", purpose: "nda" },
   { value: "nda_unilateral", purpose: "nda" },
   { value: "quotation", purpose: "quotations" },
@@ -319,10 +399,31 @@ const freelanceSalesVariables = [
   "FECHA_FIRMA",
 ];
 
+const contractAddendumVariables = [
+  "CLIENTE_RAZON_SOCIAL",
+  "CLIENTE_CEDULA",
+  "CLIENTE_REPRESENTANTE",
+  "CLIENTE_CEDULA_REPRESENTANTE",
+  "CLIENTE_CARGO_REPRESENTANTE",
+  "CLIENTE_CORREO",
+  "CLIENTE_TELEFONO",
+  "CLIENTE_DOMICILIO",
+  "DOCUMENTO_BASE",
+  "FECHA_DOCUMENTO_BASE",
+  "TITULO_ADDENDUM",
+  "MOTIVO_ADDENDUM",
+  "CAMBIOS_ADDENDUM",
+  "CLAUSULAS_MODIFICADAS",
+  "FECHA_VIGENCIA",
+  "CONDICIONES_ESPECIALES",
+  "LUGAR_FIRMA",
+  "FECHA_FIRMA",
+];
+
 const purposeLabel = (value) => {
   const item = documentPurposes.find((entry) => entry.value === value);
   return i18n.t(
-    `smartDocuments.purposes.${item ? item.value || "all" : "other"}`
+    `smartDocuments.purposes.${item ? item.value || "all" : "other"}`,
   );
 };
 
@@ -330,14 +431,14 @@ const variableLabel = (variable, documentType, recipientMode) => {
   if (recipientMode === "collaborator") {
     const collaboratorLabel = i18n.t(
       `smartDocuments.variablesCollaborator.${variable}`,
-      { defaultValue: "" }
+      { defaultValue: "" },
     );
     if (collaboratorLabel) return collaboratorLabel;
   }
   if (documentType === "nda_unilateral") {
     const ndaLabel = i18n.t(
       `smartDocuments.variablesNdaUnilateral.${variable}`,
-      { defaultValue: "" }
+      { defaultValue: "" },
     );
     if (ndaLabel) return ndaLabel;
   }
@@ -352,7 +453,7 @@ const variableLabel = (variable, documentType, recipientMode) => {
       variable === "HERRAMIENTAS_EXCLUIDAS")
   ) {
     return i18n.t(
-      `smartDocuments.ecosystemToolLabels.${documentType}.${variable}`
+      `smartDocuments.ecosystemToolLabels.${documentType}.${variable}`,
     );
   }
 
@@ -403,8 +504,7 @@ const mapClientVariables = (client) => ({
 const mapCollaboratorVariables = (collaborator) => ({
   FREELANCE_NOMBRE: collaborator.fullName || "",
   FREELANCE_CEDULA: collaborator.identificationNumber || "",
-  FREELANCE_DENOMINACION:
-    collaborator.contractualDenomination || "LA CONTRATISTA",
+  FREELANCE_DENOMINACION: collaborator.contractualDenomination || "",
   CLIENTE_RAZON_SOCIAL: collaborator.fullName || "",
   CLIENTE_CEDULA: collaborator.identificationNumber || "",
   CLIENTE_REPRESENTANTE: collaborator.fullName || "",
@@ -423,6 +523,7 @@ const getTypeVariables = (documentType) => {
   if (documentType === "freelance_sales_contract") {
     return freelanceSalesVariables;
   }
+  if (documentType === "contract_addendum") return contractAddendumVariables;
   return [];
 };
 
@@ -433,6 +534,7 @@ const getRequiredTypeVariables = (documentType) => {
   if (documentType === "freelance_sales_contract") {
     return freelanceSalesVariables;
   }
+  if (documentType === "contract_addendum") return contractAddendumVariables;
   return [];
 };
 
@@ -444,8 +546,10 @@ const getGenerationDefaults = (documentType, clientName = "Cliente") => {
       ...(documentType === "freelance_sales_contract"
         ? {
             LUGAR_FIRMA: "Alajuela, Costa Rica",
-            FREELANCE_DENOMINACION: "LA CONTRATISTA",
           }
+        : {}),
+      ...(documentType === "contract_addendum"
+        ? { LUGAR_FIRMA: "Alajuela, Costa Rica" }
         : {}),
       ...(documentType === "nda_unilateral"
         ? {
@@ -547,18 +651,55 @@ const freelanceSalesVariableGroups = [
   },
 ];
 
+const contractAddendumVariableGroups = [
+  {
+    key: "clientData",
+    variables: [
+      "CLIENTE_RAZON_SOCIAL",
+      "CLIENTE_CEDULA",
+      "CLIENTE_REPRESENTANTE",
+      "CLIENTE_CEDULA_REPRESENTANTE",
+      "CLIENTE_CARGO_REPRESENTANTE",
+      "CLIENTE_CORREO",
+      "CLIENTE_TELEFONO",
+      "CLIENTE_DOMICILIO",
+    ],
+  },
+  {
+    key: "baseDocument",
+    variables: ["DOCUMENTO_BASE", "FECHA_DOCUMENTO_BASE"],
+  },
+  {
+    key: "addendumDetails",
+    variables: [
+      "TITULO_ADDENDUM",
+      "MOTIVO_ADDENDUM",
+      "CAMBIOS_ADDENDUM",
+      "CLAUSULAS_MODIFICADAS",
+      "FECHA_VIGENCIA",
+      "CONDICIONES_ESPECIALES",
+    ],
+  },
+  {
+    key: "signature",
+    variables: ["LUGAR_FIRMA", "FECHA_FIRMA"],
+  },
+];
+
 const groupGenerationVariables = (variables, documentType) => {
   const remaining = new Set(variables);
   const groupConfiguration =
     documentType === "nda_unilateral"
       ? ndaUnilateralVariableGroups
       : documentType === "freelance_sales_contract"
-      ? freelanceSalesVariableGroups
-      : generationVariableGroups;
+        ? freelanceSalesVariableGroups
+        : documentType === "contract_addendum"
+          ? contractAddendumVariableGroups
+          : generationVariableGroups;
   const groups = groupConfiguration
     .map((group) => {
       const matching = group.variables.filter((variable) =>
-        remaining.has(variable)
+        remaining.has(variable),
       );
       matching.forEach((variable) => remaining.delete(variable));
       return { ...group, variables: matching };
@@ -580,12 +721,33 @@ const legalRepresentativeVariables = [
   "CLIENTE_CARGO_REPRESENTANTE",
 ];
 
-const getVisibleGenerationVariables = (variables, client, recipientMode) =>
-  client?.type === "physical" || recipientMode === "collaborator"
-    ? variables.filter(
-        (variable) => !legalRepresentativeVariables.includes(variable)
-      )
-    : variables;
+const getVisibleGenerationVariables = (
+  variables,
+  client,
+  recipientMode,
+  documentType,
+) =>
+  variables.filter((variable) => {
+    if (
+      (client?.type === "physical" || recipientMode === "collaborator") &&
+      legalRepresentativeVariables.includes(variable)
+    ) {
+      return false;
+    }
+    if (
+      documentType === "freelance_sales_contract" &&
+      variable === "FREELANCE_DENOMINACION"
+    ) {
+      return false;
+    }
+    if (
+      documentType === "contract_addendum" &&
+      ["DOCUMENTO_BASE", "FECHA_DOCUMENTO_BASE"].includes(variable)
+    ) {
+      return false;
+    }
+    return true;
+  });
 
 const variablePlaceholder = (variable, documentType) => {
   const ecosystem = ecosystemContractConfigs[documentType]?.ecosystem;
@@ -593,7 +755,7 @@ const variablePlaceholder = (variable, documentType) => {
   if (variable === "ENTREGABLES") {
     const deliverablesPlaceholder = i18n.t(
       `smartDocuments.placeholders.entregables.${documentType}`,
-      { defaultValue: "" }
+      { defaultValue: "" },
     );
     if (deliverablesPlaceholder) return deliverablesPlaceholder;
   }
@@ -644,7 +806,7 @@ const SmartDocuments = () => {
   const [templateAllowGenericRecipient, setTemplateAllowGenericRecipient] =
     useState(false);
   const [templateRequiredVariables, setTemplateRequiredVariables] = useState(
-    contractRequiredVariables.join(", ")
+    contractRequiredVariables.join(", "),
   );
   const [templateFile, setTemplateFile] = useState(null);
   const [installRequired, setInstallRequired] = useState(false);
@@ -662,6 +824,8 @@ const SmartDocuments = () => {
   const [generationBusinessClientId, setGenerationBusinessClientId] =
     useState("");
   const [generationCollaboratorId, setGenerationCollaboratorId] = useState("");
+  const [generationBaseDocumentId, setGenerationBaseDocumentId] = useState("");
+  const [baseDocuments, setBaseDocuments] = useState([]);
   const [recipientMode, setRecipientMode] = useState("client");
   const [technicalMode, setTechnicalMode] = useState(false);
   const [generationStage, setGenerationStage] = useState("form");
@@ -679,27 +843,29 @@ const SmartDocuments = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [notificationMode, setNotificationMode] = useState("none");
   const [notificationUsers, setNotificationUsers] = useState([]);
-  const [selectedNotificationUsers, setSelectedNotificationUsers] = useState([]);
+  const [selectedNotificationUsers, setSelectedNotificationUsers] = useState(
+    [],
+  );
   const [notificationUsersLoading, setNotificationUsersLoading] =
     useState(false);
   const [expandedVariableTemplateId, setExpandedVariableTemplateId] =
     useState(null);
   const generationBusinessClient = businessClients.find(
-    (client) => client.id === Number(generationBusinessClientId)
+    (client) => client.id === Number(generationBusinessClientId),
   );
   const requiredRecipientMode = getRequiredRecipientMode(
-    selectedTemplate?.documentType
+    selectedTemplate?.documentType,
   );
   const selectedGenerationClient = businessClients.find(
-    (client) => client.id === Number(generationBusinessClientId)
+    (client) => client.id === Number(generationBusinessClientId),
   );
   const selectedGenerationCollaborator = collaborators.find(
-    (collaborator) => collaborator.id === Number(generationCollaboratorId)
+    (collaborator) => collaborator.id === Number(generationCollaboratorId),
   );
 
   useEffect(() => {
     const documentId = new URLSearchParams(history.location.search).get(
-      "documentId"
+      "documentId",
     );
     if (!documentId) return;
     api
@@ -713,6 +879,63 @@ const SmartDocuments = () => {
       })
       .catch(toastError);
   }, [history, history.location.pathname, history.location.search]);
+
+  useEffect(() => {
+    const clientId = new URLSearchParams(history.location.search).get(
+      "addendumClientId",
+    );
+    if (!clientId || !canCreateDocuments) return;
+    const openAddendum = async () => {
+      try {
+        const [{ data: templateData }, { data: documentData }] =
+          await Promise.all([
+            api.get("/document-templates", {
+              params: {
+                pageNumber: 1,
+                purpose: "contracts",
+                documentType: "contract_addendum",
+              },
+            }),
+            api.get(`/business-clients/${clientId}/documents`),
+          ]);
+        const template = templateData.templates?.find(
+          (item) => item.documentType === "contract_addendum",
+        );
+        if (!template) {
+          toast.warn(
+            "No hay una plantilla activa de addendum. Suba una plantilla DOCX antes de generar.",
+          );
+          history.replace(history.location.pathname);
+          return;
+        }
+        openGenerateDialog(template);
+        setGenerationBusinessClientId(String(clientId));
+        setRecipientMode("client");
+        setBaseDocuments(documentData.documents || []);
+        const client = businessClients.find(
+          (item) => item.id === Number(clientId),
+        );
+        if (client) {
+          const mapped = mapClientVariables(client);
+          setGenerationValues((current) => {
+            const next = { ...current };
+            Object.keys(next).forEach((variable) => {
+              if (mapped[variable] !== undefined) {
+                next[variable] = mapped[variable];
+              }
+            });
+            setGenerationData(JSON.stringify(next, null, 2));
+            return next;
+          });
+        }
+        history.replace(history.location.pathname);
+      } catch (error) {
+        toastError(error);
+      }
+    };
+    openAddendum();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessClients, canCreateDocuments, history.location.search]);
 
   useEffect(() => {
     api
@@ -784,7 +1007,7 @@ const SmartDocuments = () => {
           linksResponse.data.links.map((link) => [
             Number(link.documentId),
             link.businessClient,
-          ])
+          ]),
         );
         const documentsWithClient = data.documents.map((document) => ({
           ...document,
@@ -900,7 +1123,7 @@ const SmartDocuments = () => {
       if (selectedBusinessClientId) {
         const linkResponse = await api.put(
           `/documents/${data.id}/business-client`,
-          { businessClientId: selectedBusinessClientId }
+          { businessClientId: selectedBusinessClientId },
         );
         setAssociationInstalled(linkResponse.data.installed);
         if (linkResponse.data.installed) {
@@ -910,7 +1133,7 @@ const SmartDocuments = () => {
           };
         } else {
           toast.warn(
-            i18n.t("smartDocuments.toasts.savedButAssociationRequiresInstall")
+            i18n.t("smartDocuments.toasts.savedButAssociationRequiresInstall"),
           );
         }
       }
@@ -944,7 +1167,10 @@ const SmartDocuments = () => {
 
     const formData = new FormData();
     formData.append("file", templateFile);
-    formData.append("name", templateName || templateFile.name.replace(/\.docx$/i, ""));
+    formData.append(
+      "name",
+      templateName || templateFile.name.replace(/\.docx$/i, ""),
+    );
     formData.append("category", templateCategory);
     formData.append("purpose", templatePurpose);
     formData.append("documentType", templateDocumentType);
@@ -952,7 +1178,7 @@ const SmartDocuments = () => {
     formData.append("requiresClient", String(templateRequiresClient));
     formData.append(
       "allowGenericRecipient",
-      String(templateAllowGenericRecipient)
+      String(templateAllowGenericRecipient),
     );
     formData.append("requiredVariables", templateRequiredVariables);
 
@@ -970,7 +1196,7 @@ const SmartDocuments = () => {
         toast.warn(
           i18n.t("smartDocuments.toasts.templateSavedMissingVariables", {
             variables: data.missingExpectedVariables.join(", "),
-          })
+          }),
         );
       }
       setTemplateName("");
@@ -1022,7 +1248,7 @@ const SmartDocuments = () => {
     try {
       await api.delete(`/documents/${deletingDocument.id}`);
       setDocuments((current) =>
-        current.filter((document) => document.id !== deletingDocument.id)
+        current.filter((document) => document.id !== deletingDocument.id),
       );
       toast.success(i18n.t("smartDocuments.toasts.documentDeleted"));
     } catch (err) {
@@ -1037,7 +1263,7 @@ const SmartDocuments = () => {
     try {
       await api.delete(`/document-templates/${deletingTemplate.id}`);
       setTemplates((current) =>
-        current.filter((template) => template.id !== deletingTemplate.id)
+        current.filter((template) => template.id !== deletingTemplate.id),
       );
       toast.success(i18n.t("smartDocuments.toasts.templateDeleted"));
     } catch (err) {
@@ -1063,7 +1289,7 @@ const SmartDocuments = () => {
     setNotificationUsersLoading(true);
     try {
       const { data } = await api.get(
-        `/documents/${statusDocument.id}/notification-recipients`
+        `/documents/${statusDocument.id}/notification-recipients`,
       );
       setNotificationUsers(data.users || []);
     } catch (error) {
@@ -1092,14 +1318,14 @@ const SmartDocuments = () => {
             notificationMode === "users"
               ? selectedNotificationUsers.map((recipient) => recipient.id)
               : [],
-        }
+        },
       );
       setDocuments((current) =>
         current.map((document) =>
           document.id === data.id
             ? { ...document, status: data.status }
-            : document
-        )
+            : document,
+        ),
       );
       setStatusDocument(null);
       toast.success(i18n.t("smartDocuments.toasts.statusUpdated"));
@@ -1134,7 +1360,7 @@ const SmartDocuments = () => {
         ? template.expectedVariables
         : getTypeVariables(template.documentType);
     const variables = Array.from(
-      new Set([...typeVariables, ...detectedVariables])
+      new Set([...typeVariables, ...detectedVariables]),
     );
     const defaults = getGenerationDefaults(template.documentType);
     const initialData = variables.reduce(
@@ -1142,7 +1368,7 @@ const SmartDocuments = () => {
         ...acc,
         [variable]: defaults[variable] || "",
       }),
-      {}
+      {},
     );
 
     setSelectedTemplate(template);
@@ -1152,13 +1378,13 @@ const SmartDocuments = () => {
     setGenerationData(JSON.stringify(initialData, null, 2));
     setGenerationBusinessClientId("");
     setGenerationCollaboratorId("");
+    setGenerationBaseDocumentId("");
+    setBaseDocuments([]);
     const requiredMode = getRequiredRecipientMode(template.documentType);
     setRecipientMode(
-      requiredMode || (template.requiresClient ? "client" : "manual")
+      requiredMode || (template.requiresClient ? "client" : "manual"),
     );
-    setTechnicalMode(
-      !knownVisualDocumentTypes.includes(template.documentType)
-    );
+    setTechnicalMode(!knownVisualDocumentTypes.includes(template.documentType));
     setGenerationStage("form");
     setGeneratedDocument(null);
     setGenerateDialogOpen(true);
@@ -1177,6 +1403,8 @@ const SmartDocuments = () => {
       setGenerationData("{}");
       setGenerationBusinessClientId("");
       setGenerationCollaboratorId("");
+      setGenerationBaseDocumentId("");
+      setBaseDocuments([]);
       setRecipientMode("client");
       setTechnicalMode(false);
       setGenerationStage("form");
@@ -1200,18 +1428,47 @@ const SmartDocuments = () => {
     setGenerationBusinessClientId(clientId);
     setGenerationCollaboratorId("");
     const client = businessClients.find((item) => item.id === Number(clientId));
+    setGenerationBaseDocumentId("");
+    if (selectedTemplate?.documentType === "contract_addendum" && clientId) {
+      api
+        .get(`/business-clients/${clientId}/documents`)
+        .then(({ data }) => setBaseDocuments(data.documents || []))
+        .catch(toastError);
+    } else {
+      setBaseDocuments([]);
+    }
     if (!client) return;
     const mapped = mapClientVariables(client);
     const defaults = getGenerationDefaults(
       selectedTemplate?.documentType,
-      client.displayName
+      client.displayName,
     );
     setGenerationValues((current) => {
       const next = { ...current };
       Object.keys(next).forEach((variable) => {
         if (mapped[variable] !== undefined) next[variable] = mapped[variable];
-        if (defaults[variable] !== undefined) next[variable] = defaults[variable];
+        if (defaults[variable] !== undefined)
+          next[variable] = defaults[variable];
       });
+      setGenerationData(JSON.stringify(next, null, 2));
+      return next;
+    });
+  };
+
+  const handleBaseDocumentChange = (documentId) => {
+    setGenerationBaseDocumentId(documentId);
+    const baseDocument = baseDocuments.find(
+      (document) => document.id === Number(documentId),
+    );
+    if (!baseDocument) return;
+    setGenerationValues((current) => {
+      const next = {
+        ...current,
+        DOCUMENTO_BASE: baseDocument.title,
+        FECHA_DOCUMENTO_BASE:
+          baseDocument.documentDate ||
+          String(baseDocument.createdAt || "").slice(0, 10),
+      };
       setGenerationData(JSON.stringify(next, null, 2));
       return next;
     });
@@ -1221,7 +1478,7 @@ const SmartDocuments = () => {
     setGenerationCollaboratorId(collaboratorId);
     setGenerationBusinessClientId("");
     const collaborator = collaborators.find(
-      (item) => item.id === Number(collaboratorId)
+      (item) => item.id === Number(collaboratorId),
     );
     if (!collaborator) return;
     const mapped = mapCollaboratorVariables(collaborator);
@@ -1266,7 +1523,7 @@ const SmartDocuments = () => {
       (variable) =>
         data?.[variable] === undefined ||
         data?.[variable] === null ||
-        String(data[variable]).trim() === ""
+        String(data[variable]).trim() === "",
     );
 
   const handleReviewGeneration = () => {
@@ -1276,11 +1533,24 @@ const SmartDocuments = () => {
       toast.warn(i18n.t("smartDocuments.toasts.selectClient"));
       return;
     }
-    if (
-      requiredRecipientMode === "collaborator" &&
-      !generationCollaboratorId
-    ) {
+    if (requiredRecipientMode === "collaborator" && !generationCollaboratorId) {
       toast.warn(i18n.t("smartDocuments.toasts.selectCollaborator"));
+      return;
+    }
+    if (
+      selectedTemplate?.documentType === "freelance_sales_contract" &&
+      !selectedGenerationCollaborator?.contractualDenomination
+    ) {
+      toast.warn(
+        "Complete el sexo o denominación contractual del colaborador antes de generar el contrato.",
+      );
+      return;
+    }
+    if (
+      selectedTemplate?.documentType === "contract_addendum" &&
+      !generationBaseDocumentId
+    ) {
+      toast.warn("Seleccione el contrato o documento base del addendum.");
       return;
     }
     setGenerationStage("summary");
@@ -1299,8 +1569,9 @@ const SmartDocuments = () => {
           data: parsedData,
           businessClientId: generationBusinessClientId || null,
           collaboratorId: generationCollaboratorId || null,
+          baseDocumentId: generationBaseDocumentId || null,
           recipientMode,
-        }
+        },
       );
       const generatedDocument = {
         ...data,
@@ -1371,7 +1642,7 @@ const SmartDocuments = () => {
                 .filter(
                   (option) =>
                     user.profile === "admin" ||
-                    option.value !== "pending_signature"
+                    option.value !== "pending_signature",
                 )
                 .map((option) => (
                   <MenuItem key={option.value} value={option.value}>
@@ -1439,7 +1710,7 @@ const SmartDocuments = () => {
                             .map((queue) => queue.name)
                             .join(", ")}`
                         : ` · ${i18n.t(
-                            "smartDocuments.statusDialog.noDepartment"
+                            "smartDocuments.statusDialog.noDepartment",
                           )}`}
                     </Typography>
                   </div>
@@ -1449,12 +1720,12 @@ const SmartDocuments = () => {
                     {...params}
                     label={i18n.t("smartDocuments.statusDialog.recipientUsers")}
                     placeholder={i18n.t(
-                      "smartDocuments.statusDialog.searchByNameOrEmail"
+                      "smartDocuments.statusDialog.searchByNameOrEmail",
                     )}
                     variant="outlined"
                     margin="dense"
                     helperText={i18n.t(
-                      "smartDocuments.statusDialog.recipientHelper"
+                      "smartDocuments.statusDialog.recipientHelper",
                     )}
                   />
                 )}
@@ -1516,13 +1787,13 @@ const SmartDocuments = () => {
                 <Typography variant="body2">
                   {event.previousStatus
                     ? documentStatusLabel(
-                        getDocumentStatus(event.previousStatus).value
+                        getDocumentStatus(event.previousStatus).value,
                       )
                     : i18n.t("smartDocuments.historyDialog.noPreviousStatus")}
                   {" → "}
                   {event.newStatus
                     ? documentStatusLabel(
-                        getDocumentStatus(event.newStatus).value
+                        getDocumentStatus(event.newStatus).value,
                       )
                     : i18n.t("smartDocuments.historyDialog.noStatusChange")}
                 </Typography>
@@ -1560,15 +1831,15 @@ const SmartDocuments = () => {
           </Button>
           {canCreateDocuments &&
             downloadingDocument?.mimeType ===
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && (
-            <Button
-              color="primary"
-              variant="outlined"
-              onClick={() => handleDownload(downloadingDocument, "docx")}
-            >
-              {i18n.t("smartDocuments.buttons.downloadDocx")}
-            </Button>
-          )}
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && (
+              <Button
+                color="primary"
+                variant="outlined"
+                onClick={() => handleDownload(downloadingDocument, "docx")}
+              >
+                {i18n.t("smartDocuments.buttons.downloadDocx")}
+              </Button>
+            )}
           {(downloadingDocument?.mimeType ===
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
             downloadingDocument?.mimeType === "application/pdf") && (
@@ -1589,9 +1860,7 @@ const SmartDocuments = () => {
               <Button
                 color="primary"
                 variant="contained"
-                onClick={() =>
-                  handleDownload(downloadingDocument, "original")
-                }
+                onClick={() => handleDownload(downloadingDocument, "original")}
               >
                 {i18n.t("smartDocuments.buttons.downloadOriginal")}
               </Button>
@@ -1626,227 +1895,241 @@ const SmartDocuments = () => {
           {generationStage === "summary"
             ? i18n.t("smartDocuments.generateDialog.titleReview")
             : generationStage === "success"
-            ? i18n.t("smartDocuments.generateDialog.titleSuccess")
-            : i18n.t("smartDocuments.generateDialog.titleForm")}
+              ? i18n.t("smartDocuments.generateDialog.titleSuccess")
+              : i18n.t("smartDocuments.generateDialog.titleForm")}
         </DialogTitle>
         <DialogContent>
           {generationStage === "form" && (
             <>
-          <Typography color="textSecondary" gutterBottom>
-            {i18n.t("smartDocuments.generateDialog.intro")}
-          </Typography>
-          <FormControl variant="outlined" margin="dense" fullWidth>
-            <InputLabel>{i18n.t("smartDocuments.fields.purpose")}</InputLabel>
-            <Select
-              value={generationPurpose}
-              onChange={(event) => {
-                setGenerationPurpose(event.target.value);
-                setSelectedTemplate(null);
-              }}
-              label={i18n.t("smartDocuments.fields.purpose")}
-            >
-              {documentPurposes
-                .filter((purpose) => purpose.value)
-                .map((purpose) => (
-                  <MenuItem key={purpose.value} value={purpose.value}>
-                    {purposeLabel(purpose.value)}
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-          <FormControl variant="outlined" margin="dense" fullWidth>
-            <InputLabel>
-              {i18n.t("smartDocuments.generateDialog.documentToGenerate")}
-            </InputLabel>
-            <Select
-              value={selectedTemplate?.id || ""}
-              onChange={(event) =>
-                selectGenerationTemplate(event.target.value)
-              }
-              label={i18n.t("smartDocuments.generateDialog.documentToGenerate")}
-              disabled={!generationPurpose}
-            >
-              {templates
-                .filter(
-                  (template) =>
-                    !generationPurpose ||
-                    template.purpose === generationPurpose
-                )
-                .map((template) => (
-                  <MenuItem key={template.id} value={template.id}>
-                    {template.name}
-                    {template.ecosystem?.name
-                      ? ` · ${template.ecosystem.name}`
-                      : ""}
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-          {selectedTemplate && (
-            <>
-              {selectedTemplate.missingExpectedVariables?.length > 0 && (
-                <Typography color="error" variant="body2">
-                  {i18n.t("smartDocuments.generateDialog.missingExpectedWarning", {
-                    variables:
-                      selectedTemplate.missingExpectedVariables.join(", "),
-                  })}
-                </Typography>
-              )}
-              {!requiredRecipientMode && (
-                <FormControl variant="outlined" margin="dense" fullWidth>
-                  <InputLabel>
-                    {i18n.t("smartDocuments.fields.recipient")}
-                  </InputLabel>
-                  <Select
-                    value={recipientMode}
-                    onChange={(event) =>
-                      handleRecipientModeChange(event.target.value)
-                    }
-                    label={i18n.t("smartDocuments.fields.recipient")}
-                  >
-                    <MenuItem value="client">
-                      {i18n.t("smartDocuments.recipients.client")}
-                    </MenuItem>
-                    <MenuItem value="collaborator">
-                      {i18n.t("smartDocuments.recipients.collaborator")}
-                    </MenuItem>
-                    {!selectedTemplate.requiresClient && (
-                      <MenuItem value="manual">
-                        {i18n.t("smartDocuments.recipients.manual")}
-                      </MenuItem>
-                    )}
-                    {selectedTemplate.allowGenericRecipient && (
-                      <MenuItem value="generic">
-                        {i18n.t("smartDocuments.recipients.generic")}
-                      </MenuItem>
-                    )}
-                  </Select>
-                </FormControl>
-              )}
-              {recipientMode === "client" && (
-                <FormControl variant="outlined" margin="dense" fullWidth>
-                  <InputLabel>
-                    {i18n.t("smartDocuments.fields.client")}
-                  </InputLabel>
-                  <Select
-                    value={generationBusinessClientId}
-                    onChange={(event) =>
-                      handleGenerationClientChange(event.target.value)
-                    }
-                    label={i18n.t("smartDocuments.fields.client")}
-                  >
-                    {businessClients.map((client) => (
-                      <MenuItem key={client.id} value={client.id}>
-                        {client.displayName}
+              <Typography color="textSecondary" gutterBottom>
+                {i18n.t("smartDocuments.generateDialog.intro")}
+              </Typography>
+              <FormControl variant="outlined" margin="dense" fullWidth>
+                <InputLabel>
+                  {i18n.t("smartDocuments.fields.purpose")}
+                </InputLabel>
+                <Select
+                  value={generationPurpose}
+                  onChange={(event) => {
+                    setGenerationPurpose(event.target.value);
+                    setSelectedTemplate(null);
+                  }}
+                  label={i18n.t("smartDocuments.fields.purpose")}
+                >
+                  {documentPurposes
+                    .filter((purpose) => purpose.value)
+                    .map((purpose) => (
+                      <MenuItem key={purpose.value} value={purpose.value}>
+                        {purposeLabel(purpose.value)}
                       </MenuItem>
                     ))}
-                  </Select>
-                </FormControl>
-              )}
-              {recipientMode === "collaborator" && (
-                <FormControl variant="outlined" margin="dense" fullWidth>
-                  <InputLabel>
-                    {i18n.t("smartDocuments.fields.collaborator")}
-                  </InputLabel>
-                  <Select
-                    value={generationCollaboratorId}
-                    onChange={(event) =>
-                      handleGenerationCollaboratorChange(event.target.value)
-                    }
-                    label={i18n.t("smartDocuments.fields.collaborator")}
-                  >
-                    {collaborators.map((collaborator) => (
-                      <MenuItem key={collaborator.id} value={collaborator.id}>
-                        {collaborator.fullName} ·{" "}
-                        {collaborator.identificationNumber}
+                </Select>
+              </FormControl>
+              <FormControl variant="outlined" margin="dense" fullWidth>
+                <InputLabel>
+                  {i18n.t("smartDocuments.generateDialog.documentToGenerate")}
+                </InputLabel>
+                <Select
+                  value={selectedTemplate?.id || ""}
+                  onChange={(event) =>
+                    selectGenerationTemplate(event.target.value)
+                  }
+                  label={i18n.t(
+                    "smartDocuments.generateDialog.documentToGenerate",
+                  )}
+                  disabled={!generationPurpose}
+                >
+                  {templates
+                    .filter(
+                      (template) =>
+                        !generationPurpose ||
+                        template.purpose === generationPurpose,
+                    )
+                    .map((template) => (
+                      <MenuItem key={template.id} value={template.id}>
+                        {template.name}
+                        {template.ecosystem?.name
+                          ? ` · ${template.ecosystem.name}`
+                          : ""}
                       </MenuItem>
                     ))}
-                  </Select>
-                </FormControl>
-              )}
-            </>
-          )}
-          <TextField
-            label={i18n.t("smartDocuments.fields.documentName")}
-            variant="outlined"
-            margin="dense"
-            fullWidth
-            value={generationTitle}
-            onChange={(event) => setGenerationTitle(event.target.value)}
-            disabled={!selectedTemplate}
-          />
-          {selectedTemplate &&
-            !technicalMode &&
-            groupGenerationVariables(
-              getVisibleGenerationVariables(
-                Object.keys(generationValues),
-                generationBusinessClient,
-                recipientMode
-              ),
-              selectedTemplate.documentType
-            ).map((group) => (
-                <div className={classes.generationSection} key={group.key}>
-                  <Typography
-                    className={classes.generationSectionTitle}
-                    variant="subtitle2"
-                  >
-                    {recipientMode === "collaborator" &&
-                    ["clientData", "recipientData"].includes(group.key)
-                      ? i18n.t("smartDocuments.variableGroups.collaboratorData")
-                      : group.key === "ecosystemScope"
-                      ? i18n.t(
-                          `smartDocuments.scopeLabels.${selectedTemplate.documentType}`,
-                          {
-                            defaultValue: i18n.t(
-                              "smartDocuments.variableGroups.ecosystemScope"
+                </Select>
+              </FormControl>
+              {selectedTemplate && (
+                <>
+                  {selectedTemplate.missingExpectedVariables?.length > 0 && (
+                    <Typography color="error" variant="body2">
+                      {i18n.t(
+                        "smartDocuments.generateDialog.missingExpectedWarning",
+                        {
+                          variables:
+                            selectedTemplate.missingExpectedVariables.join(
+                              ", ",
                             ),
-                          }
-                        )
-                      : i18n.t(`smartDocuments.variableGroups.${group.key}`)}
-                  </Typography>
-                  {group.variables.map((variable) =>
-                    variable === "FREELANCE_DENOMINACION" ? (
-                      <FormControl
-                        key={variable}
-                        variant="outlined"
-                        margin="dense"
-                        fullWidth
+                        },
+                      )}
+                    </Typography>
+                  )}
+                  {!requiredRecipientMode && (
+                    <FormControl variant="outlined" margin="dense" fullWidth>
+                      <InputLabel>
+                        {i18n.t("smartDocuments.fields.recipient")}
+                      </InputLabel>
+                      <Select
+                        value={recipientMode}
+                        onChange={(event) =>
+                          handleRecipientModeChange(event.target.value)
+                        }
+                        label={i18n.t("smartDocuments.fields.recipient")}
                       >
+                        <MenuItem value="client">
+                          {i18n.t("smartDocuments.recipients.client")}
+                        </MenuItem>
+                        <MenuItem value="collaborator">
+                          {i18n.t("smartDocuments.recipients.collaborator")}
+                        </MenuItem>
+                        {!selectedTemplate.requiresClient && (
+                          <MenuItem value="manual">
+                            {i18n.t("smartDocuments.recipients.manual")}
+                          </MenuItem>
+                        )}
+                        {selectedTemplate.allowGenericRecipient && (
+                          <MenuItem value="generic">
+                            {i18n.t("smartDocuments.recipients.generic")}
+                          </MenuItem>
+                        )}
+                      </Select>
+                    </FormControl>
+                  )}
+                  {recipientMode === "client" && (
+                    <FormControl variant="outlined" margin="dense" fullWidth>
+                      <InputLabel>
+                        {i18n.t("smartDocuments.fields.client")}
+                      </InputLabel>
+                      <Select
+                        value={generationBusinessClientId}
+                        onChange={(event) =>
+                          handleGenerationClientChange(event.target.value)
+                        }
+                        label={i18n.t("smartDocuments.fields.client")}
+                      >
+                        {businessClients.map((client) => (
+                          <MenuItem key={client.id} value={client.id}>
+                            {client.displayName}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+                  {selectedTemplate.documentType === "contract_addendum" &&
+                    generationBusinessClientId && (
+                      <FormControl variant="outlined" margin="dense" fullWidth>
                         <InputLabel>
-                          {`${i18n.t(
-                            "smartDocuments.fields.contractualDenomination"
-                          )} *`}
+                          {i18n.t("smartDocuments.fields.baseDocument")}
                         </InputLabel>
                         <Select
-                          value={generationValues[variable] || ""}
+                          value={generationBaseDocumentId}
                           onChange={(event) =>
-                            setGenerationValues((current) => ({
-                              ...current,
-                              [variable]: event.target.value,
-                            }))
+                            handleBaseDocumentChange(event.target.value)
                           }
-                          label={`${i18n.t(
-                            "smartDocuments.fields.contractualDenomination"
-                          )} *`}
+                          label={i18n.t("smartDocuments.fields.baseDocument")}
                         >
-                          <MenuItem value="LA CONTRATISTA">
-                            LA CONTRATISTA
-                          </MenuItem>
-                          <MenuItem value="EL CONTRATISTA">
-                            EL CONTRATISTA
-                          </MenuItem>
+                          {baseDocuments
+                            .filter(
+                              (document) =>
+                                document.category !== "contract_addendum" &&
+                                !document.baseDocumentId,
+                            )
+                            .map((document) => (
+                              <MenuItem key={document.id} value={document.id}>
+                                {document.title} ·{" "}
+                                {new Date(
+                                  document.documentDate || document.createdAt,
+                                ).toLocaleDateString("es-CR")}
+                              </MenuItem>
+                            ))}
                         </Select>
                       </FormControl>
-                    ) : (
+                    )}
+                  {recipientMode === "collaborator" && (
+                    <FormControl variant="outlined" margin="dense" fullWidth>
+                      <InputLabel>
+                        {i18n.t("smartDocuments.fields.collaborator")}
+                      </InputLabel>
+                      <Select
+                        value={generationCollaboratorId}
+                        onChange={(event) =>
+                          handleGenerationCollaboratorChange(event.target.value)
+                        }
+                        label={i18n.t("smartDocuments.fields.collaborator")}
+                      >
+                        {collaborators.map((collaborator) => (
+                          <MenuItem
+                            key={collaborator.id}
+                            value={collaborator.id}
+                          >
+                            {collaborator.fullName} ·{" "}
+                            {collaborator.identificationNumber}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+                </>
+              )}
+              <TextField
+                label={i18n.t("smartDocuments.fields.documentName")}
+                variant="outlined"
+                margin="dense"
+                fullWidth
+                value={generationTitle}
+                onChange={(event) => setGenerationTitle(event.target.value)}
+                disabled={!selectedTemplate}
+              />
+              {selectedTemplate &&
+                !technicalMode &&
+                groupGenerationVariables(
+                  getVisibleGenerationVariables(
+                    Object.keys(generationValues),
+                    generationBusinessClient,
+                    recipientMode,
+                    selectedTemplate.documentType,
+                  ),
+                  selectedTemplate.documentType,
+                ).map((group) => (
+                  <div className={classes.generationSection} key={group.key}>
+                    <Typography
+                      className={classes.generationSectionTitle}
+                      variant="subtitle2"
+                    >
+                      {recipientMode === "collaborator" &&
+                      ["clientData", "recipientData"].includes(group.key)
+                        ? i18n.t(
+                            "smartDocuments.variableGroups.collaboratorData",
+                          )
+                        : group.key === "ecosystemScope"
+                          ? i18n.t(
+                              `smartDocuments.scopeLabels.${selectedTemplate.documentType}`,
+                              {
+                                defaultValue: i18n.t(
+                                  "smartDocuments.variableGroups.ecosystemScope",
+                                ),
+                              },
+                            )
+                          : i18n.t(
+                              `smartDocuments.variableGroups.${group.key}`,
+                            )}
+                    </Typography>
+                    {group.variables.map((variable) => (
                       <TextField
                         key={variable}
                         label={`${variableLabel(
                           variable,
                           selectedTemplate.documentType,
-                          recipientMode
+                          recipientMode,
                         )}${
                           getRequiredTypeVariables(
-                            selectedTemplate.documentType
+                            selectedTemplate.documentType,
                           ).includes(variable)
                             ? " *"
                             : ""
@@ -1856,7 +2139,7 @@ const SmartDocuments = () => {
                         fullWidth
                         placeholder={variablePlaceholder(
                           variable,
-                          selectedTemplate.documentType
+                          selectedTemplate.documentType,
                         )}
                         multiline={[
                           "ENTREGABLES",
@@ -1867,6 +2150,10 @@ const SmartDocuments = () => {
                           "DESCRIPCION",
                           "ALCANCE",
                           "PROPOSITO",
+                          "MOTIVO_ADDENDUM",
+                          "CAMBIOS_ADDENDUM",
+                          "CLAUSULAS_MODIFICADAS",
+                          "CONDICIONES_ESPECIALES",
                         ].includes(variable)}
                         rows={
                           [
@@ -1889,54 +2176,56 @@ const SmartDocuments = () => {
                           }));
                         }}
                       />
-                    )
+                    ))}
+                  </div>
+                ))}
+              {selectedTemplate && technicalMode && (
+                <>
+                  {!knownVisualDocumentTypes.includes(
+                    selectedTemplate.documentType,
+                  ) && (
+                    <Typography color="textSecondary" variant="body2">
+                      {i18n.t("smartDocuments.generateDialog.noVisualType")}
+                    </Typography>
                   )}
-                </div>
-              )
-            )}
-          {selectedTemplate && technicalMode && (
-            <>
-              {!knownVisualDocumentTypes.includes(
-                selectedTemplate.documentType
-              ) && (
-                <Typography color="textSecondary" variant="body2">
-                  {i18n.t("smartDocuments.generateDialog.noVisualType")}
-                </Typography>
+                  <TextField
+                    label={i18n.t(
+                      "smartDocuments.generateDialog.variablesJson",
+                    )}
+                    variant="outlined"
+                    margin="dense"
+                    fullWidth
+                    multiline
+                    rows={10}
+                    value={generationData}
+                    onChange={(event) => setGenerationData(event.target.value)}
+                  />
+                </>
               )}
-              <TextField
-                label={i18n.t("smartDocuments.generateDialog.variablesJson")}
-                variant="outlined"
-                margin="dense"
-                fullWidth
-                multiline
-                rows={10}
-                value={generationData}
-                onChange={(event) => setGenerationData(event.target.value)}
-              />
-            </>
-          )}
-          {selectedTemplate &&
-            knownVisualDocumentTypes.includes(
-              selectedTemplate.documentType
-            ) && (
-            <FormControlLabel
-              control={
-                <Switch
-                  color="primary"
-                  checked={technicalMode}
-                  onChange={(event) => {
-                    setTechnicalMode(event.target.checked);
-                    if (event.target.checked) {
-                      setGenerationData(
-                        JSON.stringify(generationValues, null, 2)
-                      );
+              {selectedTemplate &&
+                knownVisualDocumentTypes.includes(
+                  selectedTemplate.documentType,
+                ) && (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        color="primary"
+                        checked={technicalMode}
+                        onChange={(event) => {
+                          setTechnicalMode(event.target.checked);
+                          if (event.target.checked) {
+                            setGenerationData(
+                              JSON.stringify(generationValues, null, 2),
+                            );
+                          }
+                        }}
+                      />
                     }
-                  }}
-                />
-              }
-              label={i18n.t("smartDocuments.generateDialog.technicalMode")}
-            />
-          )}
+                    label={i18n.t(
+                      "smartDocuments.generateDialog.technicalMode",
+                    )}
+                  />
+                )}
             </>
           )}
           {generationStage === "summary" && selectedTemplate && (
@@ -1947,7 +2236,9 @@ const SmartDocuments = () => {
               <div className={classes.generationSummary}>
                 <div className={classes.generationSummaryCard}>
                   <Typography variant="caption" color="textSecondary">
-                    {i18n.t("smartDocuments.generateDialog.summaryDocumentType")}
+                    {i18n.t(
+                      "smartDocuments.generateDialog.summaryDocumentType",
+                    )}
                   </Typography>
                   <Typography>
                     {documentTypeLabel(selectedTemplate.documentType) ||
@@ -1987,7 +2278,7 @@ const SmartDocuments = () => {
                   <Typography>
                     {
                       Object.values(parseGenerationData() || {}).filter(
-                        (value) => String(value ?? "").trim() !== ""
+                        (value) => String(value ?? "").trim() !== "",
                       ).length
                     }
                   </Typography>
@@ -1997,11 +2288,10 @@ const SmartDocuments = () => {
                     {i18n.t("smartDocuments.generateDialog.missingVariables")}
                   </Typography>
                   <div className={classes.variableList}>
-                    {getMissingGenerationVariables(
-                      parseGenerationData() || {}
-                    ).length ? (
+                    {getMissingGenerationVariables(parseGenerationData() || {})
+                      .length ? (
                       getMissingGenerationVariables(
-                        parseGenerationData() || {}
+                        parseGenerationData() || {},
                       ).map((variable) => (
                         <Chip
                           key={variable}
@@ -2010,13 +2300,15 @@ const SmartDocuments = () => {
                           label={variableLabel(
                             variable,
                             selectedTemplate.documentType,
-                            recipientMode
+                            recipientMode,
                           )}
                         />
                       ))
                     ) : (
                       <Typography>
-                        {i18n.t("smartDocuments.generateDialog.noPendingFields")}
+                        {i18n.t(
+                          "smartDocuments.generateDialog.noPendingFields",
+                        )}
                       </Typography>
                     )}
                   </div>
@@ -2062,7 +2354,7 @@ const SmartDocuments = () => {
                 {generatedDocument.collaborator && (
                   <Button onClick={() => history.push("/collaborators")}>
                     {i18n.t(
-                      "smartDocuments.generateDialog.viewRelatedCollaborator"
+                      "smartDocuments.generateDialog.viewRelatedCollaborator",
                     )}
                   </Button>
                 )}
@@ -2096,9 +2388,8 @@ const SmartDocuments = () => {
                 variant="contained"
                 disabled={
                   saving ||
-                  getMissingGenerationVariables(
-                    parseGenerationData() || {}
-                  ).length > 0
+                  getMissingGenerationVariables(parseGenerationData() || {})
+                    .length > 0
                 }
                 onClick={handleGenerateDocument}
               >
@@ -2119,59 +2410,69 @@ const SmartDocuments = () => {
       <MainHeader>
         <Title>{i18n.t("smartDocuments.title")}</Title>
         <MainHeaderButtonsWrapper>
-          <TextField
-            placeholder={
-              activeTab === 0
-                ? i18n.t("smartDocuments.search.document")
-                : i18n.t("smartDocuments.search.template")
-            }
-            type="search"
-            variant="outlined"
-            size="small"
-            value={activeTab === 0 ? searchParam : templateSearchParam}
-            onChange={(event) =>
-              activeTab === 0
-                ? setSearchParam(event.target.value)
-                : setTemplateSearchParam(event.target.value)
-            }
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
-                </InputAdornment>
-              ),
-            }}
-          />
-          {activeTab === 0 && (
-            <FormControl variant="outlined" size="small">
-              <InputLabel>{i18n.t("smartDocuments.filters.status")}</InputLabel>
-              <Select
-                value={documentStatusFilter}
-                onChange={(event) =>
-                  setDocumentStatusFilter(event.target.value)
-                }
-                label={i18n.t("smartDocuments.filters.status")}
+          <div className={classes.headerActions}>
+            <TextField
+              className={classes.headerSearch}
+              placeholder={
+                activeTab === 0
+                  ? i18n.t("smartDocuments.search.document")
+                  : i18n.t("smartDocuments.search.template")
+              }
+              type="search"
+              variant="outlined"
+              size="small"
+              value={activeTab === 0 ? searchParam : templateSearchParam}
+              onChange={(event) =>
+                activeTab === 0
+                  ? setSearchParam(event.target.value)
+                  : setTemplateSearchParam(event.target.value)
+              }
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon style={{ color: "gray" }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            {activeTab === 0 && (
+              <FormControl
+                className={classes.headerStatusFilter}
+                variant="outlined"
+                size="small"
               >
-                <MenuItem value="">
-                  {i18n.t("smartDocuments.filters.allStatuses")}
-                </MenuItem>
-                {documentStatusOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {documentStatusLabel(option.value)}
+                <InputLabel>
+                  {i18n.t("smartDocuments.filters.status")}
+                </InputLabel>
+                <Select
+                  value={documentStatusFilter}
+                  onChange={(event) =>
+                    setDocumentStatusFilter(event.target.value)
+                  }
+                  label={i18n.t("smartDocuments.filters.status")}
+                >
+                  <MenuItem value="">
+                    {i18n.t("smartDocuments.filters.allStatuses")}
                   </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-          {canCreateDocuments && (
-            <Button
-              color="primary"
-              variant="contained"
-              onClick={openGenerationWizard}
-            >
-              {i18n.t("smartDocuments.buttons.generateDocument")}
-            </Button>
-          )}
+                  {documentStatusOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {documentStatusLabel(option.value)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            {canCreateDocuments && (
+              <Button
+                className={classes.headerPrimaryAction}
+                color="primary"
+                variant="contained"
+                onClick={openGenerationWizard}
+              >
+                {i18n.t("smartDocuments.buttons.generateDocument")}
+              </Button>
+            )}
+          </div>
         </MainHeaderButtonsWrapper>
       </MainHeader>
 
@@ -2221,95 +2522,95 @@ const SmartDocuments = () => {
             </Tabs>
           </Paper>
           {canCreateDocuments && (
-          <Paper className={classes.uploadPanel} variant="outlined">
-            <TextField
-              label={i18n.t("smartDocuments.fields.documentName")}
-              variant="outlined"
-              size="small"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-            <TextField
-              label={i18n.t("smartDocuments.fields.category")}
-              variant="outlined"
-              size="small"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-            />
-            <FormControl variant="outlined" size="small">
-              <InputLabel>{i18n.t("smartDocuments.fields.usage")}</InputLabel>
-              <Select
-                value={uploadPurpose}
-                onChange={(event) => setUploadPurpose(event.target.value)}
-                label={i18n.t("smartDocuments.fields.usage")}
-              >
-                {documentPurposes
-                  .filter((purpose) => purpose.value)
-                  .map((purpose) => (
-                    <MenuItem key={purpose.value} value={purpose.value}>
-                      {purposeLabel(purpose.value)}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
-            {canManageClientLinks && (
+            <Paper className={classes.uploadPanel} variant="outlined">
+              <TextField
+                label={i18n.t("smartDocuments.fields.documentName")}
+                variant="outlined"
+                size="small"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+              <TextField
+                label={i18n.t("smartDocuments.fields.category")}
+                variant="outlined"
+                size="small"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+              />
               <FormControl variant="outlined" size="small">
-                <InputLabel>
-                  {i18n.t("smartDocuments.fields.businessClient")}
-                </InputLabel>
+                <InputLabel>{i18n.t("smartDocuments.fields.usage")}</InputLabel>
                 <Select
-                  value={selectedBusinessClientId}
-                  onChange={(event) =>
-                    setSelectedBusinessClientId(event.target.value)
-                  }
-                  label={i18n.t("smartDocuments.fields.businessClient")}
-                  disabled={!associationInstalled}
+                  value={uploadPurpose}
+                  onChange={(event) => setUploadPurpose(event.target.value)}
+                  label={i18n.t("smartDocuments.fields.usage")}
                 >
-                  <MenuItem value="">
-                    {i18n.t("smartDocuments.upload.noClientAssociated")}
-                  </MenuItem>
-                  {businessClients.map((client) => (
-                    <MenuItem key={client.id} value={client.id}>
-                      {client.displayName}
-                    </MenuItem>
-                  ))}
+                  {documentPurposes
+                    .filter((purpose) => purpose.value)
+                    .map((purpose) => (
+                      <MenuItem key={purpose.value} value={purpose.value}>
+                        {purposeLabel(purpose.value)}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
-            )}
-            <div className={classes.uploadActions}>
-              <input
-                accept=".pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp"
-                className={classes.hiddenInput}
-                id="smart-document-file"
-                type="file"
-                onChange={(event) => setFile(event.target.files?.[0] || null)}
-              />
-              <label htmlFor="smart-document-file">
-                <Button
-                  component="span"
-                  variant="outlined"
-                  startIcon={<CloudUploadOutlinedIcon />}
-                >
-                  {file
-                    ? i18n.t("smartDocuments.buttons.changeFile")
-                    : i18n.t("smartDocuments.buttons.selectFile")}
-                </Button>
-              </label>
-              <Button
-                color="primary"
-                variant="contained"
-                disabled={saving || !file}
-                onClick={handleUpload}
-              >
-                {i18n.t("smartDocuments.buttons.save")}
-              </Button>
-              {file && (
-                <Typography variant="caption" display="block">
-                  {file.name}
-                </Typography>
+              {canManageClientLinks && (
+                <FormControl variant="outlined" size="small">
+                  <InputLabel>
+                    {i18n.t("smartDocuments.fields.businessClient")}
+                  </InputLabel>
+                  <Select
+                    value={selectedBusinessClientId}
+                    onChange={(event) =>
+                      setSelectedBusinessClientId(event.target.value)
+                    }
+                    label={i18n.t("smartDocuments.fields.businessClient")}
+                    disabled={!associationInstalled}
+                  >
+                    <MenuItem value="">
+                      {i18n.t("smartDocuments.upload.noClientAssociated")}
+                    </MenuItem>
+                    {businessClients.map((client) => (
+                      <MenuItem key={client.id} value={client.id}>
+                        {client.displayName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               )}
-            </div>
-          </Paper>
+              <div className={classes.uploadActions}>
+                <input
+                  accept=".pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp"
+                  className={classes.hiddenInput}
+                  id="smart-document-file"
+                  type="file"
+                  onChange={(event) => setFile(event.target.files?.[0] || null)}
+                />
+                <label htmlFor="smart-document-file">
+                  <Button
+                    component="span"
+                    variant="outlined"
+                    startIcon={<CloudUploadOutlinedIcon />}
+                  >
+                    {file
+                      ? i18n.t("smartDocuments.buttons.changeFile")
+                      : i18n.t("smartDocuments.buttons.selectFile")}
+                  </Button>
+                </label>
+                <Button
+                  color="primary"
+                  variant="contained"
+                  disabled={saving || !file}
+                  onClick={handleUpload}
+                >
+                  {i18n.t("smartDocuments.buttons.save")}
+                </Button>
+                {file && (
+                  <Typography variant="caption" display="block">
+                    {file.name}
+                  </Typography>
+                )}
+              </div>
+            </Paper>
           )}
 
           <Paper
@@ -2320,8 +2621,12 @@ const SmartDocuments = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{i18n.t("smartDocuments.table.document")}</TableCell>
-                  <TableCell>{i18n.t("smartDocuments.table.category")}</TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.document")}
+                  </TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.category")}
+                  </TableCell>
                   <TableCell>{i18n.t("smartDocuments.table.usage")}</TableCell>
                   <TableCell>{i18n.t("smartDocuments.table.status")}</TableCell>
                   <TableCell>{i18n.t("smartDocuments.table.client")}</TableCell>
@@ -2359,7 +2664,7 @@ const SmartDocuments = () => {
                         size="small"
                         variant="outlined"
                         label={documentStatusLabel(
-                          getDocumentStatus(document.status).value
+                          getDocumentStatus(document.status).value,
                         )}
                         style={{
                           color: getDocumentStatus(document.status).color,
@@ -2401,7 +2706,7 @@ const SmartDocuments = () => {
                         <IconButton
                           size="small"
                           title={i18n.t(
-                            "smartDocuments.actions.downloadDocument"
+                            "smartDocuments.actions.downloadDocument",
                           )}
                           onClick={() => setDownloadingDocument(document)}
                         >
@@ -2426,7 +2731,7 @@ const SmartDocuments = () => {
                 ))}
                 {!loading && documents.length === 0 && (
                   <TableRow>
-                      <TableCell colSpan={9}>
+                    <TableCell colSpan={9}>
                       <div className={classes.emptyState}>
                         <Typography color="textSecondary">
                           {i18n.t("smartDocuments.emptyDocuments")}
@@ -2463,212 +2768,223 @@ const SmartDocuments = () => {
             </Tabs>
           </Paper>
           {canManageTemplates && (
-          <Paper
-            className={`${classes.uploadPanel} ${classes.templatePanel}`}
-            variant="outlined"
-          >
-            <TextField
-              label={i18n.t("smartDocuments.fields.templateName")}
+            <Paper
+              className={`${classes.uploadPanel} ${classes.templatePanel}`}
               variant="outlined"
-              size="small"
-              value={templateName}
-              onChange={(event) => setTemplateName(event.target.value)}
-            />
-            <TextField
-              label={i18n.t("smartDocuments.fields.category")}
-              variant="outlined"
-              size="small"
-              value={templateCategory}
-              onChange={(event) => setTemplateCategory(event.target.value)}
-            />
-            <FormControl variant="outlined" size="small">
-              <InputLabel>{i18n.t("smartDocuments.fields.purpose")}</InputLabel>
-              <Select
-                value={templatePurpose}
-                onChange={(event) => {
-                  const purpose = event.target.value;
-                  const nextDocumentType =
-                    documentTypes.find((item) => item.purpose === purpose)
-                      ?.value || "other";
-                  setTemplatePurpose(purpose);
-                  if (purpose === "nda") setTemplateEcosystemId("");
-                  setTemplateDocumentType(nextDocumentType);
-                  const requiredVariables =
-                    getRequiredTypeVariables(nextDocumentType);
-                  setTemplateRequiredVariables(requiredVariables.join(", "));
-                  const contractConfig =
-                    ecosystemContractConfigs[nextDocumentType];
-                  if (contractConfig) {
-                    const ecosystem = ecosystems.find(
-                      (item) =>
-                        item.name?.toLowerCase() ===
-                        contractConfig.ecosystem.toLowerCase()
-                    );
-                    setTemplateEcosystemId(ecosystem?.id || "");
-                  }
-                }}
-                label={i18n.t("smartDocuments.fields.purpose")}
-              >
-                {documentPurposes
-                  .filter((purpose) => purpose.value)
-                  .map((purpose) => (
-                    <MenuItem key={purpose.value} value={purpose.value}>
-                      {purposeLabel(purpose.value)}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
-            <FormControl variant="outlined" size="small">
-              <InputLabel>
-                {i18n.t("smartDocuments.fields.documentType")}
-              </InputLabel>
-              <Select
-                value={templateDocumentType}
-                onChange={(event) => {
-                  const documentType = event.target.value;
-                  setTemplateDocumentType(documentType);
-                  if (documentType === "freelance_sales_contract") {
-                    setTemplateRequiresClient(false);
-                    setTemplateAllowGenericRecipient(false);
-                    setTemplateEcosystemId("");
-                  }
-                  setTemplateRequiredVariables(
-                    getRequiredTypeVariables(documentType).join(", ")
-                  );
-                  const contractConfig = ecosystemContractConfigs[documentType];
-                  if (contractConfig) {
-                    const ecosystem = ecosystems.find(
-                      (item) =>
-                        item.name?.toLowerCase() ===
-                        contractConfig.ecosystem.toLowerCase()
-                    );
-                    setTemplateEcosystemId(ecosystem?.id || "");
-                  }
-                }}
-                label={i18n.t("smartDocuments.fields.documentType")}
-              >
-                {documentTypes
-                  .filter((item) => item.purpose === templatePurpose)
-                  .map((item) => (
-                    <MenuItem key={item.value} value={item.value}>
-                      {documentTypeLabel(item.value)}
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
-            {templatePurpose === "nda" ? (
+            >
               <TextField
-                label={i18n.t("smartDocuments.fields.ecosystem")}
-                value={i18n.t("smartDocuments.template.ndaEcosystem")}
+                label={i18n.t("smartDocuments.fields.templateName")}
                 variant="outlined"
                 size="small"
-                disabled
+                value={templateName}
+                onChange={(event) => setTemplateName(event.target.value)}
               />
-            ) : (
+              <TextField
+                label={i18n.t("smartDocuments.fields.category")}
+                variant="outlined"
+                size="small"
+                value={templateCategory}
+                onChange={(event) => setTemplateCategory(event.target.value)}
+              />
               <FormControl variant="outlined" size="small">
                 <InputLabel>
-                  {i18n.t("smartDocuments.fields.ecosystem")}
+                  {i18n.t("smartDocuments.fields.purpose")}
                 </InputLabel>
                 <Select
-                  value={templateEcosystemId}
-                  onChange={(event) =>
-                    setTemplateEcosystemId(event.target.value)
-                  }
-                  label={i18n.t("smartDocuments.fields.ecosystem")}
+                  value={templatePurpose}
+                  onChange={(event) => {
+                    const purpose = event.target.value;
+                    const nextDocumentType =
+                      documentTypes.find((item) => item.purpose === purpose)
+                        ?.value || "other";
+                    setTemplatePurpose(purpose);
+                    if (purpose === "nda") setTemplateEcosystemId("");
+                    setTemplateDocumentType(nextDocumentType);
+                    const requiredVariables =
+                      getRequiredTypeVariables(nextDocumentType);
+                    setTemplateRequiredVariables(requiredVariables.join(", "));
+                    const contractConfig =
+                      ecosystemContractConfigs[nextDocumentType];
+                    if (contractConfig) {
+                      const ecosystem = ecosystems.find(
+                        (item) =>
+                          item.name?.toLowerCase() ===
+                          contractConfig.ecosystem.toLowerCase(),
+                      );
+                      setTemplateEcosystemId(ecosystem?.id || "");
+                    }
+                  }}
+                  label={i18n.t("smartDocuments.fields.purpose")}
                 >
-                  <MenuItem value="">
-                    {i18n.t("smartDocuments.common.general")}
-                  </MenuItem>
-                  {ecosystems.map((ecosystem) => (
-                    <MenuItem key={ecosystem.id} value={ecosystem.id}>
-                      {ecosystem.name}
-                    </MenuItem>
-                  ))}
+                  {documentPurposes
+                    .filter((purpose) => purpose.value)
+                    .map((purpose) => (
+                      <MenuItem key={purpose.value} value={purpose.value}>
+                        {purposeLabel(purpose.value)}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
-            )}
-            <TextField
-              label={i18n.t("smartDocuments.fields.requiredVariables")}
-              placeholder="NOMBRE_CLIENTE, CEDULA_CLIENTE"
-              variant="outlined"
-              size="small"
-              value={templateRequiredVariables}
-              onChange={(event) => setTemplateRequiredVariables(event.target.value)}
-              helperText={
-                getTypeVariables(templateDocumentType).length
-                  ? i18n.t("smartDocuments.template.requiredVariablesHelperTyped")
-                  : i18n.t("smartDocuments.template.requiredVariablesHelperEmpty")
-              }
-            />
-            <div className={classes.templateActions}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    color="primary"
-                    checked={templateRequiresClient}
-                    disabled={
-                      templateDocumentType === "freelance_sales_contract"
+              <FormControl variant="outlined" size="small">
+                <InputLabel>
+                  {i18n.t("smartDocuments.fields.documentType")}
+                </InputLabel>
+                <Select
+                  value={templateDocumentType}
+                  onChange={(event) => {
+                    const documentType = event.target.value;
+                    setTemplateDocumentType(documentType);
+                    if (documentType === "freelance_sales_contract") {
+                      setTemplateRequiresClient(false);
+                      setTemplateAllowGenericRecipient(false);
+                      setTemplateEcosystemId("");
                     }
-                    onChange={(event) =>
-                      setTemplateRequiresClient(event.target.checked)
+                    setTemplateRequiredVariables(
+                      getRequiredTypeVariables(documentType).join(", "),
+                    );
+                    const contractConfig =
+                      ecosystemContractConfigs[documentType];
+                    if (contractConfig) {
+                      const ecosystem = ecosystems.find(
+                        (item) =>
+                          item.name?.toLowerCase() ===
+                          contractConfig.ecosystem.toLowerCase(),
+                      );
+                      setTemplateEcosystemId(ecosystem?.id || "");
                     }
-                  />
-                }
-                label={i18n.t("smartDocuments.template.requiresClient")}
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    color="primary"
-                    checked={templateAllowGenericRecipient}
-                    disabled={
-                      templateDocumentType === "freelance_sales_contract"
-                    }
-                    onChange={(event) =>
-                      setTemplateAllowGenericRecipient(event.target.checked)
-                    }
-                  />
-                }
-                label={i18n.t("smartDocuments.template.allowGenericRecipient")}
-              />
-            </div>
-            <div className={classes.templateActions}>
-              <input
-                accept=".docx"
-                className={classes.hiddenInput}
-                id="smart-template-file"
-                type="file"
-                onChange={(event) =>
-                  setTemplateFile(event.target.files?.[0] || null)
-                }
-              />
-              <label htmlFor="smart-template-file">
-                <Button
-                  component="span"
-                  variant="outlined"
-                  startIcon={<CloudUploadOutlinedIcon />}
+                  }}
+                  label={i18n.t("smartDocuments.fields.documentType")}
                 >
-                  {templateFile
-                    ? i18n.t("smartDocuments.buttons.changeDocx")
-                    : i18n.t("smartDocuments.buttons.selectDocx")}
-                </Button>
-              </label>
-              <Button
-                color="primary"
-                variant="contained"
-                disabled={saving || !templateFile}
-                onClick={handleUploadTemplate}
-                style={{ marginLeft: 8 }}
-              >
-                {i18n.t("smartDocuments.buttons.save")}
-              </Button>
-              {templateFile && (
-                <Typography variant="caption" display="block">
-                  {templateFile.name}
-                </Typography>
+                  {documentTypes
+                    .filter((item) => item.purpose === templatePurpose)
+                    .map((item) => (
+                      <MenuItem key={item.value} value={item.value}>
+                        {documentTypeLabel(item.value)}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+              {templatePurpose === "nda" ? (
+                <TextField
+                  label={i18n.t("smartDocuments.fields.ecosystem")}
+                  value={i18n.t("smartDocuments.template.ndaEcosystem")}
+                  variant="outlined"
+                  size="small"
+                  disabled
+                />
+              ) : (
+                <FormControl variant="outlined" size="small">
+                  <InputLabel>
+                    {i18n.t("smartDocuments.fields.ecosystem")}
+                  </InputLabel>
+                  <Select
+                    value={templateEcosystemId}
+                    onChange={(event) =>
+                      setTemplateEcosystemId(event.target.value)
+                    }
+                    label={i18n.t("smartDocuments.fields.ecosystem")}
+                  >
+                    <MenuItem value="">
+                      {i18n.t("smartDocuments.common.general")}
+                    </MenuItem>
+                    {ecosystems.map((ecosystem) => (
+                      <MenuItem key={ecosystem.id} value={ecosystem.id}>
+                        {ecosystem.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               )}
-            </div>
-          </Paper>
+              <TextField
+                label={i18n.t("smartDocuments.fields.requiredVariables")}
+                placeholder="NOMBRE_CLIENTE, CEDULA_CLIENTE"
+                variant="outlined"
+                size="small"
+                value={templateRequiredVariables}
+                onChange={(event) =>
+                  setTemplateRequiredVariables(event.target.value)
+                }
+                helperText={
+                  getTypeVariables(templateDocumentType).length
+                    ? i18n.t(
+                        "smartDocuments.template.requiredVariablesHelperTyped",
+                      )
+                    : i18n.t(
+                        "smartDocuments.template.requiredVariablesHelperEmpty",
+                      )
+                }
+              />
+              <div className={classes.templateActions}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      color="primary"
+                      checked={templateRequiresClient}
+                      disabled={
+                        templateDocumentType === "freelance_sales_contract"
+                      }
+                      onChange={(event) =>
+                        setTemplateRequiresClient(event.target.checked)
+                      }
+                    />
+                  }
+                  label={i18n.t("smartDocuments.template.requiresClient")}
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      color="primary"
+                      checked={templateAllowGenericRecipient}
+                      disabled={
+                        templateDocumentType === "freelance_sales_contract"
+                      }
+                      onChange={(event) =>
+                        setTemplateAllowGenericRecipient(event.target.checked)
+                      }
+                    />
+                  }
+                  label={i18n.t(
+                    "smartDocuments.template.allowGenericRecipient",
+                  )}
+                />
+              </div>
+              <div className={classes.templateActions}>
+                <input
+                  accept=".docx"
+                  className={classes.hiddenInput}
+                  id="smart-template-file"
+                  type="file"
+                  onChange={(event) =>
+                    setTemplateFile(event.target.files?.[0] || null)
+                  }
+                />
+                <label htmlFor="smart-template-file">
+                  <Button
+                    component="span"
+                    variant="outlined"
+                    startIcon={<CloudUploadOutlinedIcon />}
+                  >
+                    {templateFile
+                      ? i18n.t("smartDocuments.buttons.changeDocx")
+                      : i18n.t("smartDocuments.buttons.selectDocx")}
+                  </Button>
+                </label>
+                <Button
+                  color="primary"
+                  variant="contained"
+                  disabled={saving || !templateFile}
+                  onClick={handleUploadTemplate}
+                  style={{ marginLeft: 8 }}
+                >
+                  {i18n.t("smartDocuments.buttons.save")}
+                </Button>
+                {templateFile && (
+                  <Typography variant="caption" display="block">
+                    {templateFile.name}
+                  </Typography>
+                )}
+              </div>
+            </Paper>
           )}
 
           <Paper
@@ -2679,21 +2995,27 @@ const SmartDocuments = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{i18n.t("smartDocuments.table.template")}</TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.template")}
+                  </TableCell>
                   <TableCell>
                     {i18n.t("smartDocuments.table.usageAndType")}
                   </TableCell>
                   <TableCell>
                     {i18n.t("smartDocuments.table.ecosystem")}
                   </TableCell>
-                  <TableCell>{i18n.t("smartDocuments.table.category")}</TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.category")}
+                  </TableCell>
                   <TableCell>
                     {i18n.t("smartDocuments.table.variables")}
                   </TableCell>
                   <TableCell>
                     {i18n.t("smartDocuments.table.createdBy")}
                   </TableCell>
-                  <TableCell>{i18n.t("smartDocuments.table.updated")}</TableCell>
+                  <TableCell>
+                    {i18n.t("smartDocuments.table.updated")}
+                  </TableCell>
                   <TableCell align="center">
                     {i18n.t("smartDocuments.table.actions")}
                   </TableCell>
@@ -2708,13 +3030,13 @@ const SmartDocuments = () => {
                   const missingVariables =
                     template.missingExpectedVariables || [];
                   const completeVariables = Array.from(
-                    new Set([...requiredVariables, ...variables])
+                    new Set([...requiredVariables, ...variables]),
                   );
                   const expectedVariables = template.expectedVariables || [];
                   const additionalVariables = variables.filter(
                     (variable) =>
                       !expectedVariables.includes(variable) &&
-                      !requiredVariables.includes(variable)
+                      !requiredVariables.includes(variable),
                   );
                   const variablesExpanded =
                     expandedVariableTemplateId === template.id;
@@ -2722,21 +3044,21 @@ const SmartDocuments = () => {
                     missingVariables.length === 1
                       ? "smartDocuments.template.missingCountOne"
                       : "smartDocuments.template.missingCountMany",
-                    { count: missingVariables.length }
+                    { count: missingVariables.length },
                   );
                   const additionalCountLabel = i18n.t(
                     additionalVariables.length === 1
                       ? "smartDocuments.template.additionalCountOne"
                       : "smartDocuments.template.additionalCountMany",
-                    { count: additionalVariables.length }
+                    { count: additionalVariables.length },
                   );
                   const variableStatus = missingVariables.length
                     ? missingCountLabel
                     : additionalVariables.length
-                    ? `${i18n.t(
-                        "smartDocuments.template.complete"
-                      )} · ${additionalCountLabel}`
-                    : i18n.t("smartDocuments.template.complete");
+                      ? `${i18n.t(
+                          "smartDocuments.template.complete",
+                        )} · ${additionalCountLabel}`
+                      : i18n.t("smartDocuments.template.complete");
                   return (
                     <TableRow key={template.id}>
                       <TableCell>
@@ -2749,21 +3071,26 @@ const SmartDocuments = () => {
                           })}
                         </Typography>
                         {template.missingExpectedVariables?.length > 0 && (
-                          <Typography variant="caption" color="error" display="block">
+                          <Typography
+                            variant="caption"
+                            color="error"
+                            display="block"
+                          >
                             {i18n.t(
                               template.missingExpectedVariables.length === 1
                                 ? "smartDocuments.template.missingExpectedOne"
                                 : "smartDocuments.template.missingExpectedMany",
                               {
-                                count:
-                                  template.missingExpectedVariables.length,
-                              }
+                                count: template.missingExpectedVariables.length,
+                              },
                             )}
                           </Typography>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Typography>{purposeLabel(template.purpose)}</Typography>
+                        <Typography>
+                          {purposeLabel(template.purpose)}
+                        </Typography>
                         <Typography variant="caption" color="textSecondary">
                           {documentTypeLabel(template.documentType) ||
                             i18n.t("smartDocuments.template.noSpecificType")}
@@ -2785,21 +3112,26 @@ const SmartDocuments = () => {
                           <Button
                             size="small"
                             variant="outlined"
-                            color={missingVariables.length ? "secondary" : "primary"}
+                            color={
+                              missingVariables.length ? "secondary" : "primary"
+                            }
                             onClick={() =>
                               setExpandedVariableTemplateId(
-                                variablesExpanded ? null : template.id
+                                variablesExpanded ? null : template.id,
                               )
                             }
                           >
-                            {i18n.t("smartDocuments.template.reviewVariables")} ·{" "}
-                            {variableStatus}
+                            {i18n.t("smartDocuments.template.reviewVariables")}{" "}
+                            · {variableStatus}
                           </Button>
                           {variablesExpanded && (
                             <div className={classes.variableReviewPanel}>
                               {[
                                 { key: "varUsed", items: variables },
-                                { key: "varComplete", items: completeVariables },
+                                {
+                                  key: "varComplete",
+                                  items: completeVariables,
+                                },
                                 { key: "varMissing", items: missingVariables },
                                 {
                                   key: "varAdditional",
@@ -2851,7 +3183,7 @@ const SmartDocuments = () => {
                           <IconButton
                             size="small"
                             title={i18n.t(
-                              "smartDocuments.actions.deleteTemplate"
+                              "smartDocuments.actions.deleteTemplate",
                             )}
                             onClick={() => {
                               setDeletingTemplate(template);

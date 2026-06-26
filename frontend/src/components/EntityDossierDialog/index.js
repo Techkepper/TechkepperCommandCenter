@@ -25,8 +25,10 @@ import {
   Typography,
 } from "@material-ui/core";
 import EditOutlinedIcon from "@material-ui/icons/EditOutlined";
+import CloudUploadOutlinedIcon from "@material-ui/icons/CloudUploadOutlined";
 import GetAppOutlinedIcon from "@material-ui/icons/GetAppOutlined";
 import HistoryOutlinedIcon from "@material-ui/icons/HistoryOutlined";
+import NoteAddOutlinedIcon from "@material-ui/icons/NoteAddOutlined";
 import VisibilityOutlinedIcon from "@material-ui/icons/VisibilityOutlined";
 import { useHistory } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -81,6 +83,22 @@ const useStyles = makeStyles((theme) => ({
   },
   pendingSection: { marginBottom: theme.spacing(2) },
   empty: { padding: theme.spacing(4), textAlign: "center" },
+  uploadGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: theme.spacing(1),
+    "& .MuiFormControl-root, & .MuiTextField-root": { minWidth: 0 },
+    [theme.breakpoints.down("xs")]: { gridTemplateColumns: "1fr" },
+  },
+  fullWidth: { gridColumn: "1 / -1" },
+  fileRow: {
+    gridColumn: "1 / -1",
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+  },
+  hiddenInput: { display: "none" },
 }));
 
 const getDocumentStatusLabels = () => ({
@@ -101,7 +119,9 @@ const getProposalStatusLabels = () => ({
   accepted: i18n.t("entityDossier.proposalStatusAccepted"),
   rejected: i18n.t("entityDossier.proposalStatusRejected"),
   expired: i18n.t("entityDossier.proposalStatusExpired"),
-  converted_to_contract: i18n.t("entityDossier.proposalStatusConvertedToContract"),
+  converted_to_contract: i18n.t(
+    "entityDossier.proposalStatusConvertedToContract",
+  ),
   archived: i18n.t("entityDossier.proposalStatusArchived"),
 });
 
@@ -126,6 +146,10 @@ const getEventLabels = () => ({
   downloaded_docx: i18n.t("entityDossier.eventDownloadedDocx"),
   associated_client: i18n.t("entityDossier.eventAssociatedClient"),
   associated_collaborator: i18n.t("entityDossier.eventAssociatedCollaborator"),
+  associated_base_document: i18n.t("entityDossier.eventAssociatedBaseDocument"),
+  uploaded_existing_document: i18n.t(
+    "entityDossier.eventUploadedExistingDocument",
+  ),
   proposal_created: i18n.t("entityDossier.eventProposalCreated"),
   proposal_updated: i18n.t("entityDossier.eventProposalUpdated"),
   proposal_status_changed: i18n.t("entityDossier.eventProposalStatusChanged"),
@@ -140,11 +164,16 @@ const getEventLabels = () => ({
 
 const formatDate = (value, includeTime = false) =>
   value
-    ? new Date(value).toLocaleString("es-CR", includeTime ? undefined : {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })
+    ? new Date(value).toLocaleString(
+        "es-CR",
+        includeTime
+          ? undefined
+          : {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            },
+      )
     : i18n.t("entityDossier.notAvailable");
 
 const StatusChip = ({ value, proposal = false }) => (
@@ -174,6 +203,16 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
   const [date, setDate] = useState("");
   const [statusDocument, setStatusDocument] = useState(null);
   const [nextStatus, setNextStatus] = useState("");
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadForm, setUploadForm] = useState({
+    title: "",
+    documentType: "other",
+    status: "generated",
+    documentDate: new Date().toISOString().slice(0, 10),
+    comment: "",
+  });
 
   const isClient = dossier?.entityType === "businessClient";
   const documents = useMemo(
@@ -182,7 +221,7 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
         const matchesSearch =
           !search ||
           [document.title, document.originalName, document.category].some(
-            (value) => value?.toLowerCase().includes(search.toLowerCase())
+            (value) => value?.toLowerCase().includes(search.toLowerCase()),
           );
         return (
           matchesSearch &&
@@ -191,7 +230,7 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
           (!date || String(document.createdAt).slice(0, 10) === date)
         );
       }),
-    [date, dossier, purpose, search, status]
+    [date, dossier, purpose, search, status],
   );
   const proposals = useMemo(
     () =>
@@ -199,12 +238,12 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
         (proposal) =>
           (!search ||
             [proposal.proposalNumber, proposal.title].some((value) =>
-              value?.toLowerCase().includes(search.toLowerCase())
+              value?.toLowerCase().includes(search.toLowerCase()),
             )) &&
           (!status || proposal.status === status) &&
-          (!date || String(proposal.offerDate).slice(0, 10) === date)
+          (!date || String(proposal.offerDate).slice(0, 10) === date),
       ),
-    [date, dossier, search, status]
+    [date, dossier, search, status],
   );
 
   const resetFilters = () => {
@@ -257,7 +296,7 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
       }
       const { data } = await api.get(
         `/commercial-proposals/${proposal.id}/download`,
-        { params: { format: "pdf" }, responseType: "blob" }
+        { params: { format: "pdf" }, responseType: "blob" },
       );
       const url = URL.createObjectURL(new Blob([data]));
       const link = window.document.createElement("a");
@@ -285,6 +324,48 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
     }
   };
 
+  const closeUpload = () => {
+    setUploadOpen(false);
+    setUploadFile(null);
+    setUploadForm({
+      title: "",
+      documentType: "other",
+      status: "generated",
+      documentDate: new Date().toISOString().slice(0, 10),
+      comment: "",
+    });
+  };
+
+  const uploadExistingDocument = async () => {
+    if (!uploadFile) {
+      toast.warn(i18n.t("entityDossier.uploadFileRequired"));
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", uploadFile);
+    formData.append("title", uploadForm.title || uploadFile.name);
+    formData.append("documentType", uploadForm.documentType);
+    formData.append("status", uploadForm.status);
+    formData.append("documentDate", uploadForm.documentDate);
+    formData.append("comment", uploadForm.comment);
+    const endpoint = isClient
+      ? `/business-clients/${entity.id}/documents/upload-existing`
+      : `/collaborators/${entity.id}/documents/upload-existing`;
+    setUploading(true);
+    try {
+      await api.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success(i18n.t("entityDossier.uploadSuccess"));
+      closeUpload();
+      if (onReload) await onReload();
+    } catch (error) {
+      toastError(error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (!dossier) return null;
   const entity = dossier.entity;
   const entityName = isClient ? entity.displayName : entity.fullName;
@@ -307,7 +388,27 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
         <TableBody>
           {rows.map((document) => (
             <TableRow key={document.id}>
-              <TableCell>{document.title}</TableCell>
+              <TableCell>
+                <Typography variant="body2">{document.title}</Typography>
+                {document.baseDocument && (
+                  <Typography variant="caption" color="textSecondary">
+                    {i18n.t("entityDossier.baseDocument")}:{" "}
+                    {document.baseDocument.title}
+                  </Typography>
+                )}
+                {document.relatedAddendums?.length > 0 && (
+                  <Typography
+                    variant="caption"
+                    color="textSecondary"
+                    display="block"
+                  >
+                    {i18n.t("entityDossier.relatedAddendums")}:{" "}
+                    {document.relatedAddendums
+                      .map((item) => item.title)
+                      .join(", ")}
+                  </Typography>
+                )}
+              </TableCell>
               <TableCell>
                 {getPurposeLabels()[document.purpose] ||
                   document.category ||
@@ -317,7 +418,8 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                 <StatusChip value={document.status} />
               </TableCell>
               <TableCell>
-                {document.uploadedBy?.name || i18n.t("entityDossier.systemUser")}
+                {document.uploadedBy?.name ||
+                  i18n.t("entityDossier.systemUser")}
               </TableCell>
               <TableCell>{formatDate(document.createdAt)}</TableCell>
               <TableCell align="center" className={classes.actions}>
@@ -337,9 +439,12 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                 <Tooltip title={i18n.t("entityDossier.downloadPdf")}>
                   <IconButton
                     size="small"
-                    aria-label={i18n.t("entityDossier.downloadPdfDocumentAria", {
-                      title: document.title,
-                    })}
+                    aria-label={i18n.t(
+                      "entityDossier.downloadPdfDocumentAria",
+                      {
+                        title: document.title,
+                      },
+                    )}
                     onClick={() => download(document, "pdf")}
                   >
                     <GetAppOutlinedIcon />
@@ -348,9 +453,12 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                 {dossier.permissions.canDownloadDocx && (
                   <Button
                     size="small"
-                    aria-label={i18n.t("entityDossier.downloadDocxDocumentAria", {
-                      title: document.title,
-                    })}
+                    aria-label={i18n.t(
+                      "entityDossier.downloadDocxDocumentAria",
+                      {
+                        title: document.title,
+                      },
+                    )}
                     onClick={() => download(document, "docx")}
                   >
                     DOCX
@@ -431,14 +539,23 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                 </Typography>
               </Paper>
               {[
-                [i18n.t("entityDossier.tabDocuments"), dossier.summary.documentCount],
-                [i18n.t("entityDossier.tabProposals"), dossier.summary.proposalCount],
-                [i18n.t("entityDossier.tabPending"), dossier.summary.pendingCount],
+                [
+                  i18n.t("entityDossier.tabDocuments"),
+                  dossier.summary.documentCount,
+                ],
+                [
+                  i18n.t("entityDossier.tabProposals"),
+                  dossier.summary.proposalCount,
+                ],
+                [
+                  i18n.t("entityDossier.tabPending"),
+                  dossier.summary.pendingCount,
+                ],
                 [
                   i18n.t("entityDossier.summaryLastActivity"),
                   formatDate(
                     dossier.activity[0]?.createdAt ||
-                      dossier.summary.lastDocument?.createdAt
+                      dossier.summary.lastDocument?.createdAt,
                   ),
                 ],
               ].map(([label, value]) => (
@@ -489,27 +606,37 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                     label={i18n.t("entityDossier.columnType")}
                     onChange={(event) => setPurpose(event.target.value)}
                   >
-                    <MenuItem value="">{i18n.t("entityDossier.filterAll")}</MenuItem>
-                    {Object.entries(getPurposeLabels()).map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
+                    <MenuItem value="">
+                      {i18n.t("entityDossier.filterAll")}
+                    </MenuItem>
+                    {Object.entries(getPurposeLabels()).map(
+                      ([value, label]) => (
+                        <MenuItem key={value} value={value}>
+                          {label}
+                        </MenuItem>
+                      ),
+                    )}
                   </Select>
                 </FormControl>
                 <FormControl variant="outlined" size="small">
-                  <InputLabel>{i18n.t("entityDossier.columnStatus")}</InputLabel>
+                  <InputLabel>
+                    {i18n.t("entityDossier.columnStatus")}
+                  </InputLabel>
                   <Select
                     value={status}
                     label={i18n.t("entityDossier.columnStatus")}
                     onChange={(event) => setStatus(event.target.value)}
                   >
-                    <MenuItem value="">{i18n.t("entityDossier.filterAll")}</MenuItem>
-                    {Object.entries(getDocumentStatusLabels()).map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
+                    <MenuItem value="">
+                      {i18n.t("entityDossier.filterAll")}
+                    </MenuItem>
+                    {Object.entries(getDocumentStatusLabels()).map(
+                      ([value, label]) => (
+                        <MenuItem key={value} value={value}>
+                          {label}
+                        </MenuItem>
+                      ),
+                    )}
                   </Select>
                 </FormControl>
                 <TextField
@@ -537,18 +664,24 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                   onChange={(event) => setSearch(event.target.value)}
                 />
                 <FormControl variant="outlined" size="small">
-                  <InputLabel>{i18n.t("entityDossier.columnStatus")}</InputLabel>
+                  <InputLabel>
+                    {i18n.t("entityDossier.columnStatus")}
+                  </InputLabel>
                   <Select
                     value={status}
                     label={i18n.t("entityDossier.columnStatus")}
                     onChange={(event) => setStatus(event.target.value)}
                   >
-                    <MenuItem value="">{i18n.t("entityDossier.filterAll")}</MenuItem>
-                    {Object.entries(getProposalStatusLabels()).map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
+                    <MenuItem value="">
+                      {i18n.t("entityDossier.filterAll")}
+                    </MenuItem>
+                    {Object.entries(getProposalStatusLabels()).map(
+                      ([value, label]) => (
+                        <MenuItem key={value} value={value}>
+                          {label}
+                        </MenuItem>
+                      ),
+                    )}
                   </Select>
                 </FormControl>
                 <TextField
@@ -565,11 +698,21 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>{i18n.t("entityDossier.columnNumber")}</TableCell>
-                      <TableCell>{i18n.t("entityDossier.columnTitle")}</TableCell>
-                      <TableCell>{i18n.t("entityDossier.columnStatus")}</TableCell>
-                      <TableCell>{i18n.t("entityDossier.columnTotal")}</TableCell>
-                      <TableCell>{i18n.t("entityDossier.columnDate")}</TableCell>
+                      <TableCell>
+                        {i18n.t("entityDossier.columnNumber")}
+                      </TableCell>
+                      <TableCell>
+                        {i18n.t("entityDossier.columnTitle")}
+                      </TableCell>
+                      <TableCell>
+                        {i18n.t("entityDossier.columnStatus")}
+                      </TableCell>
+                      <TableCell>
+                        {i18n.t("entityDossier.columnTotal")}
+                      </TableCell>
+                      <TableCell>
+                        {i18n.t("entityDossier.columnDate")}
+                      </TableCell>
                       <TableCell align="center">
                         {i18n.t("entityDossier.columnActions")}
                       </TableCell>
@@ -592,12 +735,15 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                           <Tooltip title={i18n.t("entityDossier.viewProposal")}>
                             <IconButton
                               size="small"
-                              aria-label={i18n.t("entityDossier.viewProposalAria", {
-                                number: proposal.proposalNumber,
-                              })}
+                              aria-label={i18n.t(
+                                "entityDossier.viewProposalAria",
+                                {
+                                  number: proposal.proposalNumber,
+                                },
+                              )}
                               onClick={() =>
                                 history.push(
-                                  `/commercial-proposals?proposalId=${proposal.id}`
+                                  `/commercial-proposals?proposalId=${proposal.id}`,
                                 )
                               }
                             >
@@ -605,15 +751,20 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                             </IconButton>
                           </Tooltip>
                           {dossier.permissions.canManageProposals && (
-                            <Tooltip title={i18n.t("entityDossier.editProposal")}>
+                            <Tooltip
+                              title={i18n.t("entityDossier.editProposal")}
+                            >
                               <IconButton
                                 size="small"
-                                aria-label={i18n.t("entityDossier.editProposalAria", {
-                                  number: proposal.proposalNumber,
-                                })}
+                                aria-label={i18n.t(
+                                  "entityDossier.editProposalAria",
+                                  {
+                                    number: proposal.proposalNumber,
+                                  },
+                                )}
                                 onClick={() =>
                                   history.push(
-                                    `/commercial-proposals?editProposalId=${proposal.id}`
+                                    `/commercial-proposals?editProposalId=${proposal.id}`,
                                   )
                                 }
                               >
@@ -623,9 +774,12 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                           )}
                           <Button
                             size="small"
-                            aria-label={i18n.t("entityDossier.downloadPdfProposalAria", {
-                              number: proposal.proposalNumber,
-                            })}
+                            aria-label={i18n.t(
+                              "entityDossier.downloadPdfProposalAria",
+                              {
+                                number: proposal.proposalNumber,
+                              },
+                            )}
                             startIcon={<GetAppOutlinedIcon />}
                             onClick={() => downloadProposal(proposal)}
                           >
@@ -663,8 +817,8 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
                   </Typography>
                   {(event.previousStatus || event.newStatus) && (
                     <Typography variant="body2">
-                      {event.previousStatus || i18n.t("entityDossier.noStatus")} →{" "}
-                      {event.newStatus || i18n.t("entityDossier.noStatus")}
+                      {event.previousStatus || i18n.t("entityDossier.noStatus")}{" "}
+                      → {event.newStatus || i18n.t("entityDossier.noStatus")}
                     </Typography>
                   )}
                   {event.comment && (
@@ -714,7 +868,167 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
           )}
         </DialogContent>
         <DialogActions>
+          {dossier.permissions.canManageDocuments && (
+            <>
+              <Button
+                startIcon={<CloudUploadOutlinedIcon />}
+                onClick={() => setUploadOpen(true)}
+              >
+                {i18n.t("entityDossier.uploadExisting")}
+              </Button>
+              {isClient && (
+                <Button
+                  startIcon={<NoteAddOutlinedIcon />}
+                  onClick={() => {
+                    onClose();
+                    history.push(
+                      `/smart-documents?addendumClientId=${entity.id}`,
+                    );
+                  }}
+                >
+                  {i18n.t("entityDossier.createAddendum")}
+                </Button>
+              )}
+            </>
+          )}
           <Button onClick={onClose}>{i18n.t("entityDossier.close")}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={uploadOpen}
+        onClose={uploading ? undefined : closeUpload}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{i18n.t("entityDossier.uploadExisting")}</DialogTitle>
+        <DialogContent dividers>
+          <div className={classes.uploadGrid}>
+            <div className={classes.fileRow}>
+              <input
+                id="dossier-existing-document-file"
+                className={classes.hiddenInput}
+                type="file"
+                onChange={(event) =>
+                  setUploadFile(event.target.files?.[0] || null)
+                }
+              />
+              <label htmlFor="dossier-existing-document-file">
+                <Button
+                  component="span"
+                  variant="outlined"
+                  startIcon={<CloudUploadOutlinedIcon />}
+                >
+                  {i18n.t("entityDossier.selectFile")}
+                </Button>
+              </label>
+              <Typography variant="body2" color="textSecondary">
+                {uploadFile?.name || i18n.t("entityDossier.noFileSelected")}
+              </Typography>
+            </div>
+            <TextField
+              className={classes.fullWidth}
+              label={i18n.t("entityDossier.documentName")}
+              variant="outlined"
+              margin="dense"
+              value={uploadForm.title}
+              onChange={(event) =>
+                setUploadForm({ ...uploadForm, title: event.target.value })
+              }
+            />
+            <FormControl variant="outlined" margin="dense">
+              <InputLabel>{i18n.t("entityDossier.documentType")}</InputLabel>
+              <Select
+                value={uploadForm.documentType}
+                label={i18n.t("entityDossier.documentType")}
+                onChange={(event) =>
+                  setUploadForm({
+                    ...uploadForm,
+                    documentType: event.target.value,
+                  })
+                }
+              >
+                {[
+                  "contract_active",
+                  "nda",
+                  "contract_addendum",
+                  "quotation_proposal",
+                  "legal_document",
+                  "commercial_document",
+                  "internal_document",
+                  "other",
+                ].map((value) => (
+                  <MenuItem key={value} value={value}>
+                    {i18n.t(`entityDossier.documentTypes.${value}`)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl variant="outlined" margin="dense">
+              <InputLabel>{i18n.t("entityDossier.initialStatus")}</InputLabel>
+              <Select
+                value={uploadForm.status}
+                label={i18n.t("entityDossier.initialStatus")}
+                onChange={(event) =>
+                  setUploadForm({ ...uploadForm, status: event.target.value })
+                }
+              >
+                {[
+                  "generated",
+                  "approved",
+                  "sent",
+                  "archived",
+                  "pending_signature",
+                  "draft",
+                ].map((value) => (
+                  <MenuItem key={value} value={value}>
+                    {getDocumentStatusLabels()[value]}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              type="date"
+              label={i18n.t("entityDossier.documentDate")}
+              variant="outlined"
+              margin="dense"
+              InputLabelProps={{ shrink: true }}
+              value={uploadForm.documentDate}
+              onChange={(event) =>
+                setUploadForm({
+                  ...uploadForm,
+                  documentDate: event.target.value,
+                })
+              }
+            />
+            <TextField
+              className={classes.fullWidth}
+              label={i18n.t("entityDossier.optionalComment")}
+              variant="outlined"
+              margin="dense"
+              multiline
+              rows={4}
+              value={uploadForm.comment}
+              onChange={(event) =>
+                setUploadForm({ ...uploadForm, comment: event.target.value })
+              }
+            />
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={uploading} onClick={closeUpload}>
+            {i18n.t("entityDossier.cancel")}
+          </Button>
+          <Button
+            color="primary"
+            variant="contained"
+            disabled={uploading || !uploadFile}
+            onClick={uploadExistingDocument}
+          >
+            {uploading
+              ? i18n.t("entityDossier.uploading")
+              : i18n.t("entityDossier.upload")}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -733,11 +1047,13 @@ const EntityDossierDialog = ({ dossier, open, onClose, onReload }) => {
               label={i18n.t("entityDossier.columnStatus")}
               onChange={(event) => setNextStatus(event.target.value)}
             >
-              {Object.entries(getDocumentStatusLabels()).map(([value, label]) => (
-                <MenuItem key={value} value={value}>
-                  {label}
-                </MenuItem>
-              ))}
+              {Object.entries(getDocumentStatusLabels()).map(
+                ([value, label]) => (
+                  <MenuItem key={value} value={value}>
+                    {label}
+                  </MenuItem>
+                ),
+              )}
             </Select>
           </FormControl>
         </DialogContent>

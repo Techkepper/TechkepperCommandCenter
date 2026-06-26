@@ -96,6 +96,25 @@ class SmartDocument extends Model<SmartDocument> {
   status: string;
 
   @Column({
+    type: DataType.DATEONLY,
+    allowNull: true
+  })
+  documentDate: string | null;
+
+  @ForeignKey(() => SmartDocument)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true
+  })
+  baseDocumentId: number | null;
+
+  @BelongsTo(() => SmartDocument, "baseDocumentId")
+  baseDocument: SmartDocument | null;
+
+  @HasMany(() => SmartDocument, "baseDocumentId")
+  relatedAddendums: SmartDocument[];
+
+  @Column({
     type: DataType.TEXT,
     allowNull: true
   })

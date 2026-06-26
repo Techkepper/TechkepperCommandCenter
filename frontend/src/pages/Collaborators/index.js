@@ -60,6 +60,7 @@ const emptyForm = {
   identificationType: "Cédula de identidad",
   identificationNumber: "",
   contractualDenomination: "LA CONTRATISTA",
+  sex: "unspecified",
   email: "",
   phone: "",
   address: "",
@@ -112,7 +113,9 @@ const Collaborators = () => {
   useEffect(() => {
     api
       .get("/queue")
-      .then(({ data }) => setQueues(Array.isArray(data) ? data : data.queues || []))
+      .then(({ data }) =>
+        setQueues(Array.isArray(data) ? data : data.queues || []),
+      )
       .catch(toastError);
   }, []);
 
@@ -131,6 +134,7 @@ const Collaborators = () => {
       identificationNumber: collaborator.identificationNumber || "",
       contractualDenomination:
         collaborator.contractualDenomination || "LA CONTRATISTA",
+      sex: collaborator.sex || "unspecified",
       email: collaborator.email || "",
       phone: collaborator.phone || "",
       address: collaborator.address || "",
@@ -152,7 +156,7 @@ const Collaborators = () => {
       toast.success(
         editingId
           ? i18n.t("collaborators.toasts.updated")
-          : i18n.t("collaborators.toasts.created")
+          : i18n.t("collaborators.toasts.created"),
       );
       await loadCollaborators();
     } catch (error) {
@@ -168,7 +172,7 @@ const Collaborators = () => {
       toast.success(
         collaborator.isActive
           ? i18n.t("collaborators.toasts.deactivated")
-          : i18n.t("collaborators.toasts.reactivated")
+          : i18n.t("collaborators.toasts.reactivated"),
       );
       await loadCollaborators();
     } catch (error) {
@@ -179,7 +183,7 @@ const Collaborators = () => {
   const openDossier = async (collaboratorId) => {
     try {
       const { data } = await api.get(
-        `/collaborators/${collaboratorId}/dossier`
+        `/collaborators/${collaboratorId}/dossier`,
       );
       setDossier(data);
     } catch (error) {
@@ -222,6 +226,36 @@ const Collaborators = () => {
               }
             />
             <FormControl variant="outlined" margin="dense">
+              <InputLabel>{i18n.t("collaborators.fields.sex")}</InputLabel>
+              <Select
+                value={form.sex}
+                label={i18n.t("collaborators.fields.sex")}
+                onChange={(event) => {
+                  const sex = event.target.value;
+                  setForm({
+                    ...form,
+                    sex,
+                    contractualDenomination:
+                      sex === "female"
+                        ? "LA CONTRATISTA"
+                        : sex === "male"
+                          ? "EL CONTRATISTA"
+                          : form.contractualDenomination,
+                  });
+                }}
+              >
+                <MenuItem value="female">
+                  {i18n.t("collaborators.sex.female")}
+                </MenuItem>
+                <MenuItem value="male">
+                  {i18n.t("collaborators.sex.male")}
+                </MenuItem>
+                <MenuItem value="unspecified">
+                  {i18n.t("collaborators.sex.unspecified")}
+                </MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl variant="outlined" margin="dense">
               <InputLabel>
                 {i18n.t("collaborators.fields.contractualDenomination")}
               </InputLabel>
@@ -234,6 +268,7 @@ const Collaborators = () => {
                     contractualDenomination: event.target.value,
                   })
                 }
+                disabled={form.sex !== "unspecified"}
               >
                 <MenuItem value="LA CONTRATISTA">LA CONTRATISTA</MenuItem>
                 <MenuItem value="EL CONTRATISTA">EL CONTRATISTA</MenuItem>
@@ -276,7 +311,9 @@ const Collaborators = () => {
               }
             />
             <FormControl variant="outlined" margin="dense">
-              <InputLabel>{i18n.t("collaborators.fields.department")}</InputLabel>
+              <InputLabel>
+                {i18n.t("collaborators.fields.department")}
+              </InputLabel>
               <Select
                 value={form.queueId}
                 label={i18n.t("collaborators.fields.department")}
@@ -399,10 +436,19 @@ const Collaborators = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>{i18n.t("collaborators.table.collaborator")}</TableCell>
-                <TableCell>{i18n.t("collaborators.table.identification")}</TableCell>
-                <TableCell>{i18n.t("collaborators.table.denomination")}</TableCell>
-                <TableCell>{i18n.t("collaborators.fields.department")}</TableCell>
+                <TableCell>
+                  {i18n.t("collaborators.table.collaborator")}
+                </TableCell>
+                <TableCell>
+                  {i18n.t("collaborators.table.identification")}
+                </TableCell>
+                <TableCell>{i18n.t("collaborators.fields.sex")}</TableCell>
+                <TableCell>
+                  {i18n.t("collaborators.table.denomination")}
+                </TableCell>
+                <TableCell>
+                  {i18n.t("collaborators.fields.department")}
+                </TableCell>
                 <TableCell>{i18n.t("collaborators.table.contact")}</TableCell>
                 <TableCell>{i18n.t("collaborators.fields.status")}</TableCell>
                 <TableCell align="center">
@@ -415,13 +461,19 @@ const Collaborators = () => {
                 <TableRow key={collaborator.id}>
                   <TableCell>{collaborator.fullName}</TableCell>
                   <TableCell>{collaborator.identificationNumber}</TableCell>
+                  <TableCell>
+                    {i18n.t(
+                      `collaborators.sex.${collaborator.sex || "unspecified"}`,
+                    )}
+                  </TableCell>
                   <TableCell>{collaborator.contractualDenomination}</TableCell>
                   <TableCell>
                     {collaborator.queue?.name || i18n.t("collaborators.global")}
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {collaborator.email || i18n.t("collaborators.table.noEmail")}
+                      {collaborator.email ||
+                        i18n.t("collaborators.table.noEmail")}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
                       {collaborator.phone ||

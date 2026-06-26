@@ -18,7 +18,10 @@ const schema = Yup.object().shape({
   identificationNumber: Yup.string().trim().max(80).required(),
   contractualDenomination: Yup.string()
     .oneOf(["LA CONTRATISTA", "EL CONTRATISTA"])
-    .required(),
+    .nullable(),
+  sex: Yup.string()
+    .oneOf(["female", "male", "unspecified"])
+    .default("unspecified"),
   email: Yup.string().trim().email().max(255).nullable(),
   phone: Yup.string().trim().max(80).nullable(),
   address: Yup.string().trim().max(500).nullable(),
