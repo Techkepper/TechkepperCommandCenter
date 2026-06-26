@@ -188,8 +188,7 @@ export const createCollaborator = async (
   const duplicate = await Collaborator.findOne({
     where: {
       normalizedIdentificationNumber: normalized.normalizedIdentificationNumber
-    },
-    paranoid: false
+    }
   });
   if (duplicate) throw new AppError("ERR_DUPLICATED_COLLABORATOR", 409);
   const collaborator = await Collaborator.create({
@@ -212,8 +211,7 @@ export const updateCollaborator = async (
     where: {
       normalizedIdentificationNumber: normalized.normalizedIdentificationNumber,
       id: { [Op.ne]: collaborator.id }
-    },
-    paranoid: false
+    }
   });
   if (duplicate) throw new AppError("ERR_DUPLICATED_COLLABORATOR", 409);
   await collaborator.update(normalized);
@@ -229,4 +227,13 @@ export const setCollaboratorStatus = async (
   await ensureQueueWriteAccess(actor, collaborator.queueId);
   await collaborator.update({ isActive });
   return collaborator.reload({ include });
+};
+
+export const removeCollaborator = async (
+  collaboratorId: string | number,
+  actor: CollaboratorActor
+): Promise<void> => {
+  const collaborator = await showCollaborator(collaboratorId, actor);
+  await ensureQueueWriteAccess(actor, collaborator.queueId);
+  await collaborator.destroy();
 };

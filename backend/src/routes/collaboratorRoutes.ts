@@ -35,5 +35,11 @@ collaboratorRoutes.patch(
   requireRole("admin", "supervisor"),
   CollaboratorController.setStatus
 );
+collaboratorRoutes.delete(
+  "/collaborators/:collaboratorId",
+  isAuth,
+  requireRole("admin", "supervisor"),
+  CollaboratorController.remove
+);
 
 export default collaboratorRoutes;

@@ -8,6 +8,12 @@ export const collaborators = {
       dialog: {
         editTitle: "Editar colaborador",
       },
+      confirm: {
+        deleteTitle: "Eliminar colaborador {{name}}?",
+        deleteTitleDefault: "Eliminar colaborador",
+        deleteBody:
+          "Esta acción quitará el colaborador de la lista activa. Los documentos históricos asociados se conservan.",
+      },
       buttons: {
         cancel: "Cancelar",
         save: "Guardar",
@@ -54,6 +60,7 @@ export const collaborators = {
         edit: "Editar",
         deactivate: "Desactivar",
         reactivate: "Reactivar",
+        delete: "Eliminar",
       },
       install: {
         title: "Instalación pendiente",
@@ -65,6 +72,7 @@ export const collaborators = {
         updated: "Colaborador actualizado correctamente.",
         deactivated: "Colaborador desactivado correctamente.",
         reactivated: "Colaborador reactivado correctamente.",
+        deleted: "Colaborador eliminado correctamente.",
       },
     },
   },
@@ -76,6 +84,12 @@ export const collaborators = {
       global: "Global",
       dialog: {
         editTitle: "Edit collaborator",
+      },
+      confirm: {
+        deleteTitle: "Delete collaborator {{name}}?",
+        deleteTitleDefault: "Delete collaborator",
+        deleteBody:
+          "This action removes the collaborator from the active list. Associated historical documents are preserved.",
       },
       buttons: {
         cancel: "Cancel",
@@ -123,6 +137,7 @@ export const collaborators = {
         edit: "Edit",
         deactivate: "Deactivate",
         reactivate: "Reactivate",
+        delete: "Delete",
       },
       install: {
         title: "Installation pending",
@@ -134,6 +149,7 @@ export const collaborators = {
         updated: "Collaborator updated successfully.",
         deactivated: "Collaborator deactivated successfully.",
         reactivated: "Collaborator reactivated successfully.",
+        deleted: "Collaborator deleted successfully.",
       },
     },
   },
@@ -145,6 +161,12 @@ export const collaborators = {
       global: "Global",
       dialog: {
         editTitle: "Editar colaborador",
+      },
+      confirm: {
+        deleteTitle: "Eliminar colaborador {{name}}?",
+        deleteTitleDefault: "Eliminar colaborador",
+        deleteBody:
+          "Esta ação remove o colaborador da lista ativa. Os documentos históricos associados são preservados.",
       },
       buttons: {
         cancel: "Cancelar",
@@ -192,6 +214,7 @@ export const collaborators = {
         edit: "Editar",
         deactivate: "Desativar",
         reactivate: "Reativar",
+        delete: "Eliminar",
       },
       install: {
         title: "Instalação pendente",
@@ -203,6 +226,7 @@ export const collaborators = {
         updated: "Colaborador atualizado com sucesso.",
         deactivated: "Colaborador desativado com sucesso.",
         reactivated: "Colaborador reativado com sucesso.",
+        deleted: "Colaborador eliminado com sucesso.",
       },
     },
   },

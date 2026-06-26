@@ -23,6 +23,7 @@ import {
 } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 import SearchIcon from "@material-ui/icons/Search";
+import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditOutlinedIcon from "@material-ui/icons/EditOutlined";
 import PowerSettingsNewOutlinedIcon from "@material-ui/icons/PowerSettingsNewOutlined";
 import ReplayOutlinedIcon from "@material-ui/icons/ReplayOutlined";
@@ -37,6 +38,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import EntityDossierDialog from "../../components/EntityDossierDialog";
+import ConfirmationModal from "../../components/ConfirmationModal";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
@@ -82,6 +84,8 @@ const Collaborators = () => {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [dossier, setDossier] = useState(null);
+  const [deletingCollaborator, setDeletingCollaborator] = useState(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const loadCollaborators = async () => {
     setLoading(true);
@@ -180,6 +184,23 @@ const Collaborators = () => {
     }
   };
 
+  const openDelete = (collaborator) => {
+    setDeletingCollaborator(collaborator);
+    setConfirmDeleteOpen(true);
+  };
+
+  const deleteCollaborator = async () => {
+    if (!deletingCollaborator) return;
+    try {
+      await api.delete(`/collaborators/${deletingCollaborator.id}`);
+      toast.success(i18n.t("collaborators.toasts.deleted"));
+      setDeletingCollaborator(null);
+      await loadCollaborators();
+    } catch (error) {
+      toastError(error);
+    }
+  };
+
   const openDossier = async (collaboratorId) => {
     try {
       const { data } = await api.get(
@@ -197,6 +218,20 @@ const Collaborators = () => {
 
   return (
     <MainContainer>
+      <ConfirmationModal
+        title={
+          deletingCollaborator
+            ? i18n.t("collaborators.confirm.deleteTitle", {
+                name: deletingCollaborator.fullName,
+              })
+            : i18n.t("collaborators.confirm.deleteTitleDefault")
+        }
+        open={confirmDeleteOpen}
+        onClose={setConfirmDeleteOpen}
+        onConfirm={deleteCollaborator}
+      >
+        {i18n.t("collaborators.confirm.deleteBody")}
+      </ConfirmationModal>
       <EntityDossierDialog
         open={Boolean(dossier)}
         dossier={dossier}
@@ -524,6 +559,13 @@ const Collaborators = () => {
                             <ReplayOutlinedIcon />
                           )}
                         </IconButton>
+                        <IconButton
+                          size="small"
+                          title={i18n.t("collaborators.tooltips.delete")}
+                          onClick={() => openDelete(collaborator)}
+                        >
+                          <DeleteOutlineIcon />
+                        </IconButton>
                       </>
                     )}
                   </TableCell>
@@ -531,7 +573,7 @@ const Collaborators = () => {
               ))}
               {!loading && collaborators.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
+                  <TableCell colSpan={8} align="center">
                     <Typography color="textSecondary">
                       {i18n.t("collaborators.table.empty")}
                     </Typography>

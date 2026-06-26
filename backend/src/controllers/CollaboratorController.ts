@@ -6,6 +6,7 @@ import {
   CollaboratorData,
   createCollaborator,
   listCollaborators,
+  removeCollaborator,
   setCollaboratorStatus,
   showCollaborator,
   updateCollaborator
@@ -131,6 +132,18 @@ export const setStatus = async (
         req.user
       )
     );
+  } catch (err) {
+    return rethrowDbError(err);
+  }
+};
+
+export const remove = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    await removeCollaborator(req.params.collaboratorId, req.user);
+    return res.status(204).send();
   } catch (err) {
     return rethrowDbError(err);
   }
