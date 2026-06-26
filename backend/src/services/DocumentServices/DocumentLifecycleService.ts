@@ -36,6 +36,8 @@ export const documentEventTypes = [
   "associated_client",
   "associated_collaborator",
   "associated_base_document",
+  "dropbox_sync_success",
+  "dropbox_sync_failed",
   "deleted",
   "restored",
   "archived",

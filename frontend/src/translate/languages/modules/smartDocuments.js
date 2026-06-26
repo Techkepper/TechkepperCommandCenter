@@ -57,6 +57,7 @@ export const smartDocuments = {
         client: "Cliente",
         uploadedBy: "Subido por",
         size: "Tamaño",
+        storage: "Dropbox",
         date: "Fecha",
         actions: "Acciones",
         unassigned: "Sin asociar",
@@ -71,6 +72,7 @@ export const smartDocuments = {
         viewHistory: "Ver historial",
         changeStatus: "Cambiar estado",
         downloadDocument: "Descargar documento",
+        retryDropboxSync: "Reintentar sincronización Dropbox",
         deleteTemplate: "Eliminar plantilla",
       },
       emptyDocuments: "No hay documentos para mostrar.",
@@ -81,6 +83,31 @@ export const smartDocuments = {
       },
       upload: {
         noClientAssociated: "Sin cliente asociado",
+      },
+      storage: {
+        title: "Almacenamiento externo Dropbox",
+        connected:
+          "Dropbox está conectado. Los documentos nuevos se sincronizan como copia externa.",
+        notConnected:
+          "Dropbox está configurado, pero aún no se autorizó la cuenta.",
+        configurationRequired:
+          "Configuración requerida: complete las variables Dropbox en el backend.",
+        statusConnected: "Conectado",
+        statusNotConnected: "No conectado",
+        shortLabel: "Dropbox",
+        connect: "Conectar Dropbox",
+        validate: "Validar conexión",
+        statuses: {
+          synced: "Sincronizado",
+          pending: "Pendiente",
+          sync_failed: "Error",
+        },
+        toasts: {
+          oauthStarted:
+            "Se abrió la autorización de Dropbox. Vuelva y valide la conexión al finalizar.",
+          validated: "Conexión Dropbox validada correctamente.",
+          retryFinished: "Sincronización Dropbox procesada.",
+        },
       },
       confirm: {
         deleteDocumentTitle: "Eliminar documento {{title}}?",
@@ -218,6 +245,8 @@ export const smartDocuments = {
         associated_client: "Cliente asociado",
         associated_collaborator: "Colaborador asociado",
         associated_base_document: "Documento base asociado",
+        dropbox_sync_success: "Sincronizado con Dropbox",
+        dropbox_sync_failed: "Error al sincronizar con Dropbox",
         uploaded_existing_document: "Documento preexistente incorporado",
         deleted: "Eliminado",
         restored: "Restaurado",
@@ -421,6 +450,7 @@ export const smartDocuments = {
         client: "Client",
         uploadedBy: "Uploaded by",
         size: "Size",
+        storage: "Dropbox",
         date: "Date",
         actions: "Actions",
         unassigned: "Unassigned",
@@ -435,6 +465,7 @@ export const smartDocuments = {
         viewHistory: "View history",
         changeStatus: "Change status",
         downloadDocument: "Download document",
+        retryDropboxSync: "Retry Dropbox sync",
         deleteTemplate: "Delete template",
       },
       emptyDocuments: "No documents to show.",
@@ -445,6 +476,31 @@ export const smartDocuments = {
       },
       upload: {
         noClientAssociated: "No associated client",
+      },
+      storage: {
+        title: "Dropbox external storage",
+        connected:
+          "Dropbox is connected. New documents are synced as an external copy.",
+        notConnected:
+          "Dropbox is configured, but the account has not been authorized yet.",
+        configurationRequired:
+          "Configuration required: complete the Dropbox backend variables.",
+        statusConnected: "Connected",
+        statusNotConnected: "Not connected",
+        shortLabel: "Dropbox",
+        connect: "Connect Dropbox",
+        validate: "Validate connection",
+        statuses: {
+          synced: "Synced",
+          pending: "Pending",
+          sync_failed: "Error",
+        },
+        toasts: {
+          oauthStarted:
+            "Dropbox authorization was opened. Return and validate the connection when finished.",
+          validated: "Dropbox connection validated successfully.",
+          retryFinished: "Dropbox sync processed.",
+        },
       },
       confirm: {
         deleteDocumentTitle: "Delete document {{title}}?",
@@ -582,6 +638,8 @@ export const smartDocuments = {
         associated_client: "Client associated",
         associated_collaborator: "Collaborator associated",
         associated_base_document: "Base document associated",
+        dropbox_sync_success: "Synced with Dropbox",
+        dropbox_sync_failed: "Dropbox sync failed",
         uploaded_existing_document: "Existing document uploaded",
         deleted: "Deleted",
         restored: "Restored",
@@ -785,6 +843,7 @@ export const smartDocuments = {
         client: "Cliente",
         uploadedBy: "Enviado por",
         size: "Tamanho",
+        storage: "Dropbox",
         date: "Data",
         actions: "Ações",
         unassigned: "Sem associação",
@@ -799,6 +858,7 @@ export const smartDocuments = {
         viewHistory: "Ver histórico",
         changeStatus: "Alterar status",
         downloadDocument: "Baixar documento",
+        retryDropboxSync: "Repetir sincronização Dropbox",
         deleteTemplate: "Excluir modelo",
       },
       emptyDocuments: "Nenhum documento para exibir.",
@@ -809,6 +869,31 @@ export const smartDocuments = {
       },
       upload: {
         noClientAssociated: "Sem cliente associado",
+      },
+      storage: {
+        title: "Armazenamento externo Dropbox",
+        connected:
+          "Dropbox está conectado. Novos documentos são sincronizados como cópia externa.",
+        notConnected:
+          "Dropbox está configurado, mas a conta ainda não foi autorizada.",
+        configurationRequired:
+          "Configuração necessária: complete as variáveis Dropbox no backend.",
+        statusConnected: "Conectado",
+        statusNotConnected: "Não conectado",
+        shortLabel: "Dropbox",
+        connect: "Conectar Dropbox",
+        validate: "Validar conexão",
+        statuses: {
+          synced: "Sincronizado",
+          pending: "Pendente",
+          sync_failed: "Erro",
+        },
+        toasts: {
+          oauthStarted:
+            "A autorização do Dropbox foi aberta. Volte e valide a conexão ao finalizar.",
+          validated: "Conexão Dropbox validada corretamente.",
+          retryFinished: "Sincronização Dropbox processada.",
+        },
       },
       confirm: {
         deleteDocumentTitle: "Excluir documento {{title}}?",
@@ -945,6 +1030,8 @@ export const smartDocuments = {
         associated_client: "Cliente associado",
         associated_collaborator: "Colaborador associado",
         associated_base_document: "Documento base associado",
+        dropbox_sync_success: "Sincronizado com Dropbox",
+        dropbox_sync_failed: "Erro ao sincronizar com Dropbox",
         uploaded_existing_document: "Documento existente incorporado",
         deleted: "Excluído",
         restored: "Restaurado",

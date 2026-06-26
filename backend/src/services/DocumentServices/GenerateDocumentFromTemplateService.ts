@@ -27,6 +27,7 @@ import {
   isDocumentPurpose,
   normalizeDocumentType
 } from "./documentTaxonomy";
+import { syncSmartDocumentToDropbox } from "../DropboxServices";
 
 interface Request {
   templateId: string | number;
@@ -437,7 +438,21 @@ const GenerateDocumentFromTemplateService = async ({
         500
       );
     }
-    return reloadedDocument;
+    let preferredDropboxFolder: "clients" | "collaborators" | "proposals" =
+      "clients";
+    if (normalizedCollaboratorId !== null) {
+      preferredDropboxFolder = "collaborators";
+    } else if (normalizedPurpose === "quotations") {
+      preferredDropboxFolder = "proposals";
+    }
+    await syncSmartDocumentToDropbox({
+      documentId: reloadedDocument.id,
+      userId,
+      preferredFolder: preferredDropboxFolder
+    });
+    return reloadedDocument.reload({
+      include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
+    });
   } catch (err) {
     await removeDocumentFile(storagePath);
     throw err;

@@ -55,7 +55,11 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "auto",
+    overflowX: "auto",
     ...theme.scrollbarStyles,
+    "& .MuiTableCell-root": {
+      padding: theme.spacing(1, 0.75),
+    },
   },
   tabsPaper: {
     marginBottom: theme.spacing(2),
@@ -190,7 +194,7 @@ const useStyles = makeStyles((theme) => ({
     background: "rgba(255, 193, 7, 0.08)",
   },
   fileName: {
-    maxWidth: 320,
+    maxWidth: 240,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
@@ -240,6 +244,26 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(1),
     marginTop: theme.spacing(2),
   },
+  externalStoragePanel: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    padding: theme.spacing(1.5, 2),
+    marginBottom: theme.spacing(2),
+    borderColor: "rgba(95, 175, 58, 0.28)",
+    background:
+      theme.palette.type === "dark"
+        ? "rgba(95, 175, 58, 0.05)"
+        : "rgba(95, 175, 58, 0.08)",
+  },
+  externalStorageActions: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+  },
 }));
 
 const formatSize = (size) => {
@@ -266,6 +290,17 @@ const documentStatusOptions = [
 
 const documentStatusLabel = (status) =>
   i18n.t(`smartDocuments.statuses.${status}`);
+
+const storageStatusLabel = (status) =>
+  i18n.t(`smartDocuments.storage.statuses.${status || "pending"}`, {
+    defaultValue: i18n.t("smartDocuments.storage.statuses.pending"),
+  });
+
+const getStorageStatusColor = (status) => {
+  if (status === "synced") return "#63B246";
+  if (status === "sync_failed") return "#D9534F";
+  return "#D9A441";
+};
 
 const documentEventLabel = (eventType) =>
   i18n.t(`smartDocuments.events.${eventType}`, { defaultValue: eventType });
@@ -850,6 +885,10 @@ const SmartDocuments = () => {
     useState(false);
   const [expandedVariableTemplateId, setExpandedVariableTemplateId] =
     useState(null);
+  const [dropboxStatus, setDropboxStatus] = useState(null);
+  const [dropboxLoading, setDropboxLoading] = useState(false);
+  const [dropboxSyncingDocumentId, setDropboxSyncingDocumentId] =
+    useState(null);
   const generationBusinessClient = businessClients.find(
     (client) => client.id === Number(generationBusinessClientId),
   );
@@ -943,6 +982,21 @@ const SmartDocuments = () => {
       .then(({ data }) => setEcosystems(data))
       .catch(toastError);
   }, []);
+
+  const loadDropboxStatus = async () => {
+    if (user.profile !== "admin") return;
+    try {
+      const { data } = await api.get("/dropbox/status");
+      setDropboxStatus(data);
+    } catch (error) {
+      toastError(error);
+    }
+  };
+
+  useEffect(() => {
+    loadDropboxStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.profile]);
 
   useEffect(() => {
     if (!canManageClientLinks) return;
@@ -1241,6 +1295,48 @@ const SmartDocuments = () => {
       setDownloadingDocument(null);
     } catch (err) {
       toastError(err);
+    }
+  };
+
+  const handleConnectDropbox = async () => {
+    setDropboxLoading(true);
+    try {
+      const { data } = await api.get("/dropbox/oauth/start");
+      window.open(data.url, "_blank", "noopener,noreferrer");
+      toast.info(i18n.t("smartDocuments.storage.toasts.oauthStarted"));
+    } catch (error) {
+      toastError(error);
+    } finally {
+      setDropboxLoading(false);
+    }
+  };
+
+  const handleValidateDropbox = async () => {
+    setDropboxLoading(true);
+    try {
+      const { data } = await api.post("/dropbox/validate");
+      setDropboxStatus(data);
+      toast.success(i18n.t("smartDocuments.storage.toasts.validated"));
+    } catch (error) {
+      toastError(error);
+      loadDropboxStatus();
+    } finally {
+      setDropboxLoading(false);
+    }
+  };
+
+  const handleRetryDropboxSync = async (document) => {
+    setDropboxSyncingDocumentId(document.id);
+    try {
+      const { data } = await api.post(`/documents/${document.id}/dropbox-sync`);
+      setDocuments((current) =>
+        current.map((item) => (item.id === data.id ? data : item)),
+      );
+      toast.success(i18n.t("smartDocuments.storage.toasts.retryFinished"));
+    } catch (error) {
+      toastError(error);
+    } finally {
+      setDropboxSyncingDocumentId(null);
     }
   };
 
@@ -2501,6 +2597,54 @@ const SmartDocuments = () => {
         </Paper>
       )}
 
+      {!installRequired && activeTab === 0 && user.profile === "admin" && (
+        <Paper className={classes.externalStoragePanel} variant="outlined">
+          <div>
+            <Typography variant="subtitle2">
+              {i18n.t("smartDocuments.storage.title")}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              {dropboxStatus?.connected
+                ? i18n.t("smartDocuments.storage.connected")
+                : dropboxStatus?.configured
+                  ? i18n.t("smartDocuments.storage.notConnected")
+                  : i18n.t("smartDocuments.storage.configurationRequired")}
+            </Typography>
+          </div>
+          <div className={classes.externalStorageActions}>
+            <Chip
+              size="small"
+              variant="outlined"
+              label={
+                dropboxStatus?.connected
+                  ? i18n.t("smartDocuments.storage.statusConnected")
+                  : i18n.t("smartDocuments.storage.statusNotConnected")
+              }
+              style={{
+                color: dropboxStatus?.connected ? "#63B246" : "#D9A441",
+                borderColor: dropboxStatus?.connected ? "#63B246" : "#D9A441",
+              }}
+            />
+            <Button
+              variant="outlined"
+              color="primary"
+              disabled={dropboxLoading}
+              onClick={handleConnectDropbox}
+            >
+              {i18n.t("smartDocuments.storage.connect")}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              disabled={dropboxLoading || !dropboxStatus?.connected}
+              onClick={handleValidateDropbox}
+            >
+              {i18n.t("smartDocuments.storage.validate")}
+            </Button>
+          </div>
+        </Paper>
+      )}
+
       {!installRequired && activeTab === 0 && (
         <>
           <Paper className={classes.tabsPaper} variant="outlined">
@@ -2650,6 +2794,24 @@ const SmartDocuments = () => {
                       <Typography variant="caption" color="textSecondary">
                         {document.originalName}
                       </Typography>
+                      <div>
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={`${i18n.t(
+                            "smartDocuments.storage.shortLabel",
+                          )}: ${storageStatusLabel(document.storageStatus)}`}
+                          style={{
+                            marginTop: 4,
+                            color: getStorageStatusColor(
+                              document.storageStatus,
+                            ),
+                            borderColor: getStorageStatusColor(
+                              document.storageStatus,
+                            ),
+                          }}
+                        />
+                      </div>
                     </TableCell>
                     <TableCell>
                       {document.category ? (
@@ -2713,6 +2875,22 @@ const SmartDocuments = () => {
                           <GetAppOutlinedIcon />
                         </IconButton>
                       )}
+                      {user.profile === "admin" &&
+                        document.storageStatus !== "synced" && (
+                          <IconButton
+                            size="small"
+                            title={i18n.t(
+                              "smartDocuments.actions.retryDropboxSync",
+                            )}
+                            disabled={
+                              dropboxSyncingDocumentId === document.id ||
+                              !dropboxStatus?.connected
+                            }
+                            onClick={() => handleRetryDropboxSync(document)}
+                          >
+                            <CloudUploadOutlinedIcon />
+                          </IconButton>
+                        )}
                       {(user.profile === "admin" ||
                         (user.profile === "supervisor" &&
                           document.uploadedById === Number(user.id))) && (

@@ -65,6 +65,38 @@ class SmartDocument extends Model<SmartDocument> {
   storagePath: string;
 
   @Column({
+    type: DataType.STRING(50),
+    allowNull: false,
+    defaultValue: "local"
+  })
+  storageProvider: string;
+
+  @Column({
+    type: DataType.STRING(255),
+    allowNull: true
+  })
+  storageFileId: string | null;
+
+  @Column({
+    type: DataType.STRING(500),
+    allowNull: true
+  })
+  externalStoragePath: string | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true
+  })
+  storageSyncedAt: Date | null;
+
+  @Column({
+    type: DataType.STRING(50),
+    allowNull: false,
+    defaultValue: "pending"
+  })
+  storageStatus: string;
+
+  @Column({
     type: DataType.STRING(150),
     allowNull: false
   })

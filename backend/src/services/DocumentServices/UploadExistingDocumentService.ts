@@ -11,6 +11,7 @@ import {
   recordDocumentEvent
 } from "./DocumentLifecycleService";
 import { removeDocumentFile, saveDocumentBuffer } from "./documentStorage";
+import { syncSmartDocumentToDropbox } from "../DropboxServices";
 
 type Actor = { id: string; profile: string };
 type EntityTarget =
@@ -166,7 +167,15 @@ const UploadExistingDocumentService = async ({
     });
     if (!document)
       throw new AppError("No fue posible cargar el documento.", 500);
-    return document;
+    await syncSmartDocumentToDropbox({
+      documentId: document.id,
+      userId: actor.id,
+      preferredFolder:
+        target.entityType === "businessClient" ? "clients" : "collaborators"
+    });
+    return document.reload({
+      include: ["uploadedBy", "queue"]
+    });
   } catch (error) {
     await removeDocumentFile(storedFile.storagePath);
     throw error;

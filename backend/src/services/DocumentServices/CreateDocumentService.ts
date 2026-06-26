@@ -7,6 +7,7 @@ import { ensureDocumentWriteAccess } from "./documentPermissions";
 import { isDocumentPurpose } from "./documentTaxonomy";
 import { normalizeOptionalDocumentId } from "./documentIds";
 import { recordDocumentEvent } from "./DocumentLifecycleService";
+import { syncSmartDocumentToDropbox } from "../DropboxServices";
 
 interface Request {
   file?: Express.Multer.File;
@@ -125,7 +126,15 @@ const CreateDocumentService = async ({
       newStatus: "generated",
       metadata: { originalName: reloadedDocument.originalName }
     });
-    return reloadedDocument;
+    await syncSmartDocumentToDropbox({
+      documentId: reloadedDocument.id,
+      userId,
+      preferredFolder:
+        normalizedPurpose === "quotations" ? "proposals" : "clients"
+    });
+    return reloadedDocument.reload({
+      include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
+    });
   } catch (err) {
     if (document) {
       await document.destroy({ force: true });

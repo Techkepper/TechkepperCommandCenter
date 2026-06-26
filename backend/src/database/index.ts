@@ -25,6 +25,7 @@ import CommercialProposal from "../models/CommercialProposal";
 import CommercialProposalItem from "../models/CommercialProposalItem";
 import CommercialProposalPaymentMilestone from "../models/CommercialProposalPaymentMilestone";
 import CommercialProposalEvent from "../models/CommercialProposalEvent";
+import ExternalStorageConnection from "../models/ExternalStorageConnection";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -58,7 +59,8 @@ const models = [
   CommercialProposal,
   CommercialProposalItem,
   CommercialProposalPaymentMilestone,
-  CommercialProposalEvent
+  CommercialProposalEvent,
+  ExternalStorageConnection
 ];
 
 sequelize.addModels(models);
