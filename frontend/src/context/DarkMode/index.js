@@ -18,6 +18,35 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEY, darkMode ? "dark" : "light");
   }, [darkMode]);
 
+  useEffect(() => {
+    const syncDateInput = (input) => {
+      if (input instanceof HTMLInputElement && input.type === "date") {
+        input.toggleAttribute("data-empty-date", !input.value);
+      }
+    };
+    const syncDateInputs = (root) => {
+      if (root instanceof HTMLInputElement) syncDateInput(root);
+      root.querySelectorAll?.('input[type="date"]').forEach(syncDateInput);
+    };
+    const handleDateInput = (event) => syncDateInput(event.target);
+    const observer = new MutationObserver((entries) => {
+      entries.forEach((entry) =>
+        entry.addedNodes.forEach((node) => syncDateInputs(node))
+      );
+    });
+
+    syncDateInputs(document);
+    document.addEventListener("input", handleDateInput, true);
+    document.addEventListener("change", handleDateInput, true);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      document.removeEventListener("input", handleDateInput, true);
+      document.removeEventListener("change", handleDateInput, true);
+      observer.disconnect();
+    };
+  }, []);
+
   const toggleTheme = () => setDarkMode((previous) => !previous);
 
   const theme = useMemo(
@@ -51,6 +80,13 @@ export const ThemeProvider = ({ children }) => {
         },
         shape: { borderRadius: 12 },
         overrides: {
+          MuiCssBaseline: {
+            "@global": {
+              'input[type="date"][data-empty-date]::-webkit-datetime-edit': {
+                opacity: 0,
+              },
+            },
+          },
           MuiPaper: {
             rounded: { borderRadius: 16 },
           },

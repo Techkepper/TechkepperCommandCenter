@@ -22,6 +22,7 @@ import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import AutoAssignTicketService from "../services/TicketServices/AutoAssignTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
+import AfterHoursAutoReplyService from "../services/BusinessHoursServices/AfterHoursAutoReplyService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
@@ -313,6 +314,20 @@ export const handleMessage = async (
     await activeTicket.update(ticketUpdates);
 
     await CreateMessageService({ messageData });
+
+    if (!processedMessage.fromMe && !contextPayload.groupContact) {
+      try {
+        await AfterHoursAutoReplyService(activeTicket);
+      } catch (error) {
+        logger.warn(
+          {
+            ticketId: activeTicket.id,
+            error: error instanceof Error ? error.message : "Unknown error"
+          },
+          "after_hours_auto_reply_failed"
+        );
+      }
+    }
 
     if (
       !processedMessage.fromMe &&
