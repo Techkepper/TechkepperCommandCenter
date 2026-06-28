@@ -89,22 +89,22 @@ export const smartDocuments = {
         connected:
           "Dropbox está conectado. Los documentos nuevos se sincronizan como copia externa.",
         notConnected:
-          "Dropbox está configurado, pero aún no se autorizó la cuenta.",
+          "Dropbox está configurado en el servidor, pero aún no se ha validado.",
         configurationRequired:
           "Configuración requerida: complete las variables Dropbox en el backend.",
         statusConnected: "Conectado",
         statusNotConnected: "No conectado",
+        statusError: "Error",
         shortLabel: "Dropbox",
-        connect: "Conectar Dropbox",
         validate: "Validar conexión",
+        lastValidation: "Última validación",
+        neverValidated: "Sin validar",
         statuses: {
           synced: "Sincronizado",
           pending: "Pendiente",
           sync_failed: "Error",
         },
         toasts: {
-          oauthStarted:
-            "Se abrió la autorización de Dropbox. Vuelva y valide la conexión al finalizar.",
           validated: "Conexión Dropbox validada correctamente.",
           retryFinished: "Sincronización Dropbox procesada.",
         },
@@ -482,22 +482,22 @@ export const smartDocuments = {
         connected:
           "Dropbox is connected. New documents are synced as an external copy.",
         notConnected:
-          "Dropbox is configured, but the account has not been authorized yet.",
+          "Dropbox is configured on the server but has not been validated yet.",
         configurationRequired:
           "Configuration required: complete the Dropbox backend variables.",
         statusConnected: "Connected",
         statusNotConnected: "Not connected",
+        statusError: "Error",
         shortLabel: "Dropbox",
-        connect: "Connect Dropbox",
         validate: "Validate connection",
+        lastValidation: "Last validation",
+        neverValidated: "Not validated",
         statuses: {
           synced: "Synced",
           pending: "Pending",
           sync_failed: "Error",
         },
         toasts: {
-          oauthStarted:
-            "Dropbox authorization was opened. Return and validate the connection when finished.",
           validated: "Dropbox connection validated successfully.",
           retryFinished: "Dropbox sync processed.",
         },
@@ -875,22 +875,22 @@ export const smartDocuments = {
         connected:
           "Dropbox está conectado. Novos documentos são sincronizados como cópia externa.",
         notConnected:
-          "Dropbox está configurado, mas a conta ainda não foi autorizada.",
+          "Dropbox está configurado no servidor, mas ainda não foi validado.",
         configurationRequired:
           "Configuração necessária: complete as variáveis Dropbox no backend.",
         statusConnected: "Conectado",
         statusNotConnected: "Não conectado",
+        statusError: "Erro",
         shortLabel: "Dropbox",
-        connect: "Conectar Dropbox",
         validate: "Validar conexão",
+        lastValidation: "Última validação",
+        neverValidated: "Não validado",
         statuses: {
           synced: "Sincronizado",
           pending: "Pendente",
           sync_failed: "Erro",
         },
         toasts: {
-          oauthStarted:
-            "A autorização do Dropbox foi aberta. Volte e valide a conexão ao finalizar.",
           validated: "Conexão Dropbox validada corretamente.",
           retryFinished: "Sincronização Dropbox processada.",
         },

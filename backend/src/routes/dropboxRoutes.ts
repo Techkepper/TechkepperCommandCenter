@@ -7,15 +7,6 @@ import requireRole from "../middleware/requireRole";
 const routes = Router();
 
 routes.get(
-  "/dropbox/oauth/start",
-  isAuth,
-  requireRole("admin"),
-  DropboxController.oauthStart
-);
-
-routes.get("/dropbox/oauth/callback", DropboxController.oauthCallback);
-
-routes.get(
   "/dropbox/status",
   isAuth,
   requireRole("admin"),

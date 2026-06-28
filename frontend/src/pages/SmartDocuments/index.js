@@ -889,6 +889,7 @@ const SmartDocuments = () => {
   const [dropboxLoading, setDropboxLoading] = useState(false);
   const [dropboxSyncingDocumentId, setDropboxSyncingDocumentId] =
     useState(null);
+  const dropboxHasError = dropboxStatus?.status === "error";
   const generationBusinessClient = businessClients.find(
     (client) => client.id === Number(generationBusinessClientId),
   );
@@ -1295,19 +1296,6 @@ const SmartDocuments = () => {
       setDownloadingDocument(null);
     } catch (err) {
       toastError(err);
-    }
-  };
-
-  const handleConnectDropbox = async () => {
-    setDropboxLoading(true);
-    try {
-      const { data } = await api.get("/dropbox/oauth/start");
-      window.open(data.url, "_blank", "noopener,noreferrer");
-      toast.info(i18n.t("smartDocuments.storage.toasts.oauthStarted"));
-    } catch (error) {
-      toastError(error);
-    } finally {
-      setDropboxLoading(false);
     }
   };
 
@@ -2603,12 +2591,11 @@ const SmartDocuments = () => {
             <Typography variant="subtitle2">
               {i18n.t("smartDocuments.storage.title")}
             </Typography>
-            <Typography variant="body2" color="textSecondary">
-              {dropboxStatus?.connected
-                ? i18n.t("smartDocuments.storage.connected")
-                : dropboxStatus?.configured
-                  ? i18n.t("smartDocuments.storage.notConnected")
-                  : i18n.t("smartDocuments.storage.configurationRequired")}
+            <Typography variant="caption" color="textSecondary">
+              {i18n.t("smartDocuments.storage.lastValidation")}:{" "}
+              {dropboxStatus?.lastValidatedAt
+                ? new Date(dropboxStatus.lastValidatedAt).toLocaleString()
+                : i18n.t("smartDocuments.storage.neverValidated")}
             </Typography>
           </div>
           <div className={classes.externalStorageActions}>
@@ -2616,27 +2603,33 @@ const SmartDocuments = () => {
               size="small"
               variant="outlined"
               label={
-                dropboxStatus?.connected
-                  ? i18n.t("smartDocuments.storage.statusConnected")
-                  : i18n.t("smartDocuments.storage.statusNotConnected")
+                dropboxHasError
+                  ? i18n.t("smartDocuments.storage.statusError")
+                  : dropboxStatus?.connected
+                    ? i18n.t("smartDocuments.storage.statusConnected")
+                    : i18n.t("smartDocuments.storage.statusNotConnected")
               }
               style={{
-                color: dropboxStatus?.connected ? "#63B246" : "#D9A441",
-                borderColor: dropboxStatus?.connected ? "#63B246" : "#D9A441",
+                color: dropboxHasError
+                  ? "#D9534F"
+                  : dropboxStatus?.connected
+                    ? "#63B246"
+                    : "#D9A441",
+                borderColor: dropboxHasError
+                  ? "#D9534F"
+                  : dropboxStatus?.connected
+                    ? "#63B246"
+                    : "#D9A441",
               }}
             />
             <Button
-              variant="outlined"
-              color="primary"
-              disabled={dropboxLoading}
-              onClick={handleConnectDropbox}
-            >
-              {i18n.t("smartDocuments.storage.connect")}
-            </Button>
-            <Button
               variant="contained"
               color="primary"
-              disabled={dropboxLoading || !dropboxStatus?.connected}
+              disabled={
+                dropboxLoading ||
+                !dropboxStatus?.enabled ||
+                !dropboxStatus?.configured
+              }
               onClick={handleValidateDropbox}
             >
               {i18n.t("smartDocuments.storage.validate")}

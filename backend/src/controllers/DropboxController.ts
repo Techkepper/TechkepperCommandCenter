@@ -2,37 +2,10 @@ import { Request, Response } from "express";
 
 import ShowDocumentService from "../services/DocumentServices/ShowDocumentService";
 import {
-  generateDropboxOAuthUrl,
   getDropboxStatus,
-  handleDropboxOAuthCallback,
   syncSmartDocumentToDropbox,
   validateDropboxConnection
 } from "../services/DropboxServices";
-
-export const oauthStart = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
-  const url = await generateDropboxOAuthUrl(req.user.id);
-  return res.json({ url });
-};
-
-export const oauthCallback = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
-  await handleDropboxOAuthCallback({
-    code: req.query.code,
-    state: req.query.state
-  });
-
-  return res
-    .status(200)
-    .type("html")
-    .send(
-      '<!doctype html><html><head><meta charset="utf-8"><title>Dropbox conectado</title></head><body style="font-family: Arial, sans-serif; background:#071009; color:#f4f8f3; padding:32px;"><h1>Dropbox conectado correctamente</h1><p>Puede cerrar esta ventana y volver a Techkepper Command Center.</p></body></html>'
-    );
-};
 
 export const status = async (
   _req: Request,

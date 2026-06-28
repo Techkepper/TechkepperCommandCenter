@@ -1,15 +1,15 @@
 import fs from "fs";
 import path from "path";
 import { request } from "https";
-import { createHmac } from "crypto";
 import { stringify } from "querystring";
 import { URL } from "url";
+
+import { Op } from "sequelize";
 
 import AppError from "../../errors/AppError";
 import ExternalStorageConnection from "../../models/ExternalStorageConnection";
 import SmartDocument from "../../models/SmartDocument";
 import { logger } from "../../utils/logger";
-import { decryptSecret, encryptSecret } from "../../utils/secretCipher";
 import { resolveDocumentPath } from "../DocumentServices/documentStorage";
 import {
   normalizeDocumentStatus,
@@ -17,20 +17,19 @@ import {
 } from "../DocumentServices/DocumentLifecycleService";
 
 const provider = "dropbox";
-const oauthBaseUrl = "https://www.dropbox.com/oauth2/authorize";
 const tokenUrl = "https://api.dropboxapi.com/oauth2/token";
 const apiBaseUrl = "https://api.dropboxapi.com/2";
 const contentBaseUrl = "https://content.dropboxapi.com/2";
-const stateMaxAgeMs = 10 * 60 * 1000;
 
 type DropboxStatus = {
   provider: "dropbox";
+  mode: "env";
+  storageMode: "env";
   enabled: boolean;
   configured: boolean;
   connected: boolean;
   status: string;
-  accountInfo: Record<string, unknown> | null;
-  lastSyncAt: Date | null;
+  lastValidatedAt: Date | null;
 };
 
 type HttpResponse<T> = {
@@ -40,20 +39,11 @@ type HttpResponse<T> = {
 
 type TokenResponse = {
   access_token?: string;
-  refresh_token?: string;
-  expires_in?: number;
-  token_type?: string;
-  uid?: string;
-  account_id?: string;
-  error?: string;
-  error_description?: string;
 };
 
 type DropboxUploadResponse = {
   id?: string;
-  name?: string;
   path_display?: string;
-  path_lower?: string;
 };
 
 const isDropboxEnabled = (): boolean =>
@@ -61,85 +51,37 @@ const isDropboxEnabled = (): boolean =>
   "true";
 
 const getDropboxConfig = () => ({
+  mode: String(process.env.DROPBOX_STORAGE_MODE || "env").toLowerCase(),
   appKey: process.env.DROPBOX_APP_KEY || "",
   appSecret: process.env.DROPBOX_APP_SECRET || "",
-  redirectUri:
-    process.env.DROPBOX_REDIRECT_URI ||
-    "http://localhost:8081/dropbox/oauth/callback"
+  refreshToken: process.env.DROPBOX_REFRESH_TOKEN || "",
+  redirectUri: process.env.DROPBOX_REDIRECT_URI || ""
 });
 
-const hasDropboxOAuthConfig = (): boolean => {
+const hasDropboxEnvConfig = (): boolean => {
   const config = getDropboxConfig();
-  return Boolean(config.appKey && config.appSecret && config.redirectUri);
+  return Boolean(
+    config.mode === "env" &&
+      config.appKey &&
+      config.appSecret &&
+      config.refreshToken &&
+      config.redirectUri
+  );
 };
 
-const safeJsonParse = (
-  value?: string | null
-): Record<string, unknown> | null => {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-};
-
-const encodeBasicAuth = (appKey: string, appSecret: string): string =>
-  Buffer.from(`${appKey}:${appSecret}`).toString("base64");
-
-const ensureOAuthConfig = (): ReturnType<typeof getDropboxConfig> => {
+const ensureEnvConfig = (): ReturnType<typeof getDropboxConfig> => {
   const config = getDropboxConfig();
-  if (!config.appKey || !config.appSecret || !config.redirectUri) {
+  if (!isDropboxEnabled() || !hasDropboxEnvConfig()) {
     throw new AppError(
-      "Configure las variables DROPBOX_APP_KEY, DROPBOX_APP_SECRET y DROPBOX_REDIRECT_URI antes de conectar Dropbox.",
-      400
+      "La configuración de Dropbox en el servidor está incompleta.",
+      409
     );
   }
   return config;
 };
 
-const buildStateSignature = (userId: string, timestamp: number): string => {
-  const secret = process.env.JWT_SECRET || process.env.ENCRYPTION_KEY;
-  if (!secret || secret.length < 16) {
-    throw new AppError("No hay una clave segura para firmar OAuth.", 500);
-  }
-  return createHmac("sha256", secret)
-    .update(`${userId}:${timestamp}`)
-    .digest("hex");
-};
-
-const createOAuthState = (userId: string): string => {
-  const timestamp = Date.now();
-  const signature = buildStateSignature(userId, timestamp);
-  return Buffer.from(`${userId}:${timestamp}:${signature}`, "utf8").toString(
-    "base64url"
-  );
-};
-
-const parseOAuthState = (state: unknown): { userId: string } => {
-  if (typeof state !== "string" || !state) {
-    throw new AppError("El estado OAuth no es válido.", 400);
-  }
-  const decoded = Buffer.from(state, "base64url").toString("utf8");
-  const [userId, timestampValue, signature] = decoded.split(":");
-  const timestamp = Number(timestampValue);
-  if (!userId || !Number.isFinite(timestamp) || !signature) {
-    throw new AppError("El estado OAuth no es válido.", 400);
-  }
-  if (Date.now() - timestamp > stateMaxAgeMs) {
-    throw new AppError(
-      "La autorización de Dropbox expiró. Intente de nuevo.",
-      400
-    );
-  }
-  if (buildStateSignature(userId, timestamp) !== signature) {
-    throw new AppError("El estado OAuth no coincide.", 400);
-  }
-  return { userId };
-};
+const encodeBasicAuth = (appKey: string, appSecret: string): string =>
+  Buffer.from(`${appKey}:${appSecret}`).toString("base64");
 
 const requestBuffer = <T>({
   url,
@@ -172,13 +114,22 @@ const requestBuffer = <T>({
         res.on("data", chunk => chunks.push(Buffer.from(chunk)));
         res.on("end", () => {
           const responseBuffer = Buffer.concat(chunks);
-          const text = responseBuffer.toString("utf8");
           const contentType = String(res.headers["content-type"] || "");
           const statusCode = res.statusCode || 500;
-          const data = contentType.includes("application/json")
-            ? JSON.parse(text || "{}")
-            : (responseBuffer as unknown);
-          resolve({ statusCode, data: data as T });
+          let data: T;
+          if (contentType.includes("application/json")) {
+            try {
+              data = JSON.parse(responseBuffer.toString("utf8") || "{}") as T;
+            } catch {
+              reject(
+                new AppError("Dropbox devolvió una respuesta inválida.", 502)
+              );
+              return;
+            }
+          } else {
+            data = responseBuffer as unknown as T;
+          }
+          resolve({ statusCode, data });
         });
       }
     );
@@ -213,10 +164,71 @@ const requestDropboxJson = async <T>({
   return response.data;
 };
 
-const requestDropboxToken = async (
-  params: Record<string, string>
-): Promise<TokenResponse> => {
-  const config = ensureOAuthConfig();
+const getConnection = async (): Promise<ExternalStorageConnection | null> =>
+  ExternalStorageConnection.findOne({ where: { provider } });
+
+const persistConnectionStatus = async ({
+  status,
+  accountInfo,
+  validated = false
+}: {
+  status: string;
+  accountInfo?: Record<string, unknown> | null;
+  validated?: boolean;
+}): Promise<void> => {
+  const existing = await getConnection();
+  const values = {
+    status,
+    encryptedRefreshToken: null,
+    ...(accountInfo !== undefined
+      ? { accountInfo: accountInfo ? JSON.stringify(accountInfo) : null }
+      : {}),
+    ...(validated ? { lastSyncAt: new Date() } : {})
+  };
+  if (existing) {
+    await existing.update(values);
+    return;
+  }
+  await ExternalStorageConnection.create({
+    provider,
+    accountInfo: null,
+    createdById: null,
+    updatedById: null,
+    lastSyncAt: null,
+    ...values
+  } as unknown as ExternalStorageConnection);
+};
+
+export const getDropboxStatus = async (): Promise<DropboxStatus> => {
+  let connection = await getConnection();
+  if (connection?.encryptedRefreshToken) {
+    await connection.update({
+      encryptedRefreshToken: null,
+      status: "not_connected",
+      accountInfo: null,
+      lastSyncAt: null
+    });
+    connection = await getConnection();
+  }
+  const enabled = isDropboxEnabled();
+  const configured = hasDropboxEnvConfig();
+  const connected = Boolean(
+    enabled && configured && connection?.status === "connected"
+  );
+  return {
+    provider,
+    mode: "env",
+    storageMode: "env",
+    enabled,
+    configured,
+    connected,
+    status: connected ? "connected" : connection?.status || "not_connected",
+    lastValidatedAt: connection?.lastSyncAt || null
+  };
+};
+
+export const renewDropboxAccessToken = async (): Promise<string> => {
+  const config = ensureEnvConfig();
   const response = await requestBuffer<TokenResponse>({
     url: tokenUrl,
     headers: {
@@ -226,137 +238,46 @@ const requestDropboxToken = async (
       )}`,
       "Content-Type": "application/x-www-form-urlencoded"
     },
-    body: stringify(params)
+    body: stringify({
+      refresh_token: config.refreshToken,
+      grant_type: "refresh_token"
+    })
   });
-
-  if (response.statusCode < 200 || response.statusCode >= 300) {
+  if (
+    response.statusCode < 200 ||
+    response.statusCode >= 300 ||
+    !response.data.access_token
+  ) {
     throw new AppError(
-      "Dropbox no aceptó la autorización. Revise la app y los permisos configurados.",
-      400
+      "Dropbox no pudo renovar la sesión. Revise la configuración del servidor.",
+      502
     );
   }
-  return response.data;
-};
-
-const getConnection = async (): Promise<ExternalStorageConnection | null> =>
-  ExternalStorageConnection.findOne({ where: { provider } });
-
-const getActiveConnection = async (): Promise<ExternalStorageConnection> => {
-  const connection = await getConnection();
-  if (!connection?.encryptedRefreshToken || connection.status !== "connected") {
-    throw new AppError("Dropbox no está conectado.", 409);
-  }
-  return connection;
-};
-
-export const getDropboxStatus = async (): Promise<DropboxStatus> => {
-  const connection = await getConnection();
-  return {
-    provider,
-    enabled: isDropboxEnabled(),
-    configured: hasDropboxOAuthConfig(),
-    connected: Boolean(connection?.encryptedRefreshToken),
-    status: connection?.status || "not_connected",
-    accountInfo: safeJsonParse(connection?.accountInfo),
-    lastSyncAt: connection?.lastSyncAt || null
-  };
-};
-
-export const generateDropboxOAuthUrl = async (
-  userId: string
-): Promise<string> => {
-  const config = ensureOAuthConfig();
-  const url = new URL(oauthBaseUrl);
-  url.searchParams.set("client_id", config.appKey);
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("token_access_type", "offline");
-  url.searchParams.set("redirect_uri", config.redirectUri);
-  url.searchParams.set("state", createOAuthState(userId));
-  return url.toString();
-};
-
-export const handleDropboxOAuthCallback = async ({
-  code,
-  state
-}: {
-  code: unknown;
-  state: unknown;
-}): Promise<DropboxStatus> => {
-  if (typeof code !== "string" || !code) {
-    throw new AppError("Dropbox no devolvió un código de autorización.", 400);
-  }
-  const { userId } = parseOAuthState(state);
-  const config = ensureOAuthConfig();
-  const token = await requestDropboxToken({
-    code,
-    grant_type: "authorization_code",
-    redirect_uri: config.redirectUri
-  });
-
-  if (!token.refresh_token) {
-    throw new AppError(
-      "Dropbox no devolvió refresh token. Revise que la app use token_access_type=offline.",
-      400
-    );
-  }
-
-  const accountInfo = token.access_token
-    ? await requestDropboxJson<Record<string, unknown>>({
-        url: `${apiBaseUrl}/users/get_current_account`,
-        accessToken: token.access_token
-      })
-    : null;
-
-  const existing = await getConnection();
-  const payload = {
-    provider,
-    status: "connected",
-    encryptedRefreshToken: encryptSecret(token.refresh_token),
-    accountInfo: accountInfo ? JSON.stringify(accountInfo) : null,
-    updatedById: Number(userId),
-    lastSyncAt: new Date()
-  };
-
-  if (existing) {
-    await existing.update(payload);
-  } else {
-    await ExternalStorageConnection.create({
-      ...payload,
-      createdById: Number(userId)
-    } as unknown as ExternalStorageConnection);
-  }
-
-  return getDropboxStatus();
-};
-
-export const renewDropboxAccessToken = async (): Promise<string> => {
-  const connection = await getActiveConnection();
-  const refreshToken = decryptSecret(
-    connection.encryptedRefreshToken as string
-  );
-  const token = await requestDropboxToken({
-    refresh_token: refreshToken,
-    grant_type: "refresh_token"
-  });
-  if (!token.access_token) {
-    throw new AppError("Dropbox no devolvió un access token válido.", 502);
-  }
-  return token.access_token;
+  return response.data.access_token;
 };
 
 export const validateDropboxConnection = async (): Promise<DropboxStatus> => {
-  const accessToken = await renewDropboxAccessToken();
-  const accountInfo = await requestDropboxJson<Record<string, unknown>>({
-    url: `${apiBaseUrl}/users/get_current_account`,
-    accessToken
-  });
-  const connection = await getActiveConnection();
-  await connection.update({
-    status: "connected",
-    accountInfo: JSON.stringify(accountInfo),
-    lastSyncAt: new Date()
-  });
-  return getDropboxStatus();
+  try {
+    const accessToken = await renewDropboxAccessToken();
+    const accountInfo = await requestDropboxJson<Record<string, unknown>>({
+      url: `${apiBaseUrl}/users/get_current_account`,
+      accessToken
+    });
+    await persistConnectionStatus({
+      status: "connected",
+      accountInfo,
+      validated: true
+    });
+    return getDropboxStatus();
+  } catch (error) {
+    await persistConnectionStatus({ status: "error" });
+    logger.warn(
+      { provider, errorName: (error as Error).name },
+      "Dropbox env connection validation failed"
+    );
+    if (error instanceof AppError) throw error;
+    throw new AppError("No fue posible validar la conexión con Dropbox.", 502);
+  }
 };
 
 export const uploadFileToDropbox = async ({
@@ -374,15 +295,14 @@ export const uploadFileToDropbox = async ({
       "Content-Type": "application/octet-stream",
       "Dropbox-API-Arg": JSON.stringify({
         path: dropboxPath,
-        mode: "add",
-        autorename: true,
+        mode: "overwrite",
+        autorename: false,
         mute: false,
         strict_conflict: false
       })
     },
     body: buffer
   });
-
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw new AppError(
       "No fue posible sincronizar el documento con Dropbox.",
@@ -452,57 +372,45 @@ export const syncSmartDocumentToDropbox = async ({
   userId?: string | number | null;
   preferredFolder?: "clients" | "collaborators" | "proposals" | "templates";
 }): Promise<SmartDocument | null> => {
-  if (!isDropboxEnabled()) return null;
-
   const document = await SmartDocument.findByPk(documentId);
-  if (!document) return null;
+  if (!document || document.storageStatus === "synced") return document;
+  if (!isDropboxEnabled()) return document;
 
+  await document.update({ storageProvider: provider });
   try {
-    const connection = await getConnection();
-    if (
-      !connection?.encryptedRefreshToken ||
-      connection.status !== "connected"
-    ) {
-      return null;
-    }
-
+    ensureEnvConfig();
     const localPath = resolveDocumentPath(document.storagePath);
     const buffer = await fs.promises.readFile(localPath);
     const dropboxFolder = resolveDocumentDropboxFolder(
       document,
       preferredFolder
     );
-    const dropboxPath = `${dropboxFolder}/${sanitizeDropboxSegment(
-      document.originalName || document.storedName
-    )}`;
+    const deterministicPath = `${dropboxFolder}/${
+      document.id
+    }-${sanitizeDropboxSegment(document.originalName || document.storedName)}`;
+    const dropboxPath =
+      document.externalStoragePath ||
+      document.storageFileId ||
+      deterministicPath;
     const uploaded = await uploadFileToDropbox({ buffer, dropboxPath });
     await document.update({
       storageProvider: provider,
       storageStatus: "synced",
-      storageFileId: uploaded.id || uploaded.path_display || dropboxPath,
+      storageFileId: uploaded.id || document.storageFileId || dropboxPath,
       externalStoragePath: uploaded.path_display || dropboxPath,
       storageSyncedAt: new Date()
     });
-    await connection.update({ lastSyncAt: new Date(), status: "connected" });
     await recordDocumentEvent({
       documentId: document.id,
       userId,
       eventType: "dropbox_sync_success",
       newStatus: normalizeDocumentStatus(document.status),
-      metadata: {
-        provider,
-        storageFileId: uploaded.id || null,
-        externalStoragePath: uploaded.path_display || dropboxPath
-      }
+      metadata: { provider }
     });
     return document.reload();
-  } catch (err) {
+  } catch (error) {
     logger.warn(
-      {
-        documentId: document.id,
-        provider,
-        errorName: (err as Error).name
-      },
+      { documentId: document.id, provider, errorName: (error as Error).name },
       "Dropbox document sync failed"
     );
     await document.update({
@@ -518,4 +426,49 @@ export const syncSmartDocumentToDropbox = async ({
     });
     return document.reload();
   }
+};
+
+export const retryPendingDropboxDocuments = async (): Promise<number> => {
+  if (!isDropboxEnabled() || !hasDropboxEnvConfig()) return 0;
+  const documents = await SmartDocument.findAll({
+    where: {
+      storageStatus: { [Op.in]: ["pending", "sync_failed"] }
+    },
+    order: [["updatedAt", "ASC"]],
+    limit: 50
+  });
+  logger.info(
+    { provider, candidatesFound: documents.length },
+    "Dropbox document retry candidates loaded"
+  );
+  await documents.reduce(
+    (previous, document) =>
+      previous.then(async () => {
+        const candidateContext = {
+          documentId: document.id,
+          storageProvider: document.storageProvider,
+          storageStatus: document.storageStatus
+        };
+        logger.info(candidateContext, "Dropbox document retry started");
+        const result = await syncSmartDocumentToDropbox({
+          documentId: document.id,
+          userId: null
+        });
+        const succeeded = result?.storageStatus === "synced";
+        const resultContext = {
+          ...candidateContext,
+          result: succeeded ? "success" : "failed",
+          resultingStorageProvider: result?.storageProvider || null,
+          resultingStorageStatus: result?.storageStatus || null
+        };
+        if (succeeded) {
+          logger.info(resultContext, "Dropbox document retry finished");
+        } else {
+          logger.warn(resultContext, "Dropbox document retry finished");
+        }
+        return result;
+      }),
+    Promise.resolve<SmartDocument | null>(null)
+  );
+  return documents.length;
 };
