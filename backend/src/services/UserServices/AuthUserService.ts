@@ -1,3 +1,4 @@
+import { getRounds, hash } from "bcryptjs";
 import User from "../../models/User";
 import AppError from "../../errors/AppError";
 import {
@@ -6,7 +7,6 @@ import {
 } from "../../helpers/CreateTokens";
 import { SerializeUser } from "../../helpers/SerializeUser";
 import Queue from "../../models/Queue";
-import { getRounds, hash } from "bcryptjs";
 
 interface SerializedUser {
   id: number;
@@ -31,7 +31,9 @@ const AuthUserService = async ({
   email,
   password
 }: Request): Promise<Response> => {
-  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
   const user = await User.findOne({
     where: { email: normalizedEmail },
     include: ["queues"]
@@ -53,11 +55,14 @@ const AuthUserService = async ({
     await user.update({ passwordHash: await hash(password, 12) });
   }
 
+  await user.update({
+    lastActivityAt: new Date(),
+    availabilityStatus: "available"
+  });
+  await user.reload();
   const token = createAccessToken(user);
   const refreshToken = createRefreshToken(user);
-
   const serializedUser = SerializeUser(user);
-  await user.update({ lastActivityAt: new Date() });
 
   return {
     serializedUser,

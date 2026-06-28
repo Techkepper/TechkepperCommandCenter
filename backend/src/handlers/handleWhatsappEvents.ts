@@ -20,6 +20,7 @@ import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTi
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
+import AutoAssignTicketService from "../services/TicketServices/AutoAssignTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
@@ -312,6 +313,16 @@ export const handleMessage = async (
     await activeTicket.update(ticketUpdates);
 
     await CreateMessageService({ messageData });
+
+    if (
+      !processedMessage.fromMe &&
+      !contextPayload.groupContact &&
+      activeTicket.status === "pending" &&
+      !activeTicket.userId &&
+      activeTicket.queueId
+    ) {
+      activeTicket = await AutoAssignTicketService(activeTicket);
+    }
 
     await processVcardMessage(processedMessage);
 

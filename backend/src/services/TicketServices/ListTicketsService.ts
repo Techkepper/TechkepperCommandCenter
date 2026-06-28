@@ -129,7 +129,7 @@ const ListTicketsService = async ({
     {
       model: User,
       as: "user",
-      attributes: ["id", "name", "profile"]
+      attributes: ["id", "name", "profile", "availabilityStatus"]
     },
     {
       model: Ecosystem,
@@ -200,6 +200,50 @@ const ListTicketsService = async ({
     offset,
     order: [["updatedAt", "DESC"]]
   });
+
+  const pendingQueueIds = Array.from(
+    new Set(
+      tickets
+        .filter(ticket => ticket.status === "pending" && ticket.queueId)
+        .map(ticket => Number(ticket.queueId))
+    )
+  );
+  if (pendingQueueIds.length) {
+    const availableUsers = await User.findAll({
+      where: {
+        profile: "agent",
+        isActive: true,
+        availabilityStatus: "available"
+      },
+      attributes: ["id"],
+      include: [
+        {
+          model: Queue,
+          as: "queues",
+          attributes: ["id"],
+          through: { attributes: [] },
+          where: { id: { [Op.in]: pendingQueueIds } },
+          required: true
+        }
+      ]
+    });
+    const availableQueueIds = availableUsers.reduce((result, availableUser) => {
+      (availableUser.queues || []).forEach(queue => {
+        result.add(Number(queue.id));
+      });
+      return result;
+    }, new Set<number>());
+    tickets.forEach(ticket => {
+      ticket.setDataValue(
+        "noAvailableAgent",
+        Boolean(
+          ticket.status === "pending" &&
+            ticket.queueId &&
+            !availableQueueIds.has(Number(ticket.queueId))
+        )
+      );
+    });
+  }
 
   return {
     tickets,

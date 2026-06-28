@@ -49,9 +49,17 @@ const ListUsersService = async ({
           "isActive",
           "theme",
           "lastActivityAt",
+          "availabilityStatus",
           "createdAt"
         ]
-      : ["name", "id", "profile", "isActive", "lastActivityAt"],
+      : [
+          "name",
+          "id",
+          "profile",
+          "isActive",
+          "lastActivityAt",
+          "availabilityStatus"
+        ],
     limit,
     offset,
     order: [["createdAt", "DESC"]],

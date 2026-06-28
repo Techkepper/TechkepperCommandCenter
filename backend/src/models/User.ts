@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Table,
   Column,
@@ -58,6 +59,10 @@ class User extends Model<User> {
 
   @Column
   lastActivityAt: Date;
+
+  @Default("available")
+  @Column({ type: DataType.STRING(20), allowNull: false })
+  availabilityStatus: string;
 
   @ForeignKey(() => Whatsapp)
   @Column(DataType.INTEGER)

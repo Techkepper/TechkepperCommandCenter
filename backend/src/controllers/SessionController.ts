@@ -1,14 +1,17 @@
+import * as Yup from "yup";
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 
 import AuthUserService from "../services/UserServices/AuthUserService";
-import { SendRefreshToken } from "../helpers/SendRefreshToken";
-import { ClearRefreshToken } from "../helpers/SendRefreshToken";
+import {
+  SendRefreshToken,
+  ClearRefreshToken
+} from "../helpers/SendRefreshToken";
 import { RefreshTokenService } from "../services/AuthServices/RefreshTokenService";
 import User from "../models/User";
-import * as Yup from "yup";
 import { RevokeUserSockets } from "../helpers/EmitUserEvent";
 import { SerializeUser } from "../helpers/SerializeUser";
+import UpdateUserAvailabilityService from "../services/UserServices/UpdateUserAvailabilityService";
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const schema = Yup.object({
@@ -65,6 +68,12 @@ export const remove = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
+  await UpdateUserAvailabilityService({
+    targetUserId: req.user.id,
+    availabilityStatus: "offline",
+    actorUserId: req.user.id,
+    actorProfile: req.user.profile
+  });
   await User.increment("tokenVersion", { where: { id: req.user.id } });
   await RevokeUserSockets(req.user.id);
   ClearRefreshToken(res);

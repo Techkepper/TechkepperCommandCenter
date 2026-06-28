@@ -17,6 +17,7 @@ interface TicketData {
   queueId?: number | null;
   whatsappId?: number;
   ecosystemId?: number | null;
+  forceAssignUnavailable?: boolean;
 }
 
 interface Request {
@@ -24,6 +25,7 @@ interface Request {
   ticketId: string | number;
   performedByUserId?: string | number;
   performedByProfile?: string;
+  assignmentAction?: string;
 }
 
 interface Response {
@@ -59,8 +61,11 @@ const UpdateTicketService = async ({
   ticketData,
   ticketId,
   performedByUserId,
-  performedByProfile
+  performedByProfile,
+  assignmentAction
 }: Request): Promise<Response> => {
+  const forceAssignUnavailable = Boolean(ticketData.forceAssignUnavailable);
+  delete ticketData.forceAssignUnavailable;
   const incomingUserId =
     ticketData.userId === null || ticketData.userId === undefined
       ? undefined
@@ -116,6 +121,9 @@ const UpdateTicketService = async ({
     if (!newUser || !newUser.isActive) {
       throw new AppError("ERR_ASSIGNED_USER_INACTIVE", 400);
     }
+    if (newUser.availabilityStatus !== "available" && !forceAssignUnavailable) {
+      throw new AppError("ERR_USER_UNAVAILABLE_CONFIRMATION_REQUIRED", 409);
+    }
   }
 
   if (ticketData.whatsappId && ticket.whatsappId !== ticketData.whatsappId) {
@@ -152,14 +160,18 @@ const UpdateTicketService = async ({
 
   let assignmentEvent: TicketAssignmentEvent | undefined;
   if (assignmentChanged) {
-    let action = "assignment";
-    if (oldUserId && requestedUserId) {
+    let action = assignmentAction || "assignment";
+    if (!assignmentAction && oldUserId && requestedUserId) {
       action = "reassignment";
     } else if (
+      !assignmentAction &&
       requestedUserId &&
       Number(performedByUserId) === Number(requestedUserId)
     ) {
       action = "take";
+    }
+    if (forceAssignUnavailable && newUser?.availabilityStatus !== "available") {
+      action = "manual_assignment_to_unavailable_user";
     }
 
     assignmentEvent = await TicketAssignmentEvent.create({

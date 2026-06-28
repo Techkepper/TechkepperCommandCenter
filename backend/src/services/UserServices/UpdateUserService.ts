@@ -13,6 +13,7 @@ interface UserData {
   whatsappId?: number;
   isActive?: boolean;
   theme?: string;
+  availabilityStatus?: string;
 }
 
 interface Request {
@@ -39,7 +40,14 @@ const UpdateUserService = async ({
     profile: Yup.string().oneOf(["admin", "supervisor", "agent"]),
     password: Yup.string().min(12).max(128),
     isActive: Yup.boolean(),
-    theme: Yup.string().oneOf(["dark", "light"])
+    theme: Yup.string().oneOf(["dark", "light"]),
+    availabilityStatus: Yup.string().oneOf([
+      "available",
+      "busy",
+      "away",
+      "unavailable",
+      "offline"
+    ])
   });
 
   const {
@@ -50,7 +58,8 @@ const UpdateUserService = async ({
     queueIds,
     whatsappId,
     isActive,
-    theme
+    theme,
+    availabilityStatus
   } = userData;
 
   try {
@@ -60,7 +69,8 @@ const UpdateUserService = async ({
       profile,
       name,
       isActive,
-      theme
+      theme,
+      availabilityStatus
     });
   } catch (err) {
     throw new AppError(err.message);
@@ -73,6 +83,9 @@ const UpdateUserService = async ({
   if (name !== undefined) updateData.name = name;
   if (isActive !== undefined) updateData.isActive = isActive;
   if (theme !== undefined) updateData.theme = theme;
+  if (availabilityStatus !== undefined) {
+    updateData.availabilityStatus = availabilityStatus;
+  }
   if (whatsappId !== undefined) {
     updateData.whatsappId = whatsappId || null;
   }

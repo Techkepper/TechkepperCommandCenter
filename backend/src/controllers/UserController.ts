@@ -6,10 +6,8 @@ import ListUsersService from "../services/UserServices/ListUsersService";
 import UpdateUserService from "../services/UserServices/UpdateUserService";
 import ShowUserService from "../services/UserServices/ShowUserService";
 import DeleteUserService from "../services/UserServices/DeleteUserService";
-import {
-  EmitUserEvent,
-  RevokeUserSockets
-} from "../helpers/EmitUserEvent";
+import { EmitUserEvent, RevokeUserSockets } from "../helpers/EmitUserEvent";
+import UpdateUserAvailabilityService from "../services/UserServices/UpdateUserAvailabilityService";
 
 type IndexQuery = {
   searchParam: string;
@@ -38,7 +36,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     queueIds,
     whatsappId,
     isActive,
-    theme
+    theme,
+    availabilityStatus
   } = req.body;
 
   if (req.user.profile !== "admin") {
@@ -53,7 +52,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     queueIds,
     whatsappId,
     isActive,
-    theme
+    theme,
+    availabilityStatus
   });
 
   EmitUserEvent("create", user as Record<string, any>);
@@ -63,10 +63,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { userId } = req.params;
-  if (
-    req.user.profile === "agent" &&
-    Number(req.user.id) !== Number(userId)
-  ) {
+  if (req.user.profile === "agent" && Number(req.user.id) !== Number(userId)) {
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
@@ -107,6 +104,20 @@ export const update = async (
   }
 
   return res.status(200).json(user);
+};
+
+export const updateAvailability = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const targetUserId = req.params.userId || req.user.id;
+  const user = await UpdateUserAvailabilityService({
+    targetUserId,
+    availabilityStatus: req.body.availabilityStatus,
+    actorUserId: req.user.id,
+    actorProfile: req.user.profile
+  });
+  return res.json(user);
 };
 
 export const remove = async (

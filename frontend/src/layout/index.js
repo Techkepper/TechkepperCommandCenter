@@ -13,6 +13,8 @@ import {
   Menu,
   Switch,
   Tooltip,
+  FormControl,
+  Select,
 } from "@material-ui/core";
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
@@ -29,6 +31,11 @@ import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import { useThemeContext } from "../context/DarkMode";
 import { useLanguage } from "../context/Language";
+import toastError from "../errors/toastError";
+import {
+  availabilityStatusLabel,
+  availabilityStatusOptions,
+} from "../components/AvailabilityStatus";
 
 const LANGUAGE_LABELS = {
   es: "Español",
@@ -142,6 +149,12 @@ const useStyles = makeStyles((theme) => ({
   themeIcon: {
     color: theme.palette.text.primary,
   },
+  availabilitySelect: {
+    minWidth: 130,
+    marginRight: theme.spacing(1),
+    "& .MuiSelect-select": { paddingTop: 7, paddingBottom: 7 },
+    [theme.breakpoints.down("xs")]: { minWidth: 105 },
+  },
 }));
 
 const LoggedInLayout = ({ children }) => {
@@ -151,7 +164,8 @@ const LoggedInLayout = ({ children }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [langAnchorEl, setLangAnchorEl] = useState(null);
   const langMenuOpen = Boolean(langAnchorEl);
-  const { handleLogout, loading } = useContext(AuthContext);
+  const { handleLogout, loading, updateAvailabilityStatus } =
+    useContext(AuthContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { user } = useContext(AuthContext);
@@ -222,7 +236,7 @@ const LoggedInLayout = ({ children }) => {
         classes={{
           paper: clsx(
             classes.drawerPaper,
-            !drawerOpen && classes.drawerPaperClose
+            !drawerOpen && classes.drawerPaperClose,
           ),
         }}
         open={drawerOpen}
@@ -261,7 +275,7 @@ const LoggedInLayout = ({ children }) => {
             onClick={() => setDrawerOpen(!drawerOpen)}
             className={clsx(
               classes.menuButton,
-              drawerOpen && classes.menuButtonHidden
+              drawerOpen && classes.menuButtonHidden,
             )}
           >
             <MenuIcon />
@@ -274,6 +288,32 @@ const LoggedInLayout = ({ children }) => {
           >
             Techkepper Command Center
           </Typography>
+
+          {user.id && (
+            <FormControl
+              variant="outlined"
+              size="small"
+              className={classes.availabilitySelect}
+            >
+              <Select
+                value={
+                  availabilityStatusOptions.includes(user.availabilityStatus)
+                    ? user.availabilityStatus
+                    : "available"
+                }
+                onChange={(event) =>
+                  updateAvailabilityStatus(event.target.value).catch(toastError)
+                }
+                aria-label={i18n.t("users.availability.selector")}
+              >
+                {availabilityStatusOptions.map((status) => (
+                  <MenuItem key={status} value={status}>
+                    {availabilityStatusLabel(status)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
 
           <div className={classes.themeSwitchContainer}>
             <Brightness4Icon className={classes.themeIcon} />
@@ -317,9 +357,7 @@ const LoggedInLayout = ({ children }) => {
             ))}
           </Menu>
 
-          {user.id && (
-            <NotificationsPopOver className={classes.iconButton} />
-          )}
+          {user.id && <NotificationsPopOver className={classes.iconButton} />}
 
           <div>
             <IconButton

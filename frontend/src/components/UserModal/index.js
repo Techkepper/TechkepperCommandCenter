@@ -28,6 +28,10 @@ import toastError from "../../errors/toastError";
 import QueueSelect from "../QueueSelect";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import useWhatsApps from "../../hooks/useWhatsApps";
+import {
+  availabilityStatusLabel,
+  availabilityStatusOptions,
+} from "../AvailabilityStatus";
 
 const useStyles = makeStyles((theme) => ({
   row: {
@@ -53,6 +57,7 @@ const emptyUser = {
   profile: "agent",
   isActive: true,
   theme: "dark",
+  availabilityStatus: "available",
 };
 
 const UserModal = ({ open, onClose, userId }) => {
@@ -73,7 +78,7 @@ const UserModal = ({ open, onClose, userId }) => {
     password: Yup.string().test(
       "secure-password",
       i18n.t("userModal.extra.passwordRule"),
-      (value) => !value || value.length >= 10
+      (value) => !value || value.length >= 10,
     ),
     email: Yup.string()
       .email(i18n.t("userModal.extra.invalidEmail"))
@@ -167,7 +172,9 @@ const UserModal = ({ open, onClose, userId }) => {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <IconButton onClick={() => setShowPassword((value) => !value)}>
+                        <IconButton
+                          onClick={() => setShowPassword((value) => !value)}
+                        >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
@@ -217,7 +224,9 @@ const UserModal = ({ open, onClose, userId }) => {
                         </InputLabel>
                         <Select
                           value={whatsappId}
-                          onChange={(event) => setWhatsappId(event.target.value)}
+                          onChange={(event) =>
+                            setWhatsappId(event.target.value)
+                          }
                           label={i18n.t("userModal.extra.whatsappConnection")}
                         >
                           <MenuItem value="">
@@ -236,6 +245,25 @@ const UserModal = ({ open, onClose, userId }) => {
                     selectedQueueIds={selectedQueueIds}
                     onChange={setSelectedQueueIds}
                   />
+                  <FormControl variant="outlined" margin="dense" fullWidth>
+                    <InputLabel>
+                      {i18n.t("users.availability.selector")}
+                    </InputLabel>
+                    <Field
+                      as={Select}
+                      name="availabilityStatus"
+                      label={i18n.t("users.availability.selector")}
+                    >
+                      {availabilityStatusOptions.map((status) => (
+                        <MenuItem key={status} value={status}>
+                          {availabilityStatusLabel(status)}
+                        </MenuItem>
+                      ))}
+                      <MenuItem value="offline">
+                        {availabilityStatusLabel("offline")}
+                      </MenuItem>
+                    </Field>
+                  </FormControl>
                   <FormControlLabel
                     control={
                       <Switch
@@ -264,7 +292,10 @@ const UserModal = ({ open, onClose, userId }) => {
               >
                 {i18n.t("userModal.extra.saveUser")}
                 {isSubmitting && (
-                  <CircularProgress size={24} className={classes.buttonProgress} />
+                  <CircularProgress
+                    size={24}
+                    className={classes.buttonProgress}
+                  />
                 )}
               </Button>
             </DialogActions>

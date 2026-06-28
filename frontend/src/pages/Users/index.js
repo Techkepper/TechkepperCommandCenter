@@ -30,6 +30,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import UserModal from "../../components/UserModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
+import { AvailabilityChip } from "../../components/AvailabilityStatus";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_USERS") {
@@ -253,6 +254,9 @@ const Users = () => {
                 {i18n.t("users.table.status")}
               </TableCell>
               <TableCell align="center">
+                {i18n.t("users.availability.column")}
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("users.table.actions")}
               </TableCell>
             </TableRow>
@@ -278,6 +282,9 @@ const Users = () => {
                     />
                   </TableCell>
                   <TableCell align="center">
+                    <AvailabilityChip status={user.availabilityStatus} />
+                  </TableCell>
+                  <TableCell align="center">
                     <IconButton
                       size="small"
                       onClick={() => handleEditUser(user)}
@@ -297,7 +304,7 @@ const Users = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={6} />}
+              {loading && <TableRowSkeleton columns={7} />}
             </>
           </TableBody>
         </Table>

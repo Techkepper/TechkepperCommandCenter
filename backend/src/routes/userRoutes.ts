@@ -8,14 +8,22 @@ const userRoutes = Router();
 
 userRoutes.get("/users", isAuth, UserController.index);
 
-userRoutes.post(
-  "/users",
-  isAuth,
-  requireRole("admin"),
-  UserController.store
-);
+userRoutes.post("/users", isAuth, requireRole("admin"), UserController.store);
 
 userRoutes.put("/users/:userId", isAuth, UserController.update);
+
+userRoutes.patch(
+  "/users/me/availability",
+  isAuth,
+  UserController.updateAvailability
+);
+
+userRoutes.patch(
+  "/users/:userId/availability",
+  isAuth,
+  requireRole("admin"),
+  UserController.updateAvailability
+);
 
 userRoutes.get("/users/:userId", isAuth, UserController.show);
 
