@@ -23,6 +23,7 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import AutoAssignTicketService from "../services/TicketServices/AutoAssignTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
 import AfterHoursAutoReplyService from "../services/BusinessHoursServices/AfterHoursAutoReplyService";
+import UrgentAfterHoursAlertService from "../services/BusinessHoursServices/UrgentAfterHoursAlertService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
@@ -316,6 +317,23 @@ export const handleMessage = async (
     await CreateMessageService({ messageData });
 
     if (!processedMessage.fromMe && !contextPayload.groupContact) {
+      const receivedAt = Number.isFinite(processedMessage.timestamp)
+        ? new Date(processedMessage.timestamp * 1000)
+        : new Date();
+      UrgentAfterHoursAlertService({
+        ticket: activeTicket,
+        messageBody: processedMessage.body,
+        receivedAt
+      }).catch(error => {
+        logger.warn(
+          {
+            ticketId: activeTicket.id,
+            errorName: error instanceof Error ? error.name : "UnknownError"
+          },
+          "urgent_after_hours_email_failed"
+        );
+      });
+
       try {
         await AfterHoursAutoReplyService(activeTicket);
       } catch (error) {

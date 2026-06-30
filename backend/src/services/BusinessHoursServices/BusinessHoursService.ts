@@ -11,23 +11,52 @@ export const SPECIAL_DATE_TYPES = [
   "custom"
 ] as const;
 
-const DEFAULT_AFTER_HOURS_MESSAGE = `Hola, gracias por comunicarse con Techkepper Company S.A. 👋
+const URGENT_REPLY_INSTRUCTION =
+  "Si su caso es urgente, responda con la palabra URGENTE y una breve descripción del problema.";
+
+const LEGACY_DEFAULT_AFTER_HOURS_MESSAGE = `Hola, gracias por comunicarse con Techkepper Company S.A. 👋
 
 Hemos recibido su mensaje correctamente. Nuestro horario de atención es de lunes a viernes de 9:00 a.m. a 5:00 p.m.
 
 Su solicitud queda registrada y nuestro equipo le dará seguimiento en el próximo horario hábil.`;
 
-const DEFAULT_NON_WORKING_MESSAGE = `Hola, gracias por comunicarse con Techkepper Company S.A. 👋
+const DEFAULT_AFTER_HOURS_MESSAGE = `${LEGACY_DEFAULT_AFTER_HOURS_MESSAGE}
+
+${URGENT_REPLY_INSTRUCTION}`;
+
+const LEGACY_DEFAULT_NON_WORKING_MESSAGE = `Hola, gracias por comunicarse con Techkepper Company S.A. 👋
 
 Actualmente estamos fuera de nuestro horario de atención. Su mensaje fue recibido correctamente y será atendido el próximo día hábil.
 
 Gracias por su comprensión.`;
 
+const DEFAULT_NON_WORKING_MESSAGE = `${LEGACY_DEFAULT_NON_WORKING_MESSAGE}
+
+${URGENT_REPLY_INSTRUCTION}`;
+
 export const DEFAULT_SPECIAL_DATE_MESSAGE = `Hola, gracias por comunicarse con Techkepper Company S.A. 👋
 
 En este momento nos encontramos en un periodo especial de cierre temporal. Su mensaje fue recibido correctamente y será atendido cuando retomemos operaciones.
 
-Gracias por su comprensión.`;
+Gracias por su comprensión.
+
+${URGENT_REPLY_INSTRUCTION}`;
+
+const DEFAULT_URGENT_KEYWORDS = [
+  "urgente",
+  "emergencia",
+  "caído",
+  "caido",
+  "no funciona",
+  "sistema caído",
+  "sistema caido",
+  "sin servicio",
+  "error crítico",
+  "error critico"
+];
+
+const DEFAULT_URGENT_SUBJECT =
+  "[URGENTE] Solicitud fuera de horario - Techkepper Command Center";
 
 const SETTING_KEYS = {
   enabled: "afterHoursAutoReplyEnabled",
@@ -37,7 +66,12 @@ const SETTING_KEYS = {
   endTime: "businessHoursEndTime",
   afterHoursMessage: "afterHoursReplyMessage",
   nonWorkingDayMessage: "nonWorkingDayReplyMessage",
-  cooldownHours: "afterHoursReplyCooldownHours"
+  cooldownHours: "afterHoursReplyCooldownHours",
+  urgentEmailEnabled: "urgentAfterHoursEmailEnabled",
+  urgentEmailRecipients: "urgentAfterHoursEmailRecipients",
+  urgentKeywords: "urgentAfterHoursKeywords",
+  urgentEmailSubject: "urgentAfterHoursEmailSubject",
+  urgentEmailCooldownMinutes: "urgentAfterHoursEmailCooldownMinutes"
 } as const;
 
 export interface BusinessHoursConfig {
@@ -49,6 +83,11 @@ export interface BusinessHoursConfig {
   afterHoursMessage: string;
   nonWorkingDayMessage: string;
   cooldownHours: number;
+  urgentEmailEnabled: boolean;
+  urgentEmailRecipients: string[];
+  urgentKeywords: string[];
+  urgentEmailSubject: string;
+  urgentEmailCooldownMinutes: number;
 }
 
 export interface BusinessHoursEvaluation {
@@ -56,6 +95,25 @@ export interface BusinessHoursEvaluation {
   message: string | null;
   specialDateId?: number;
 }
+
+const parseList = (value?: string): string[] => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map(String)
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+  } catch (_error) {
+    // Environment values may be comma, semicolon or newline separated.
+  }
+  return value
+    .split(/[;,\n]/)
+    .map(item => item.trim())
+    .filter(Boolean);
+};
 
 const defaults = (): BusinessHoursConfig => ({
   enabled: process.env.ENABLE_AFTER_HOURS_AUTO_REPLY === "true",
@@ -68,8 +126,22 @@ const defaults = (): BusinessHoursConfig => ({
   cooldownHours: Math.max(
     1,
     Number(process.env.AFTER_HOURS_REPLY_COOLDOWN_HOURS) || 12
+  ),
+  urgentEmailEnabled: process.env.URGENT_AFTER_HOURS_EMAIL_ENABLED === "true",
+  urgentEmailRecipients: parseList(process.env.URGENT_AFTER_HOURS_EMAIL_TO),
+  urgentKeywords: DEFAULT_URGENT_KEYWORDS,
+  urgentEmailSubject: DEFAULT_URGENT_SUBJECT,
+  urgentEmailCooldownMinutes: Math.max(
+    1,
+    Number(process.env.URGENT_AFTER_HOURS_EMAIL_COOLDOWN_MINUTES) || 30
   )
 });
+
+const useCurrentDefault = (
+  value: string | undefined,
+  legacyDefault: string,
+  currentDefault: string
+): string => (!value || value === legacyDefault ? currentDefault : value);
 
 const parseWorkingDays = (value: string | undefined): number[] => {
   try {
@@ -115,15 +187,36 @@ export const getBusinessHoursConfig =
       workingDays: parseWorkingDays(values.get(SETTING_KEYS.workingDays)),
       startTime: values.get(SETTING_KEYS.startTime) || fallback.startTime,
       endTime: values.get(SETTING_KEYS.endTime) || fallback.endTime,
-      afterHoursMessage:
-        values.get(SETTING_KEYS.afterHoursMessage) ||
-        fallback.afterHoursMessage,
-      nonWorkingDayMessage:
-        values.get(SETTING_KEYS.nonWorkingDayMessage) ||
-        fallback.nonWorkingDayMessage,
+      afterHoursMessage: useCurrentDefault(
+        values.get(SETTING_KEYS.afterHoursMessage),
+        LEGACY_DEFAULT_AFTER_HOURS_MESSAGE,
+        fallback.afterHoursMessage
+      ),
+      nonWorkingDayMessage: useCurrentDefault(
+        values.get(SETTING_KEYS.nonWorkingDayMessage),
+        LEGACY_DEFAULT_NON_WORKING_MESSAGE,
+        fallback.nonWorkingDayMessage
+      ),
       cooldownHours: Math.max(
         1,
         Number(values.get(SETTING_KEYS.cooldownHours)) || fallback.cooldownHours
+      ),
+      urgentEmailEnabled: values.has(SETTING_KEYS.urgentEmailEnabled)
+        ? values.get(SETTING_KEYS.urgentEmailEnabled) === "true"
+        : fallback.urgentEmailEnabled,
+      urgentEmailRecipients: values.has(SETTING_KEYS.urgentEmailRecipients)
+        ? parseList(values.get(SETTING_KEYS.urgentEmailRecipients))
+        : fallback.urgentEmailRecipients,
+      urgentKeywords: values.has(SETTING_KEYS.urgentKeywords)
+        ? parseList(values.get(SETTING_KEYS.urgentKeywords))
+        : fallback.urgentKeywords,
+      urgentEmailSubject:
+        values.get(SETTING_KEYS.urgentEmailSubject) ||
+        fallback.urgentEmailSubject,
+      urgentEmailCooldownMinutes: Math.max(
+        1,
+        Number(values.get(SETTING_KEYS.urgentEmailCooldownMinutes)) ||
+          fallback.urgentEmailCooldownMinutes
       )
     };
   };
@@ -136,6 +229,13 @@ export const updateBusinessHoursConfig = async (
     .filter(day => Number.isInteger(day) && day >= 0 && day <= 6)
     .sort();
   const cooldownHours = Number(input.cooldownHours);
+  const urgentEmailCooldownMinutes = Number(input.urgentEmailCooldownMinutes);
+  const urgentEmailRecipients = Array.from(
+    new Set((input.urgentEmailRecipients || []).map(item => item.trim()))
+  ).filter(Boolean);
+  const urgentKeywords = Array.from(
+    new Set((input.urgentKeywords || []).map(item => item.trim()))
+  ).filter(Boolean);
   validateTimezone(input.timezone);
   if (
     !validateTime(input.startTime) ||
@@ -144,7 +244,17 @@ export const updateBusinessHoursConfig = async (
     !input.nonWorkingDayMessage?.trim() ||
     !Number.isFinite(cooldownHours) ||
     cooldownHours < 1 ||
-    cooldownHours > 720
+    cooldownHours > 720 ||
+    !Number.isFinite(urgentEmailCooldownMinutes) ||
+    urgentEmailCooldownMinutes < 1 ||
+    urgentEmailCooldownMinutes > 10080 ||
+    !input.urgentEmailSubject?.trim() ||
+    input.urgentEmailSubject.trim().length > 255 ||
+    urgentKeywords.length === 0 ||
+    urgentKeywords.some(keyword => keyword.length > 100) ||
+    urgentEmailRecipients.some(
+      email => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    )
   ) {
     throw new AppError("ERR_INVALID_BUSINESS_HOURS_CONFIG", 400);
   }
@@ -157,7 +267,16 @@ export const updateBusinessHoursConfig = async (
     [SETTING_KEYS.endTime]: input.endTime,
     [SETTING_KEYS.afterHoursMessage]: input.afterHoursMessage.trim(),
     [SETTING_KEYS.nonWorkingDayMessage]: input.nonWorkingDayMessage.trim(),
-    [SETTING_KEYS.cooldownHours]: String(cooldownHours)
+    [SETTING_KEYS.cooldownHours]: String(cooldownHours),
+    [SETTING_KEYS.urgentEmailEnabled]: String(
+      Boolean(input.urgentEmailEnabled)
+    ),
+    [SETTING_KEYS.urgentEmailRecipients]: JSON.stringify(urgentEmailRecipients),
+    [SETTING_KEYS.urgentKeywords]: JSON.stringify(urgentKeywords),
+    [SETTING_KEYS.urgentEmailSubject]: input.urgentEmailSubject.trim(),
+    [SETTING_KEYS.urgentEmailCooldownMinutes]: String(
+      urgentEmailCooldownMinutes
+    )
   };
 
   await Promise.all(
@@ -205,11 +324,11 @@ const timeToMinutes = (value: string): number => {
   return hours * 60 + minutes;
 };
 
-export const evaluateBusinessHours = async (
-  now = new Date()
+export const evaluateBusinessHoursCondition = async (
+  now = new Date(),
+  loadedConfig?: BusinessHoursConfig
 ): Promise<BusinessHoursEvaluation> => {
-  const config = await getBusinessHoursConfig();
-  if (!config.enabled) return { replyType: null, message: null };
+  const config = loadedConfig || (await getBusinessHoursConfig());
 
   const local = localDateTime(now, config.timezone);
   const specialDate = await BusinessHoursSpecialDate.findOne({
@@ -247,6 +366,15 @@ export const evaluateBusinessHours = async (
   return inside
     ? { replyType: null, message: null }
     : { replyType: "after_hours", message: config.afterHoursMessage };
+};
+
+export const evaluateBusinessHours = async (
+  now = new Date()
+): Promise<BusinessHoursEvaluation> => {
+  const config = await getBusinessHoursConfig();
+  if (!config.enabled) return { replyType: null, message: null };
+
+  return evaluateBusinessHoursCondition(now, config);
 };
 
 export const listSpecialDates = (): Promise<BusinessHoursSpecialDate[]> =>

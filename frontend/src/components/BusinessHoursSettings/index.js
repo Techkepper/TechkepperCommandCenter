@@ -32,12 +32,21 @@ En este momento nos encontramos en un periodo especial de cierre temporal. Su me
 
 Gracias por su comprensión.`;
 
+const urgentInstruction =
+  "Si su caso es urgente, responda con la palabra URGENTE y una breve descripción del problema.";
+
+const splitList = (value) =>
+  value
+    .split(/[;,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 const emptySpecialDate = {
   name: "",
   type: "holiday",
   startDate: "",
   endDate: "",
-  message: specialMessage,
+  message: `${specialMessage}\n\n${urgentInstruction}`,
   active: true,
 };
 
@@ -88,7 +97,7 @@ const BusinessHoursSettings = ({ cardClass }) => {
       "workingDays",
       selected
         ? config.workingDays.filter((item) => item !== day)
-        : [...config.workingDays, day],
+        : [...config.workingDays, day]
     );
   };
 
@@ -276,6 +285,81 @@ const BusinessHoursSettings = ({ cardClass }) => {
             value={config.nonWorkingDayMessage}
             onChange={(event) =>
               setValue("nonWorkingDayMessage", event.target.value)
+            }
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <Box mt={2} pt={2} borderTop="1px solid rgba(142, 230, 63, 0.18)">
+            <Typography variant="h6">Alertas urgentes por correo</Typography>
+            <Typography color="textSecondary" variant="body2">
+              Se envían únicamente fuera de horario, en días no laborables o
+              durante una fecha especial activa.
+            </Typography>
+          </Box>
+        </Grid>
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={
+              <Switch
+                color="primary"
+                checked={Boolean(config.urgentEmailEnabled)}
+                onChange={(event) =>
+                  setValue("urgentEmailEnabled", event.target.checked)
+                }
+              />
+            }
+            label="Activar alertas urgentes por correo"
+          />
+        </Grid>
+        <Grid item xs={12} sm={8}>
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            variant="outlined"
+            label="Correos destinatarios"
+            helperText="Separe múltiples correos con coma o una línea nueva."
+            value={(config.urgentEmailRecipients || []).join("\n")}
+            onChange={(event) =>
+              setValue("urgentEmailRecipients", splitList(event.target.value))
+            }
+          />
+        </Grid>
+        <Grid item xs={12} sm={4}>
+          <TextField
+            fullWidth
+            type="number"
+            variant="outlined"
+            label="Cooldown urgente (minutos)"
+            inputProps={{ min: 1, max: 10080 }}
+            value={config.urgentEmailCooldownMinutes}
+            onChange={(event) =>
+              setValue("urgentEmailCooldownMinutes", Number(event.target.value))
+            }
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            label="Asunto del correo"
+            value={config.urgentEmailSubject}
+            onChange={(event) =>
+              setValue("urgentEmailSubject", event.target.value)
+            }
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            variant="outlined"
+            label="Palabras clave de urgencia"
+            helperText="Una palabra o frase por línea."
+            value={(config.urgentKeywords || []).join("\n")}
+            onChange={(event) =>
+              setValue("urgentKeywords", splitList(event.target.value))
             }
           />
         </Grid>
