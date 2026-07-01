@@ -4,6 +4,8 @@ import CreateUserService from "../../../services/UserServices/CreateUserService"
 import UpdateUserService from "../../../services/UserServices/UpdateUserService";
 import { disconnect, truncate } from "../../utils/database";
 
+const testPassword = () => faker.internet.password(12);
+
 describe("User", () => {
   beforeEach(async () => {
     await truncate();
@@ -21,7 +23,7 @@ describe("User", () => {
     const newUser = await CreateUserService({
       name: faker.name.findName(),
       email: faker.internet.email(),
-      password: faker.internet.password()
+      password: testPassword()
     });
 
     const updatedUser = await UpdateUserService({
@@ -43,16 +45,16 @@ describe("User", () => {
       email: faker.internet.email()
     };
 
-    expect(UpdateUserService({ userId, userData })).rejects.toBeInstanceOf(
-      AppError
-    );
+    await expect(
+      UpdateUserService({ userId, userData })
+    ).rejects.toBeInstanceOf(AppError);
   });
 
   it("should not be able to updated an user with invalid data", async () => {
     const newUser = await CreateUserService({
       name: faker.name.findName(),
       email: faker.internet.email(),
-      password: faker.internet.password()
+      password: testPassword()
     });
 
     const userId = newUser.id;
@@ -61,8 +63,8 @@ describe("User", () => {
       email: "test.worgn.email"
     };
 
-    expect(UpdateUserService({ userId, userData })).rejects.toBeInstanceOf(
-      AppError
-    );
+    await expect(
+      UpdateUserService({ userId, userData })
+    ).rejects.toBeInstanceOf(AppError);
   });
 });

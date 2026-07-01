@@ -1,4 +1,4 @@
-name: Deploy to Heroku
+name: Deploy Backend Heroku
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
       - feat/heroku-deploy
 
 concurrency:
-  group: deploy-heroku-${{ github.ref }}
+  group: deploy-heroku-backend-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -36,7 +36,6 @@ jobs:
           echo "HEROKU_BACKEND_APP=$backend_app" >> "$GITHUB_ENV"
           echo "HEROKU_FRONTEND_APP=$frontend_app" >> "$GITHUB_ENV"
           echo "Backend app: $backend_app"
-          echo "Frontend app: $frontend_app"
 
       - name: Validate secrets
         env:
@@ -60,7 +59,7 @@ jobs:
       - name: Install Heroku CLI
         run: curl https://cli-assets.heroku.com/install.sh | sh
 
-      - name: Verify Heroku access and apps
+      - name: Verify Heroku access and backend app
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
@@ -75,12 +74,6 @@ jobs:
           chmod +x scripts/heroku-sync-env.sh
           ./scripts/heroku-sync-env.sh "$HEROKU_BACKEND_APP" .env.production
 
-      - name: Sync frontend config vars
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-          HEROKU_FRONTEND_APP: ${{ env.HEROKU_FRONTEND_APP }}
-        run: ./scripts/heroku-sync-env.sh "$HEROKU_FRONTEND_APP" .env.production
-
       - name: Deploy backend
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
@@ -90,17 +83,9 @@ jobs:
           git subtree split --prefix=backend -b heroku-backend-deploy
           git push "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_BACKEND_APP}.git" heroku-backend-deploy:main --force
 
-      - name: Deploy frontend
-        env:
-          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
-        run: |
-          git subtree split --prefix=frontend -b heroku-frontend-deploy
-          git push "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_FRONTEND_APP}.git" heroku-frontend-deploy:main --force
-
       - name: Deploy summary
         run: |
-          echo "## Deploy completado" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Deploy backend completado" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Rama:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Backend:** https://${{ env.HEROKU_BACKEND_APP }}.herokuapp.com" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Frontend:** https://${{ env.HEROKU_FRONTEND_APP }}.herokuapp.com" >> "$GITHUB_STEP_SUMMARY"

@@ -4,7 +4,7 @@
   "description": "Backend multiagente de Techkepper Command Center",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "watch": "tsc -w",
     "start": "nodemon dist/server.js",
     "start:prod": "node dist/server.js",
