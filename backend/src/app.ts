@@ -36,7 +36,7 @@ app.use(
         callback(null, origin || true);
         return;
       }
-      callback(new AppError("ERR_CORS_ORIGIN_NOT_ALLOWED", 403));
+      callback(null, false);
     }
   })
 );
