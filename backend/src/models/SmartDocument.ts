@@ -97,6 +97,13 @@ class SmartDocument extends Model<SmartDocument> {
   storageStatus: string;
 
   @Column({
+    type: DataType.STRING(50),
+    allowNull: false,
+    defaultValue: "local_and_cloud"
+  })
+  storageRetention: string;
+
+  @Column({
     type: DataType.STRING(150),
     allowNull: false
   })

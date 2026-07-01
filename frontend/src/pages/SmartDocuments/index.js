@@ -12,6 +12,7 @@ import {
   InputAdornment,
   InputLabel,
   makeStyles,
+  Menu,
   MenuItem,
   Paper,
   Radio,
@@ -35,7 +36,9 @@ import GetAppOutlinedIcon from "@material-ui/icons/GetAppOutlined";
 import HistoryOutlinedIcon from "@material-ui/icons/HistoryOutlined";
 import PlayArrowOutlinedIcon from "@material-ui/icons/PlayArrowOutlined";
 import SearchIcon from "@material-ui/icons/Search";
+import StorageOutlinedIcon from "@material-ui/icons/StorageOutlined";
 import SwapHorizOutlinedIcon from "@material-ui/icons/SwapHorizOutlined";
+import CheckIcon from "@material-ui/icons/Check";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 
@@ -300,6 +303,52 @@ const getStorageStatusColor = (status) => {
   if (status === "synced") return "#63B246";
   if (status === "sync_failed") return "#D9534F";
   return "#D9A441";
+};
+
+const getStorageLocationColor = (location) => {
+  if (location === "local_and_cloud") return "#63B246";
+  if (location === "local_only") return "#D9A441";
+  if (location === "cloud_only") return "#5B8DEF";
+  return "#D9534F";
+};
+
+const storageLocationLabel = (location) =>
+  i18n.t(`smartDocuments.storage.locations.${location || "unavailable"}`, {
+    defaultValue: i18n.t("smartDocuments.storage.locations.unavailable"),
+  });
+
+const getDocumentRetentionMode = (document) =>
+  document.storageRetention || "local_and_cloud";
+
+const storageRetentionOptions = [
+  "local_and_cloud",
+  "cloud_only",
+  "local_only",
+];
+
+const getDocumentStorageLocation = (document) => {
+  if (document.storageLocation) return document.storageLocation;
+  if (
+    document.storageProvider === "dropbox" &&
+    document.storageStatus === "synced"
+  ) {
+    return "local_and_cloud";
+  }
+  return "local_only";
+};
+
+const buildStorageLocationTitle = (document) => {
+  const parts = [];
+  if (document.hasLocalCopy) {
+    parts.push(i18n.t("smartDocuments.storage.localCopy"));
+  }
+  if (document.hasCloudCopy) {
+    parts.push(i18n.t("smartDocuments.storage.cloudCopy"));
+  }
+  if (document.externalStoragePath) {
+    parts.push(document.externalStoragePath);
+  }
+  return parts.join(" · ");
 };
 
 const documentEventLabel = (eventType) =>
@@ -887,6 +936,14 @@ const SmartDocuments = () => {
     useState(null);
   const [dropboxStatus, setDropboxStatus] = useState(null);
   const [dropboxLoading, setDropboxLoading] = useState(false);
+  const [dropboxImportLoading, setDropboxImportLoading] = useState(false);
+  const [documentsRefreshToken, setDocumentsRefreshToken] = useState(0);
+  const [storageRetentionMenuAnchor, setStorageRetentionMenuAnchor] =
+    useState(null);
+  const [storageRetentionDocument, setStorageRetentionDocument] =
+    useState(null);
+  const [storageRetentionLoadingId, setStorageRetentionLoadingId] =
+    useState(null);
   const [dropboxSyncingDocumentId, setDropboxSyncingDocumentId] =
     useState(null);
   const dropboxHasError = dropboxStatus?.status === "error";
@@ -1103,6 +1160,7 @@ const SmartDocuments = () => {
     pageNumber,
     documentPurposeFilter,
     documentStatusFilter,
+    documentsRefreshToken,
   ]);
 
   useEffect(() => {
@@ -1310,6 +1368,58 @@ const SmartDocuments = () => {
       loadDropboxStatus();
     } finally {
       setDropboxLoading(false);
+    }
+  };
+
+  const handleImportFromDropbox = async () => {
+    setDropboxImportLoading(true);
+    try {
+      const { data } = await api.post("/dropbox/import");
+      toast.success(
+        i18n.t("smartDocuments.storage.toasts.importFinished", {
+          imported: data.imported,
+          skipped: data.skipped,
+          failed: data.failed,
+        }),
+      );
+      setDocuments([]);
+      setPageNumber(1);
+      setDocumentsRefreshToken((current) => current + 1);
+    } catch (error) {
+      toastError(error);
+    } finally {
+      setDropboxImportLoading(false);
+    }
+  };
+
+  const openStorageRetentionMenu = (event, document) => {
+    setStorageRetentionMenuAnchor(event.currentTarget);
+    setStorageRetentionDocument(document);
+  };
+
+  const closeStorageRetentionMenu = () => {
+    setStorageRetentionMenuAnchor(null);
+    setStorageRetentionDocument(null);
+  };
+
+  const handleChangeStorageRetention = async (storageRetention) => {
+    if (!storageRetentionDocument) return;
+    const documentId = storageRetentionDocument.id;
+    setStorageRetentionLoadingId(documentId);
+    closeStorageRetentionMenu();
+    try {
+      const { data } = await api.patch(
+        `/documents/${documentId}/storage-retention`,
+        { storageRetention },
+      );
+      setDocuments((current) =>
+        current.map((item) => (item.id === data.id ? data : item)),
+      );
+      toast.success(i18n.t("smartDocuments.storage.retention.changed"));
+    } catch (error) {
+      toastError(error);
+    } finally {
+      setStorageRetentionLoadingId(null);
     }
   };
 
@@ -2597,6 +2707,9 @@ const SmartDocuments = () => {
                 ? new Date(dropboxStatus.lastValidatedAt).toLocaleString()
                 : i18n.t("smartDocuments.storage.neverValidated")}
             </Typography>
+            <Typography variant="caption" color="textSecondary" display="block">
+              {i18n.t("smartDocuments.storage.importHint")}
+            </Typography>
           </div>
           <div className={classes.externalStorageActions}>
             <Chip
@@ -2623,10 +2736,25 @@ const SmartDocuments = () => {
               }}
             />
             <Button
+              variant="outlined"
+              color="primary"
+              disabled={
+                dropboxImportLoading ||
+                dropboxLoading ||
+                !dropboxStatus?.enabled ||
+                !dropboxStatus?.configured ||
+                !dropboxStatus?.connected
+              }
+              onClick={handleImportFromDropbox}
+            >
+              {i18n.t("smartDocuments.storage.importFromDropbox")}
+            </Button>
+            <Button
               variant="contained"
               color="primary"
               disabled={
                 dropboxLoading ||
+                dropboxImportLoading ||
                 !dropboxStatus?.enabled ||
                 !dropboxStatus?.configured
               }
@@ -2791,19 +2919,39 @@ const SmartDocuments = () => {
                         <Chip
                           size="small"
                           variant="outlined"
-                          label={`${i18n.t(
-                            "smartDocuments.storage.shortLabel",
-                          )}: ${storageStatusLabel(document.storageStatus)}`}
+                          title={buildStorageLocationTitle(document)}
+                          label={storageLocationLabel(
+                            getDocumentStorageLocation(document),
+                          )}
                           style={{
                             marginTop: 4,
-                            color: getStorageStatusColor(
-                              document.storageStatus,
+                            marginRight: 4,
+                            color: getStorageLocationColor(
+                              getDocumentStorageLocation(document),
                             ),
-                            borderColor: getStorageStatusColor(
-                              document.storageStatus,
+                            borderColor: getStorageLocationColor(
+                              getDocumentStorageLocation(document),
                             ),
                           }}
                         />
+                        {document.storageProvider === "dropbox" && (
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={`${i18n.t(
+                              "smartDocuments.storage.shortLabel",
+                            )}: ${storageStatusLabel(document.storageStatus)}`}
+                            style={{
+                              marginTop: 4,
+                              color: getStorageStatusColor(
+                                document.storageStatus,
+                              ),
+                              borderColor: getStorageStatusColor(
+                                document.storageStatus,
+                              ),
+                            }}
+                          />
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -2868,8 +3016,23 @@ const SmartDocuments = () => {
                           <GetAppOutlinedIcon />
                         </IconButton>
                       )}
+                      {user.profile === "admin" && (
+                        <IconButton
+                          size="small"
+                          title={i18n.t(
+                            "smartDocuments.storage.retention.title",
+                          )}
+                          disabled={storageRetentionLoadingId === document.id}
+                          onClick={(event) =>
+                            openStorageRetentionMenu(event, document)
+                          }
+                        >
+                          <StorageOutlinedIcon />
+                        </IconButton>
+                      )}
                       {user.profile === "admin" &&
-                        document.storageStatus !== "synced" && (
+                        document.storageStatus !== "synced" &&
+                        document.storageRetention !== "local_only" && (
                           <IconButton
                             size="small"
                             title={i18n.t(
@@ -3385,6 +3548,44 @@ const SmartDocuments = () => {
           </Paper>
         </>
       )}
+
+      <Menu
+        anchorEl={storageRetentionMenuAnchor}
+        open={Boolean(storageRetentionMenuAnchor)}
+        onClose={closeStorageRetentionMenu}
+        keepMounted
+      >
+        {storageRetentionOptions.map((mode) => {
+          const requiresDropbox = mode !== "local_only";
+          const isCurrent =
+            storageRetentionDocument &&
+            getDocumentRetentionMode(storageRetentionDocument) === mode;
+          return (
+            <MenuItem
+              key={mode}
+              dense
+              disabled={requiresDropbox && !dropboxStatus?.connected}
+              onClick={() => handleChangeStorageRetention(mode)}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                {isCurrent ? (
+                  <CheckIcon fontSize="small" style={{ marginTop: 2 }} />
+                ) : (
+                  <span style={{ width: 20 }} />
+                )}
+                <div>
+                  <Typography variant="body2">
+                    {i18n.t(`smartDocuments.storage.retention.${mode}`)}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {i18n.t(`smartDocuments.storage.retention.${mode}Hint`)}
+                  </Typography>
+                </div>
+              </div>
+            </MenuItem>
+          );
+        })}
+      </Menu>
     </MainContainer>
   );
 };

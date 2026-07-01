@@ -21,6 +21,13 @@ routes.post(
 );
 
 routes.post(
+  "/dropbox/import",
+  isAuth,
+  requireRole("admin"),
+  DropboxController.importFromDropbox
+);
+
+routes.post(
   "/documents/:documentId/dropbox-sync",
   isAuth,
   requireRole("admin"),

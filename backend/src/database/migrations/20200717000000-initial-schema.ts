@@ -3,9 +3,15 @@ import { QueryInterface } from "sequelize";
 /**
  * Esquema base consolidado (baseline).
  *
- * Esta migración reemplaza a todas las migraciones incrementales previas y crea
- * el esquema completo en un solo paso, para que levantar la app desde cero sea
- * lo más simple posible.
+ * Una sola migración para desarrollo: al resetear la base (docker compose down -v)
+ * y volver a levantar, todo el esquema queda listo en un paso.
+ *
+ * Incluye, entre otros:
+ * - Documentos inteligentes (Dropbox, retención local/nube, dossier/addendum)
+ * - ExternalStorageConnections
+ * - Collaborators.sex
+ * - Users.availabilityStatus
+ * - BusinessHoursSpecialDates y AfterHoursAutoReplyEvents
  *
  * Los nombres de tabla se declaran en CamelCase a propósito: así funciona tanto
  * en filesystems case-insensitive con lower_case_table_names=1 (macOS) como en
@@ -26,6 +32,7 @@ const createStatements: string[] = [
     \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
     \`theme\` varchar(255) NOT NULL DEFAULT 'dark',
     \`lastActivityAt\` datetime DEFAULT NULL,
+    \`availabilityStatus\` varchar(20) NOT NULL DEFAULT 'available',
     PRIMARY KEY (\`id\`),
     UNIQUE KEY \`email\` (\`email\`),
     KEY \`Users_whatsappId_foreign_idx\` (\`whatsappId\`),
@@ -219,11 +226,19 @@ const createStatements: string[] = [
     \`originalName\` varchar(255) NOT NULL,
     \`storedName\` varchar(255) NOT NULL,
     \`storagePath\` varchar(500) NOT NULL,
+    \`storageProvider\` varchar(50) NOT NULL DEFAULT 'local',
+    \`storageFileId\` varchar(255) DEFAULT NULL,
+    \`externalStoragePath\` varchar(500) DEFAULT NULL,
+    \`storageSyncedAt\` datetime DEFAULT NULL,
+    \`storageStatus\` varchar(50) NOT NULL DEFAULT 'pending',
+    \`storageRetention\` varchar(50) NOT NULL DEFAULT 'local_and_cloud',
     \`mimeType\` varchar(150) NOT NULL,
     \`size\` int(11) NOT NULL,
     \`category\` varchar(120) DEFAULT NULL,
     \`purpose\` varchar(80) DEFAULT NULL,
     \`status\` varchar(50) NOT NULL DEFAULT 'generated',
+    \`documentDate\` date DEFAULT NULL,
+    \`baseDocumentId\` int(11) DEFAULT NULL,
     \`tags\` text DEFAULT NULL,
     \`uploadedById\` int(11) NOT NULL,
     \`contactId\` int(11) DEFAULT NULL,
@@ -242,11 +257,37 @@ const createStatements: string[] = [
     KEY \`idx_smart_documents_created_at\` (\`createdAt\`),
     KEY \`idx_smart_documents_purpose\` (\`purpose\`),
     KEY \`idx_smart_documents_status\` (\`status\`),
+    KEY \`idx_smart_documents_base_document\` (\`baseDocumentId\`),
     CONSTRAINT \`smartdocuments_ibfk_1\` FOREIGN KEY (\`uploadedById\`) REFERENCES \`Users\` (\`id\`) ON UPDATE CASCADE,
     CONSTRAINT \`smartdocuments_ibfk_2\` FOREIGN KEY (\`contactId\`) REFERENCES \`Contacts\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT \`smartdocuments_ibfk_3\` FOREIGN KEY (\`ticketId\`) REFERENCES \`Tickets\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT \`smartdocuments_ibfk_4\` FOREIGN KEY (\`queueId\`) REFERENCES \`Queues\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT \`smartdocuments_ibfk_5\` FOREIGN KEY (\`ecosystemId\`) REFERENCES \`Ecosystems\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT \`smartdocuments_ibfk_5\` FOREIGN KEY (\`ecosystemId\`) REFERENCES \`Ecosystems\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`smartdocuments_ibfk_6\` FOREIGN KEY (\`baseDocumentId\`) REFERENCES \`SmartDocuments\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`ExternalStorageConnections\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`provider\` varchar(50) NOT NULL,
+    \`status\` varchar(50) NOT NULL DEFAULT 'not_connected',
+    \`encryptedRefreshToken\` text DEFAULT NULL,
+    \`accountInfo\` text DEFAULT NULL,
+    \`createdById\` int(11) DEFAULT NULL,
+    \`updatedById\` int(11) DEFAULT NULL,
+    \`lastSyncAt\` datetime DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`deletedAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`external_storage_provider_unique\` (\`provider\`),
+    KEY \`ExternalStorageConnections_createdById_idx\` (\`createdById\`),
+    KEY \`ExternalStorageConnections_updatedById_idx\` (\`updatedById\`),
+    CONSTRAINT \`ExternalStorageConnections_createdById_fk\`
+      FOREIGN KEY (\`createdById\`) REFERENCES \`Users\` (\`id\`)
+      ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT \`ExternalStorageConnections_updatedById_fk\`
+      FOREIGN KEY (\`updatedById\`) REFERENCES \`Users\` (\`id\`)
+      ON DELETE SET NULL ON UPDATE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
 
   `CREATE TABLE IF NOT EXISTS \`SmartDocumentEvents\` (
@@ -385,6 +426,7 @@ const createStatements: string[] = [
     \`phone\` varchar(80) DEFAULT NULL,
     \`address\` varchar(500) DEFAULT NULL,
     \`notes\` text DEFAULT NULL,
+    \`sex\` enum('female','male','unspecified') NOT NULL DEFAULT 'unspecified',
     \`queueId\` int(11) DEFAULT NULL,
     \`createdById\` int(11) NOT NULL,
     \`isActive\` tinyint(1) NOT NULL DEFAULT 1,
@@ -575,10 +617,39 @@ const createStatements: string[] = [
     CONSTRAINT \`internalnotificationsv2_ibfk_2\` FOREIGN KEY (\`createdById\`) REFERENCES \`Users\` (\`id\`) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT \`internalnotificationsv2_ibfk_3\` FOREIGN KEY (\`documentId\`) REFERENCES \`SmartDocuments\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT \`internalnotificationsv2_ibfk_4\` FOREIGN KEY (\`proposalId\`) REFERENCES \`CommercialProposals\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`BusinessHoursSpecialDates\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`name\` varchar(160) NOT NULL,
+    \`type\` varchar(30) NOT NULL,
+    \`startDate\` date NOT NULL,
+    \`endDate\` date NOT NULL,
+    \`message\` text NOT NULL,
+    \`active\` tinyint(1) NOT NULL DEFAULT 1,
+    \`createdAt\` datetime NOT NULL,
+    \`updatedAt\` datetime NOT NULL,
+    \`deletedAt\` datetime DEFAULT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`bh_special_date_range\` (\`active\`, \`startDate\`, \`endDate\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+
+  `CREATE TABLE IF NOT EXISTS \`AfterHoursAutoReplyEvents\` (
+    \`id\` int(11) NOT NULL AUTO_INCREMENT,
+    \`contactId\` int(11) NOT NULL,
+    \`ticketId\` int(11) NOT NULL,
+    \`replyType\` varchar(80) NOT NULL,
+    \`status\` varchar(20) NOT NULL,
+    \`detail\` varchar(255) DEFAULT NULL,
+    \`createdAt\` datetime NOT NULL,
+    PRIMARY KEY (\`id\`),
+    KEY \`after_hours_cooldown\` (\`contactId\`, \`replyType\`, \`status\`, \`createdAt\`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`
 ];
 
 const dropOrder: string[] = [
+  "AfterHoursAutoReplyEvents",
+  "BusinessHoursSpecialDates",
   "InternalNotificationsV2",
   "InternalNotifications",
   "CommercialProposalEvents",
@@ -593,6 +664,7 @@ const dropOrder: string[] = [
   "SmartDocumentTemplates",
   "SmartDocumentEvents",
   "SmartDocuments",
+  "ExternalStorageConnections",
   "TicketAssignmentEvents",
   "QuickAnswers",
   "WhatsappQueues",

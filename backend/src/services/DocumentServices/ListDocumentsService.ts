@@ -8,6 +8,7 @@ import Ecosystem from "../../models/Ecosystem";
 import { buildDocumentWhere } from "./documentPermissions";
 import { isDocumentPurpose } from "./documentTaxonomy";
 import { isDocumentStatus } from "./DocumentLifecycleService";
+import { serializeSmartDocuments } from "./documentSerialization";
 
 interface Request {
   searchParam?: string;
@@ -19,7 +20,7 @@ interface Request {
 }
 
 interface Response {
-  documents: SmartDocument[];
+  documents: Record<string, unknown>[];
   count: number;
   hasMore: boolean;
 }
@@ -63,7 +64,7 @@ const ListDocumentsService = async ({
   });
 
   return {
-    documents,
+    documents: await serializeSmartDocuments(documents),
     count,
     hasMore: count > offset + documents.length
   };

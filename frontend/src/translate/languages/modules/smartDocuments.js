@@ -97,6 +97,9 @@ export const smartDocuments = {
         statusError: "Error",
         shortLabel: "Dropbox",
         validate: "Validar conexión",
+        importFromDropbox: "Importar desde Dropbox",
+        importHint:
+          "Trae a Documentos inteligentes los archivos existentes en /TechkepperCommandCenter.",
         lastValidation: "Última validación",
         neverValidated: "Sin validar",
         statuses: {
@@ -104,9 +107,31 @@ export const smartDocuments = {
           pending: "Pendiente",
           sync_failed: "Error",
         },
+        locations: {
+          local_only: "Solo local",
+          cloud_only: "Solo nube",
+          local_and_cloud: "Local y nube",
+          unavailable: "Sin archivo",
+        },
+        localCopy: "Local",
+        cloudCopy: "Nube",
+        retention: {
+          title: "Ubicación del archivo",
+          local_and_cloud: "Local y nube",
+          local_and_cloudHint:
+            "Mantiene copia en el servidor y respaldo en Dropbox.",
+          cloud_only: "Solo en la nube",
+          cloud_onlyHint:
+            "Libera espacio local. Se descarga desde Dropbox cuando hace falta.",
+          local_only: "Solo local",
+          local_onlyHint: "No se sincroniza con Dropbox.",
+          changed: "Ubicación de almacenamiento actualizada.",
+        },
         toasts: {
           validated: "Conexión Dropbox validada correctamente.",
           retryFinished: "Sincronización Dropbox procesada.",
+          importFinished:
+            "Importación completada: {{imported}} nuevos, {{skipped}} omitidos, {{failed}} con error.",
         },
       },
       confirm: {
@@ -247,6 +272,8 @@ export const smartDocuments = {
         associated_base_document: "Documento base asociado",
         dropbox_sync_success: "Sincronizado con Dropbox",
         dropbox_sync_failed: "Error al sincronizar con Dropbox",
+        imported_from_dropbox: "Importado desde Dropbox",
+        storage_retention_changed: "Ubicación de almacenamiento cambiada",
         uploaded_existing_document: "Documento preexistente incorporado",
         deleted: "Eliminado",
         restored: "Restaurado",
@@ -490,6 +517,9 @@ export const smartDocuments = {
         statusError: "Error",
         shortLabel: "Dropbox",
         validate: "Validate connection",
+        importFromDropbox: "Import from Dropbox",
+        importHint:
+          "Brings existing files from /TechkepperCommandCenter into Smart Documents.",
         lastValidation: "Last validation",
         neverValidated: "Not validated",
         statuses: {
@@ -497,9 +527,31 @@ export const smartDocuments = {
           pending: "Pending",
           sync_failed: "Error",
         },
+        locations: {
+          local_only: "Local only",
+          cloud_only: "Cloud only",
+          local_and_cloud: "Local and cloud",
+          unavailable: "Unavailable",
+        },
+        localCopy: "Local",
+        cloudCopy: "Cloud",
+        retention: {
+          title: "File location",
+          local_and_cloud: "Local and cloud",
+          local_and_cloudHint:
+            "Keeps a server copy and a Dropbox backup.",
+          cloud_only: "Cloud only",
+          cloud_onlyHint:
+            "Frees local space. Downloads from Dropbox on demand.",
+          local_only: "Local only",
+          local_onlyHint: "Does not sync to Dropbox.",
+          changed: "Storage location updated.",
+        },
         toasts: {
           validated: "Dropbox connection validated successfully.",
           retryFinished: "Dropbox sync processed.",
+          importFinished:
+            "Import finished: {{imported}} new, {{skipped}} skipped, {{failed}} failed.",
         },
       },
       confirm: {
@@ -640,6 +692,8 @@ export const smartDocuments = {
         associated_base_document: "Base document associated",
         dropbox_sync_success: "Synced with Dropbox",
         dropbox_sync_failed: "Dropbox sync failed",
+        imported_from_dropbox: "Imported from Dropbox",
+        storage_retention_changed: "Storage location changed",
         uploaded_existing_document: "Existing document uploaded",
         deleted: "Deleted",
         restored: "Restored",
@@ -883,6 +937,9 @@ export const smartDocuments = {
         statusError: "Erro",
         shortLabel: "Dropbox",
         validate: "Validar conexão",
+        importFromDropbox: "Importar do Dropbox",
+        importHint:
+          "Traz para Documentos inteligentes os arquivos existentes em /TechkepperCommandCenter.",
         lastValidation: "Última validação",
         neverValidated: "Não validado",
         statuses: {
@@ -890,9 +947,31 @@ export const smartDocuments = {
           pending: "Pendente",
           sync_failed: "Erro",
         },
+        locations: {
+          local_only: "Só local",
+          cloud_only: "Só nuvem",
+          local_and_cloud: "Local e nuvem",
+          unavailable: "Indisponível",
+        },
+        localCopy: "Local",
+        cloudCopy: "Nuvem",
+        retention: {
+          title: "Localização do arquivo",
+          local_and_cloud: "Local e nuvem",
+          local_and_cloudHint:
+            "Mantém cópia no servidor e backup no Dropbox.",
+          cloud_only: "Só na nuvem",
+          cloud_onlyHint:
+            "Libera espaço local. Baixa do Dropbox quando necessário.",
+          local_only: "Só local",
+          local_onlyHint: "Não sincroniza com Dropbox.",
+          changed: "Localização de armazenamento atualizada.",
+        },
         toasts: {
           validated: "Conexão Dropbox validada corretamente.",
           retryFinished: "Sincronização Dropbox processada.",
+          importFinished:
+            "Importação concluída: {{imported}} novos, {{skipped}} omitidos, {{failed}} com erro.",
         },
       },
       confirm: {
@@ -1032,6 +1111,8 @@ export const smartDocuments = {
         associated_base_document: "Documento base associado",
         dropbox_sync_success: "Sincronizado com Dropbox",
         dropbox_sync_failed: "Erro ao sincronizar com Dropbox",
+        imported_from_dropbox: "Importado do Dropbox",
+        storage_retention_changed: "Localização de armazenamento alterada",
         uploaded_existing_document: "Documento existente incorporado",
         deleted: "Excluído",
         restored: "Restaurado",

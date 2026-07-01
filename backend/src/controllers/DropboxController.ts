@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
 
 import ShowDocumentService from "../services/DocumentServices/ShowDocumentService";
+import { serializeSmartDocument } from "../services/DocumentServices/documentSerialization";
 import {
   getDropboxStatus,
   syncSmartDocumentToDropbox,
   validateDropboxConnection
 } from "../services/DropboxServices";
+import { importDocumentsFromDropbox } from "../services/DropboxServices/importFromDropbox";
 
 export const status = async (
   _req: Request,
@@ -41,5 +43,13 @@ export const retryDocumentSync = async (
     userId: req.user.id,
     userProfile: req.user.profile
   });
-  return res.json(reloadedDocument);
+  return res.json(await serializeSmartDocument(reloadedDocument));
+};
+
+export const importFromDropbox = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const result = await importDocumentsFromDropbox(Number(req.user.id));
+  return res.json(result);
 };

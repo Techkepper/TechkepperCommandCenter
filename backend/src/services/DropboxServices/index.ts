@@ -10,13 +10,17 @@ import AppError from "../../errors/AppError";
 import ExternalStorageConnection from "../../models/ExternalStorageConnection";
 import SmartDocument from "../../models/SmartDocument";
 import { logger } from "../../utils/logger";
-import { resolveDocumentPath } from "../DocumentServices/documentStorage";
+import {
+  removeDocumentFile,
+  resolveDocumentPath
+} from "../DocumentServices/documentStorage";
 import {
   normalizeDocumentStatus,
   recordDocumentEvent
 } from "../DocumentServices/DocumentLifecycleService";
 
-const provider = "dropbox";
+export const dropboxProvider = "dropbox";
+const provider = dropboxProvider;
 const tokenUrl = "https://api.dropboxapi.com/oauth2/token";
 const apiBaseUrl = "https://api.dropboxapi.com/2";
 const contentBaseUrl = "https://content.dropboxapi.com/2";
@@ -46,7 +50,7 @@ type DropboxUploadResponse = {
   path_display?: string;
 };
 
-const isDropboxEnabled = (): boolean =>
+export const isDropboxEnabled = (): boolean =>
   String(process.env.DROPBOX_STORAGE_ENABLED || "false").toLowerCase() ===
   "true";
 
@@ -69,7 +73,7 @@ const hasDropboxEnvConfig = (): boolean => {
   );
 };
 
-const ensureEnvConfig = (): ReturnType<typeof getDropboxConfig> => {
+export const ensureEnvConfig = (): ReturnType<typeof getDropboxConfig> => {
   const config = getDropboxConfig();
   if (!isDropboxEnabled() || !hasDropboxEnvConfig()) {
     throw new AppError(
@@ -332,6 +336,17 @@ export const downloadFileFromDropbox = async (
   return response.data as unknown as Buffer;
 };
 
+export const deleteFileFromDropbox = async (
+  storagePathOrId: string
+): Promise<void> => {
+  const accessToken = await renewDropboxAccessToken();
+  await requestDropboxJson<{ metadata?: { id?: string } }>({
+    url: `${apiBaseUrl}/files/delete_v2`,
+    accessToken,
+    body: { path: storagePathOrId }
+  });
+};
+
 const sanitizeDropboxSegment = (value: string): string =>
   path
     .basename(value)
@@ -363,6 +378,13 @@ const resolveDocumentDropboxFolder = (
   return "/TechkepperCommandCenter/documents/clients";
 };
 
+const removeLocalDocumentCopyIfPresent = async (
+  document: SmartDocument
+): Promise<void> => {
+  if (document.storageRetention !== "cloud_only") return;
+  await removeDocumentFile(document.storagePath);
+};
+
 export const syncSmartDocumentToDropbox = async ({
   documentId,
   userId,
@@ -373,8 +395,14 @@ export const syncSmartDocumentToDropbox = async ({
   preferredFolder?: "clients" | "collaborators" | "proposals" | "templates";
 }): Promise<SmartDocument | null> => {
   const document = await SmartDocument.findByPk(documentId);
-  if (!document || document.storageStatus === "synced") return document;
+  if (!document || document.storageStatus === "synced") {
+    if (document?.storageRetention === "cloud_only") {
+      await removeLocalDocumentCopyIfPresent(document);
+    }
+    return document;
+  }
   if (!isDropboxEnabled()) return document;
+  if (document.storageRetention === "local_only") return document;
 
   await document.update({ storageProvider: provider });
   try {
@@ -407,7 +435,9 @@ export const syncSmartDocumentToDropbox = async ({
       newStatus: normalizeDocumentStatus(document.status),
       metadata: { provider }
     });
-    return document.reload();
+    const syncedDocument = await document.reload();
+    await removeLocalDocumentCopyIfPresent(syncedDocument);
+    return syncedDocument.reload();
   } catch (error) {
     logger.warn(
       { documentId: document.id, provider, errorName: (error as Error).name },
@@ -432,7 +462,8 @@ export const retryPendingDropboxDocuments = async (): Promise<number> => {
   if (!isDropboxEnabled() || !hasDropboxEnvConfig()) return 0;
   const documents = await SmartDocument.findAll({
     where: {
-      storageStatus: { [Op.in]: ["pending", "sync_failed"] }
+      storageStatus: { [Op.in]: ["pending", "sync_failed"] },
+      storageRetention: { [Op.ne]: "local_only" }
     },
     order: [["updatedAt", "ASC"]],
     limit: 50
@@ -471,4 +502,74 @@ export const retryPendingDropboxDocuments = async (): Promise<number> => {
     Promise.resolve<SmartDocument | null>(null)
   );
   return documents.length;
+};
+
+type DropboxListEntry = {
+  ".tag": string;
+  id?: string;
+  path_display?: string;
+  name?: string;
+  size?: number;
+  client_modified?: string;
+};
+
+type DropboxListFolderResponse = {
+  entries: DropboxListEntry[];
+  cursor?: string;
+  has_more?: boolean;
+};
+
+export type DropboxRemoteFile = {
+  id: string;
+  path_display: string;
+  name: string;
+  size: number;
+  client_modified?: string;
+};
+
+export const listDropboxFilesRecursive = async (
+  folderPath: string
+): Promise<DropboxRemoteFile[]> => {
+  const accessToken = await renewDropboxAccessToken();
+  const files: DropboxRemoteFile[] = [];
+  let cursor: string | undefined;
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await requestDropboxJson<DropboxListFolderResponse>({
+      url: cursor
+        ? `${apiBaseUrl}/files/list_folder/continue`
+        : `${apiBaseUrl}/files/list_folder`,
+      accessToken,
+      body: cursor
+        ? { cursor }
+        : {
+            path: folderPath,
+            recursive: true,
+            include_deleted: false
+          }
+    });
+
+    response.entries.forEach(entry => {
+      if (
+        entry[".tag"] === "file" &&
+        entry.id &&
+        entry.path_display &&
+        entry.name
+      ) {
+        files.push({
+          id: entry.id,
+          path_display: entry.path_display,
+          name: entry.name,
+          size: entry.size || 0,
+          client_modified: entry.client_modified
+        });
+      }
+    });
+
+    hasMore = Boolean(response.has_more);
+    cursor = response.cursor;
+  }
+
+  return files;
 };

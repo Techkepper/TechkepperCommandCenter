@@ -120,6 +120,13 @@ documentRoutes.patch(
   DocumentController.updateStatus
 );
 
+documentRoutes.patch(
+  "/documents/:documentId/storage-retention",
+  isAuth,
+  requireRole("admin"),
+  DocumentController.updateStorageRetention
+);
+
 documentRoutes.get(
   "/documents/:documentId/notification-recipients",
   isAuth,

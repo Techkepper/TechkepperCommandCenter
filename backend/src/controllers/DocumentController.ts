@@ -6,7 +6,7 @@ import ListDocumentsService from "../services/DocumentServices/ListDocumentsServ
 import CreateDocumentService from "../services/DocumentServices/CreateDocumentService";
 import ShowDocumentService from "../services/DocumentServices/ShowDocumentService";
 import DeleteDocumentService from "../services/DocumentServices/DeleteDocumentService";
-import { resolveDocumentPath } from "../services/DocumentServices/documentStorage";
+import { resolveDocumentReadablePath } from "../services/DocumentServices/documentStorageRetention";
 import ConvertDocumentToPdfService from "../services/DocumentServices/ConvertDocumentToPdfService";
 import {
   listDocumentEvents,
@@ -16,6 +16,8 @@ import {
 } from "../services/DocumentServices/DocumentLifecycleService";
 import { listEligibleDocumentNotificationUsers } from "../services/DocumentServices/InternalDocumentNotificationService";
 import UploadExistingDocumentService from "../services/DocumentServices/UploadExistingDocumentService";
+import { serializeSmartDocument } from "../services/DocumentServices/documentSerialization";
+import { updateDocumentStorageRetention } from "../services/DocumentServices/documentStorageRetention";
 
 type IndexQuery = {
   searchParam?: string;
@@ -77,7 +79,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
       userProfile: req.user.profile
     });
 
-    return res.status(201).json(document);
+    return res.status(201).json(await serializeSmartDocument(document));
   } catch (err) {
     return rethrowDocumentDbError(err);
   }
@@ -109,7 +111,7 @@ const uploadExisting = async (
         | { entityType: "businessClient"; entityId: number }
         | { entityType: "collaborator"; entityId: number }
     });
-    return res.status(201).json(document);
+    return res.status(201).json(await serializeSmartDocument(document));
   } catch (err) {
     return rethrowDocumentDbError(err);
   }
@@ -135,7 +137,7 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
       userProfile: req.user.profile
     });
 
-    return res.json(document);
+    return res.json(await serializeSmartDocument(document));
   } catch (err) {
     return rethrowDocumentDbError(err);
   }
@@ -163,56 +165,62 @@ export const download = async (
       userId: req.user.id,
       userProfile: req.user.profile
     });
-    const filePath = resolveDocumentPath(document.storagePath);
+    const { filePath, cleanup } = await resolveDocumentReadablePath(document);
 
     res.setHeader("X-Content-Type-Options", "nosniff");
 
-    if (requestedFormat === "pdf") {
-      const pdf = await ConvertDocumentToPdfService({
-        sourcePath: filePath,
-        mimeType: document.mimeType
-      });
-      const pdfName = `${path.basename(
-        document.originalName,
-        path.extname(document.originalName)
-      )}.pdf`;
+    try {
+      if (requestedFormat === "pdf") {
+        const pdf = await ConvertDocumentToPdfService({
+          sourcePath: filePath,
+          mimeType: document.mimeType
+        });
+        const pdfName = `${path.basename(
+          document.originalName,
+          path.extname(document.originalName)
+        )}.pdf`;
 
-      res.type("application/pdf");
-      res.attachment(sanitizeDownloadName(pdfName));
+        res.type("application/pdf");
+        res.attachment(sanitizeDownloadName(pdfName));
+        await recordDocumentEvent({
+          documentId: document.id,
+          userId: req.user.id,
+          eventType: "downloaded_pdf",
+          newStatus: normalizeDocumentStatus(document.status)
+        });
+        return res.send(pdf);
+      }
+
+      if (requestedFormat !== "original" && requestedFormat !== "docx") {
+        throw new AppError(
+          "El formato de descarga solicitado no es válido.",
+          400
+        );
+      }
+
+      if (
+        requestedFormat === "docx" &&
+        document.mimeType !==
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ) {
+        throw new AppError(
+          "Este documento no está disponible en formato DOCX.",
+          400
+        );
+      }
+
       await recordDocumentEvent({
         documentId: document.id,
         userId: req.user.id,
-        eventType: "downloaded_pdf",
+        eventType: "downloaded_docx",
         newStatus: normalizeDocumentStatus(document.status)
       });
-      return res.send(pdf);
+      return res.download(filePath, sanitizeDownloadName(document.originalName));
+    } finally {
+      if (cleanup) {
+        await cleanup();
+      }
     }
-
-    if (requestedFormat !== "original" && requestedFormat !== "docx") {
-      throw new AppError(
-        "El formato de descarga solicitado no es válido.",
-        400
-      );
-    }
-
-    if (
-      requestedFormat === "docx" &&
-      document.mimeType !==
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ) {
-      throw new AppError(
-        "Este documento no está disponible en formato DOCX.",
-        400
-      );
-    }
-
-    await recordDocumentEvent({
-      documentId: document.id,
-      userId: req.user.id,
-      eventType: "downloaded_docx",
-      newStatus: normalizeDocumentStatus(document.status)
-    });
-    return res.download(filePath, sanitizeDownloadName(document.originalName));
   } catch (err) {
     return rethrowDocumentDbError(err);
   }
@@ -247,7 +255,24 @@ export const updateStatus = async (
       userId: req.user.id,
       userProfile: req.user.profile
     });
-    return res.json(document);
+    return res.json(await serializeSmartDocument(document));
+  } catch (err) {
+    return rethrowDocumentDbError(err);
+  }
+};
+
+export const updateStorageRetention = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    const document = await updateDocumentStorageRetention({
+      documentId: req.params.documentId,
+      storageRetention: req.body.storageRetention,
+      userId: req.user.id,
+      userProfile: req.user.profile
+    });
+    return res.json(await serializeSmartDocument(document));
   } catch (err) {
     return rethrowDocumentDbError(err);
   }
