@@ -74,7 +74,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     continue
   fi
 
-  heroku config:set "${key}=${value}" --app "$APP_NAME" --overwrite >/dev/null
+  heroku config:set "${key}=${value}" --app "$APP_NAME" >/dev/null
   echo "  ✓ ${key}"
 done < "$ENV_FILE"
 
