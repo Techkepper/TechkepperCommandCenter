@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env.production}"
-BACKEND_APP="${HEROKU_BACKEND_APP:-api-command-center-6a6bbf5602c2}"
-FRONTEND_APP="${HEROKU_FRONTEND_APP:-web-command-center-e0b9cd1e60e4}"
+BACKEND_APP="${HEROKU_BACKEND_APP:-api-command-center}"
+FRONTEND_APP="${HEROKU_FRONTEND_APP:-web-command-center}"
 
 if [[ -z "${HEROKU_API_KEY:-}" ]]; then
   echo "Define HEROKU_API_KEY antes de desplegar." >&2
