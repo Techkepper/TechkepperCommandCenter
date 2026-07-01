@@ -11,11 +11,15 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DB_HOST: mysql
-      DB_USER: root
-      DB_PASS: ${MYSQL_ROOT_PASSWORD}
-      DB_NAME: ${MYSQL_DATABASE:-techkepper_command_center}
-      DB_DIALECT: mysql
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-root}
+      DB_PASS: ${DB_PASS:-${MYSQL_ROOT_PASSWORD}}
+      DB_NAME: ${DB_NAME:-${MYSQL_DATABASE:-techkepper_command_center}}
+      DB_DIALECT: ${DB_DIALECT:-mysql}
+      DATABASE_URL: ${DATABASE_URL:-}
+      DB_SSL: ${DB_SSL:-false}
+      DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED:-false}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-techkepper-command-center}
@@ -59,7 +63,9 @@ services:
       - ./backend/public/:/usr/src/app/public/
       - ./backend/storage/:/usr/src/app/storage/
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+        required: false
     restart: unless-stopped
     networks:
       - techkepper
@@ -85,6 +91,7 @@ services:
       - techkepper
 
   mysql:
+    profiles: [local-db]
     image: "${MYSQL_ENGINE:-mariadb}:${MYSQL_VERSION:-10.11}"
     # lower-case-table-names=1 es obligatorio en filesystems case-insensitive
     # (macOS/APFS). Sin esto, InnoDB crea .ibd en minúscula mientras los .frm
@@ -100,6 +107,12 @@ services:
       TZ: ${TZ:-America/Costa_Rica}
     ports:
       - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
     networks:
       - techkepper

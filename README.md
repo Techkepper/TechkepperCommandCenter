@@ -58,19 +58,55 @@ administrador cuando se proporcionan sus variables seguras.
 ## Docker
 
 1. Copie `.env.example` como `.env`.
-2. Cambie obligatoriamente `MYSQL_ROOT_PASSWORD`, `JWT_SECRET`,
-   `JWT_REFRESH_SECRET` e `INITIAL_ADMIN_PASSWORD`.
-3. Configure las credenciales de Meta.
-4. Ejecute:
+2. Elija el modo de base de datos:
+   - **MySQL local en Docker (desarrollo):** deje `COMPOSE_PROFILES=local-db` y
+     configure `MYSQL_ROOT_PASSWORD`.
+   - **MySQL remoto (MySQL 8.x, Site4Now, etc.):** elimine o comente
+     `COMPOSE_PROFILES=local-db` y configure `DATABASE_URL` o `DB_HOST`,
+     `DB_NAME`, `DB_USER` y `DB_PASS`.
+3. Cambie obligatoriamente `JWT_SECRET`, `JWT_REFRESH_SECRET` e
+   `INITIAL_ADMIN_PASSWORD`.
+4. Configure las credenciales de Meta.
+5. Ejecute:
 
 ```bash
 docker compose build
 docker compose up -d
-docker compose exec backend npx sequelize db:seed:all
 docker compose logs -f backend
 ```
 
 El backend ejecuta migraciones y seeds al iniciar (ver `backend/Dockerfile`).
+
+### MySQL remoto (MySQL 8.x)
+
+La app usa Sequelize + `mysql2` y es compatible con **MySQL 8.x** y MariaDB.
+
+Ejemplo para Site4Now — connection string Node:
+
+```env
+COMPOSE_PROFILES=
+DATABASE_URL=mysql://aa7e7f_command:YOUR_DB_PASSWORD@MYSQL5044.site4now.net:3306/db_aa7e7f_command
+DB_SSL=true
+# Site4Now usa certificado autofirmado; no verificar la CA del hosting:
+DB_SSL_REJECT_UNAUTHORIZED=false
+```
+
+Equivalente con variables separadas:
+
+```env
+DB_HOST=MYSQL5044.site4now.net
+DB_PORT=3306
+DB_NAME=db_aa7e7f_command
+DB_USER=aa7e7f_command
+DB_PASS=YOUR_DB_PASSWORD
+DB_SSL=true
+```
+
+Si la contraseña tiene caracteres especiales en `DATABASE_URL`, codifíquelos
+en URL (por ejemplo `@` → `%40`, `!` → `%21`).
+
+Con MySQL remoto **no se levanta** el contenedor `mysql`. Con
+`COMPOSE_PROFILES=local-db` se usa la base local como hasta ahora.
 
 ### Reset desde cero (desarrollo)
 
