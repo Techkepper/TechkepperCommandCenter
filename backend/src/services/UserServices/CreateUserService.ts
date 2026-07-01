@@ -13,6 +13,7 @@ interface Request {
   whatsappId?: number;
   isActive?: boolean;
   theme?: string;
+  availabilityStatus?: string;
 }
 
 interface Response {
@@ -30,7 +31,8 @@ const CreateUserService = async ({
   profile = "agent",
   whatsappId,
   isActive = true,
-  theme = "dark"
+  theme = "dark",
+  availabilityStatus = "available"
 }: Request): Promise<Response> => {
   const normalizedEmail = email.trim().toLowerCase();
   const schema = Yup.object().shape({
@@ -39,20 +41,23 @@ const CreateUserService = async ({
       .email()
       .max(254)
       .required()
-      .test(
-        "Check-email",
-        "ERR_USER_EMAIL_ALREADY_EXISTS",
-        async value => {
-          if (!value) return false;
-          const emailExists = await User.findOne({
-            where: { email: value.trim().toLowerCase() }
-          });
-          return !emailExists;
-        }
-      ),
+      .test("Check-email", "ERR_USER_EMAIL_ALREADY_EXISTS", async value => {
+        if (!value) return false;
+        const emailExists = await User.findOne({
+          where: { email: value.trim().toLowerCase() }
+        });
+        return !emailExists;
+      }),
     password: Yup.string().required().min(12).max(128),
     profile: Yup.string().oneOf(["admin", "supervisor", "agent"]),
-    theme: Yup.string().oneOf(["dark", "light"])
+    theme: Yup.string().oneOf(["dark", "light"]),
+    availabilityStatus: Yup.string().oneOf([
+      "available",
+      "busy",
+      "away",
+      "unavailable",
+      "offline"
+    ])
   });
 
   try {
@@ -61,7 +66,8 @@ const CreateUserService = async ({
       password,
       name,
       profile,
-      theme
+      theme,
+      availabilityStatus
     });
   } catch (err) {
     throw new AppError(err.message);
@@ -75,7 +81,8 @@ const CreateUserService = async ({
       profile,
       isActive,
       theme,
-      whatsappId: whatsappId ? whatsappId : null
+      availabilityStatus,
+      whatsappId: whatsappId || null
     } as any,
     { include: ["queues", "whatsapp"] }
   );

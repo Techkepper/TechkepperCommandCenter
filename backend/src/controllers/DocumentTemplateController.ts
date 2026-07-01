@@ -176,6 +176,7 @@ export const generate = async (
       data: parseJsonBodyObject(req.body.data),
       businessClientId: req.body.businessClientId,
       collaboratorId: req.body.collaboratorId,
+      baseDocumentId: req.body.baseDocumentId,
       recipientMode: req.body.recipientMode,
       userId: req.user.id,
       userProfile: req.user.profile

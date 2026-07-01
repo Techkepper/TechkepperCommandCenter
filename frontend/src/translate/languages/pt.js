@@ -41,15 +41,15 @@ const messages = {
         },
         messages: {
           inAttendance: {
-            title: "Em Atendimento"
+            title: "Em Atendimento",
           },
           waiting: {
-            title: "Aguardando"
+            title: "Aguardando",
           },
           closed: {
-            title: "Finalizado"
-          }
-        }
+            title: "Finalizado",
+          },
+        },
       },
       connections: {
         title: "Conexões",
@@ -107,7 +107,7 @@ const messages = {
         form: {
           name: "Nome",
           default: "Padrão",
-          farewellMessage: "Mensagem de despedida"
+          farewellMessage: "Mensagem de despedida",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -268,6 +268,8 @@ const messages = {
         fieldQueuePlaceholder: "Selecione uma fila",
         fieldConnectionPlaceholder: "Selecione uma conexão",
         noOptions: "Nenhum usuário encontrado com esse nome",
+        unavailableWarning:
+          "Este usuário não está disponível no momento. Deseja atribuir a conversa mesmo assim?",
         buttons: {
           ok: "Transferir",
           cancel: "Cancelar",
@@ -279,11 +281,13 @@ const messages = {
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
           "Nenhum ticket encontrado com esse status ou termo pesquisado",
+        noAvailableAgent: "Nenhum agente disponível",
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         buttons: {
           accept: "Aceitar",
           assign: "Atribuir",
         },
+        deleteSuccess: "Conversa excluída.",
       },
       newTicketModal: {
         title: "Criar Ticket",
@@ -413,7 +417,8 @@ const messages = {
         },
       },
       messagesInput: {
-        placeholderOpen: "Digite uma mensagem ou tecle ''/'' para utilizar as respostas rápidas cadastrada",
+        placeholderOpen:
+          "Digite uma mensagem ou tecle ''/'' para utilizar as respostas rápidas cadastrada",
         placeholderClosed:
           "Reabra ou aceite esse ticket para enviar uma mensagem.",
         placeholderObserver:

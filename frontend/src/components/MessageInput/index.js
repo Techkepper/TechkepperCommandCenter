@@ -350,10 +350,6 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
     notifyTyping({ requireInput: true, value });
   };
 
-  const handleFocusInput = () => {
-    notifyTyping();
-  };
-
   const handleQuickAnswersClick = value => {
     setInputMessage(value);
     setTypeBar(false);
@@ -731,7 +727,6 @@ const MessageInput = ({ ticketStatus, canReply = true }) => {
               maxRows={5}
               value={inputMessage}
               onChange={handleChangeInput}
-              onFocus={handleFocusInput}
               disabled={recording || loading || !canSendMessage}
               onPaste={e => {
                 canSendMessage && handleInputPaste(e);

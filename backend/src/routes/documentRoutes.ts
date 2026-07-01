@@ -90,6 +90,20 @@ documentRoutes.post(
   upload.single("file"),
   DocumentController.store
 );
+documentRoutes.post(
+  "/business-clients/:clientId/documents/upload-existing",
+  isAuth,
+  requireRole("admin", "supervisor"),
+  upload.single("file"),
+  DocumentController.uploadExistingForClient
+);
+documentRoutes.post(
+  "/collaborators/:collaboratorId/documents/upload-existing",
+  isAuth,
+  requireRole("admin", "supervisor"),
+  upload.single("file"),
+  DocumentController.uploadExistingForCollaborator
+);
 
 documentRoutes.get("/documents/:documentId", isAuth, DocumentController.show);
 
@@ -104,6 +118,13 @@ documentRoutes.patch(
   isAuth,
   requireRole("admin", "supervisor"),
   DocumentController.updateStatus
+);
+
+documentRoutes.patch(
+  "/documents/:documentId/storage-retention",
+  isAuth,
+  requireRole("admin"),
+  DocumentController.updateStorageRetention
 );
 
 documentRoutes.get(

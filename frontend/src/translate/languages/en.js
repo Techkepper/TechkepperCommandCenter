@@ -41,15 +41,15 @@ const messages = {
         },
         messages: {
           inAttendance: {
-            title: "In Service"
+            title: "In Service",
           },
           waiting: {
-            title: "Waiting"
+            title: "Waiting",
           },
           closed: {
-            title: "Closed"
-          }
-        }
+            title: "Closed",
+          },
+        },
       },
       connections: {
         title: "Connections",
@@ -60,7 +60,8 @@ const messages = {
           deleteTitle: "Delete",
           deleteMessage: "Are you sure? It cannot be reverted.",
           disconnectTitle: "Disconnect",
-          disconnectMessage: "Are you sure you want to disconnect this official API connection?",
+          disconnectMessage:
+            "Are you sure you want to disconnect this official API connection?",
         },
         buttons: {
           add: "Add WhatsApp",
@@ -267,6 +268,8 @@ const messages = {
         fieldQueuePlaceholder: "Please select a queue",
         fieldConnectionPlaceholder: "Please select a connection",
         noOptions: "No user found with this name",
+        unavailableWarning:
+          "This user is not currently available. Do you want to assign the conversation anyway?",
         buttons: {
           ok: "Transfer",
           cancel: "Cancel",
@@ -277,11 +280,13 @@ const messages = {
         assignedHeader: "Working on",
         noTicketsTitle: "Nothing here!",
         noTicketsMessage: "No tickets found with this status or search term.",
+        noAvailableAgent: "No agent available",
         connectionTitle: "Connection that is currently being used.",
         buttons: {
           accept: "Accept",
           assign: "Assign",
         },
+        deleteSuccess: "Conversation deleted.",
       },
       newTicketModal: {
         title: "Create Ticket",
@@ -410,7 +415,8 @@ const messages = {
         },
       },
       messagesInput: {
-        placeholderOpen: "Type a message or press ''/'' to use the registered quick responses",
+        placeholderOpen:
+          "Type a message or press ''/'' to use the registered quick responses",
         placeholderClosed: "Reopen or accept this ticket to send a message.",
         placeholderObserver:
           "Observer mode: assign the conversation before replying.",
@@ -490,8 +496,7 @@ const messages = {
         ERR_NO_PERMISSION: "You don't have permission to access this resource.",
         ERR_USER_INACTIVE:
           "Your user is inactive. Please contact an administrator.",
-        ERR_USER_EMAIL_ALREADY_EXISTS:
-          "A user with this email already exists.",
+        ERR_USER_EMAIL_ALREADY_EXISTS: "A user with this email already exists.",
         ERR_ASSIGNED_USER_INACTIVE:
           "The conversation cannot be assigned to an inactive user.",
         ERR_CORS_ORIGIN_NOT_ALLOWED: "The request origin is not allowed.",

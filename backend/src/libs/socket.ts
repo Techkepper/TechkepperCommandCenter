@@ -8,6 +8,7 @@ import { isAllowedOrigin } from "../config/allowedOrigins";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import ShowUserService from "../services/UserServices/ShowUserService";
 import EnsureTicketReadAccessService from "../services/TicketServices/EnsureTicketReadAccessService";
+import UpdateUserAvailabilityService from "../services/UserServices/UpdateUserAvailabilityService";
 
 interface SocketTokenPayload {
   id: string;
@@ -84,6 +85,23 @@ export const initIO = (httpServer: Server): SocketIO => {
     };
 
     socket.join(`user:${authenticatedUser.id}`);
+    ShowUserService(authenticatedUser.id)
+      .then(currentUser => {
+        if (currentUser.availabilityStatus === "offline") {
+          return UpdateUserAvailabilityService({
+            targetUserId: authenticatedUser.id,
+            availabilityStatus: "available",
+            systemChange: true
+          });
+        }
+        return undefined;
+      })
+      .catch(error => {
+        logger.warn(
+          { userId: authenticatedUser.id, errorName: error.name },
+          "Could not restore user availability on socket connection"
+        );
+      });
     if (authenticatedUser.profile === "admin") {
       socket.join("role:admin");
     }
@@ -125,6 +143,26 @@ export const initIO = (httpServer: Server): SocketIO => {
 
     socket.on("disconnect", () => {
       logger.debug("Client disconnected");
+      setTimeout(() => {
+        io.in(`user:${authenticatedUser.id}`)
+          .allSockets()
+          .then(remainingSockets => {
+            if (remainingSockets.size === 0) {
+              return UpdateUserAvailabilityService({
+                targetUserId: authenticatedUser.id,
+                availabilityStatus: "offline",
+                systemChange: true
+              });
+            }
+            return undefined;
+          })
+          .catch(error => {
+            logger.warn(
+              { userId: authenticatedUser.id, errorName: error.name },
+              "Could not update user availability on socket disconnect"
+            );
+          });
+      }, 1000);
     });
 
     return socket;

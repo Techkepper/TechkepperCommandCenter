@@ -18,7 +18,10 @@ type Actor = { id: string; profile: string };
 const pendingDocumentStatuses = ["in_review", "pending_signature", "rejected"];
 const pendingProposalStatuses = ["in_review", "sent", "expired"];
 
-const serializeDocument = (document: SmartDocument) => ({
+const serializeDocument = (
+  document: SmartDocument,
+  allDocuments: SmartDocument[]
+) => ({
   id: document.id,
   title: document.title,
   originalName: document.originalName,
@@ -26,6 +29,19 @@ const serializeDocument = (document: SmartDocument) => ({
   category: document.category,
   purpose: document.purpose,
   status: document.status,
+  documentDate: document.documentDate,
+  baseDocumentId: document.baseDocumentId,
+  baseDocument: document.baseDocumentId
+    ? (() => {
+        const base = allDocuments.find(
+          item => Number(item.id) === Number(document.baseDocumentId)
+        );
+        return base ? { id: base.id, title: base.title } : null;
+      })()
+    : null,
+  relatedAddendums: allDocuments
+    .filter(item => Number(item.baseDocumentId) === Number(document.id))
+    .map(item => ({ id: item.id, title: item.title, status: item.status })),
   uploadedBy: document.uploadedBy
     ? { id: document.uploadedBy.id, name: document.uploadedBy.name }
     : null,
@@ -217,7 +233,9 @@ export const showBusinessClientDossier = async ({
   ]);
   const includeInternal =
     actor.profile === "admin" || actor.profile === "supervisor";
-  const serializedDocuments = documents.map(serializeDocument);
+  const serializedDocuments = documents.map(document =>
+    serializeDocument(document, documents)
+  );
   const serializedProposals = proposals.map(proposal =>
     serializeProposal(proposal.toJSON(), includeInternal)
   );
@@ -297,7 +315,9 @@ export const showCollaboratorDossier = async ({
     loadDocumentEvents(documentIds),
     loadNotifications({ documentIds, proposalIds: [], actor })
   ]);
-  const serializedDocuments = documents.map(serializeDocument);
+  const serializedDocuments = documents.map(document =>
+    serializeDocument(document, documents)
+  );
   const pendingDocuments = serializedDocuments.filter(document =>
     pendingDocumentStatuses.includes(document.status)
   );

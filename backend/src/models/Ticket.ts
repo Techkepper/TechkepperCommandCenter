@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Table,
   Column,
@@ -30,6 +31,9 @@ class Ticket extends Model<Ticket> {
 
   @Column({ defaultValue: "pending" })
   status: string;
+
+  @Column(DataType.VIRTUAL)
+  noAvailableAgent: boolean;
 
   @Column
   unreadMessages: number;

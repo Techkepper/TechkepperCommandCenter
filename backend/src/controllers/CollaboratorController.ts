@@ -6,6 +6,7 @@ import {
   CollaboratorData,
   createCollaborator,
   listCollaborators,
+  removeCollaborator,
   setCollaboratorStatus,
   showCollaborator,
   updateCollaborator
@@ -18,7 +19,10 @@ const schema = Yup.object().shape({
   identificationNumber: Yup.string().trim().max(80).required(),
   contractualDenomination: Yup.string()
     .oneOf(["LA CONTRATISTA", "EL CONTRATISTA"])
-    .required(),
+    .nullable(),
+  sex: Yup.string()
+    .oneOf(["female", "male", "unspecified"])
+    .default("unspecified"),
   email: Yup.string().trim().email().max(255).nullable(),
   phone: Yup.string().trim().max(80).nullable(),
   address: Yup.string().trim().max(500).nullable(),
@@ -128,6 +132,18 @@ export const setStatus = async (
         req.user
       )
     );
+  } catch (err) {
+    return rethrowDbError(err);
+  }
+};
+
+export const remove = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    await removeCollaborator(req.params.collaboratorId, req.user);
+    return res.status(204).send();
   } catch (err) {
     return rethrowDbError(err);
   }

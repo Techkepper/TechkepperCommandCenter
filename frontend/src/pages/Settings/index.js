@@ -15,6 +15,7 @@ import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
+import BusinessHoursSettings from "../../components/BusinessHoursSettings";
 
 const useStyles = makeStyles((theme) => ({
   root: { paddingTop: theme.spacing(4), paddingBottom: theme.spacing(5) },
@@ -51,8 +52,8 @@ const Settings = () => {
           data.reduce((result, item) => {
             result[item.key] = item.value;
             return result;
-          }, {})
-        )
+          }, {}),
+        ),
       )
       .catch(toastError);
   }, []);
@@ -66,7 +67,7 @@ const Settings = () => {
       await Promise.all(
         editableKeys
           .filter((key) => values[key] !== undefined)
-          .map((key) => api.put(`/settings/${key}`, { value: values[key] }))
+          .map((key) => api.put(`/settings/${key}`, { value: values[key] })),
       );
       toast.success(i18n.t("settings.operational.saved"));
     } catch (error) {
@@ -225,6 +226,8 @@ const Settings = () => {
           </Grid>
         </Grid>
       </Paper>
+
+      <BusinessHoursSettings cardClass={classes.card} />
     </Container>
   );
 };

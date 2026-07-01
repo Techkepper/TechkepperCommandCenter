@@ -1,10 +1,12 @@
 import path from "path";
 
 import AppError from "../../errors/AppError";
+import sequelize from "../../database";
 import BusinessClient from "../../models/BusinessClient";
 import BusinessClientDocument from "../../models/BusinessClientDocument";
 import CollaboratorDocument from "../../models/CollaboratorDocument";
 import SmartDocument from "../../models/SmartDocument";
+import ShowBusinessClientService from "../BusinessClientServices/ShowBusinessClientService";
 import { showCollaborator } from "../CollaboratorServices";
 import {
   extractTemplateVariablesFromBuffer,
@@ -17,8 +19,6 @@ import {
 } from "./documentStorage";
 import ShowDocumentTemplateService from "./ShowDocumentTemplateService";
 import { parseJsonList } from "./templateSerialization";
-import { setDocumentBusinessClient } from "./BusinessClientDocumentService";
-import { setDocumentCollaborator } from "./CollaboratorDocumentService";
 import { normalizeOptionalDocumentId } from "./documentIds";
 import { recordDocumentEvent } from "./DocumentLifecycleService";
 import {
@@ -27,6 +27,7 @@ import {
   isDocumentPurpose,
   normalizeDocumentType
 } from "./documentTaxonomy";
+import { syncSmartDocumentToDropbox } from "../DropboxServices";
 
 interface Request {
   templateId: string | number;
@@ -34,6 +35,7 @@ interface Request {
   data: Record<string, unknown>;
   businessClientId?: number | string | null;
   collaboratorId?: number | string | null;
+  baseDocumentId?: number | string | null;
   recipientMode?: "client" | "collaborator" | "generic" | "manual";
   userId: string;
   userProfile: string;
@@ -74,8 +76,7 @@ const applyCollaboratorVariables = (
   ...data,
   FREELANCE_NOMBRE: data.FREELANCE_NOMBRE || collaborator.fullName,
   FREELANCE_CEDULA: data.FREELANCE_CEDULA || collaborator.identificationNumber,
-  FREELANCE_DENOMINACION:
-    data.FREELANCE_DENOMINACION || collaborator.contractualDenomination,
+  FREELANCE_DENOMINACION: collaborator.contractualDenomination,
   CLIENTE_RAZON_SOCIAL: data.CLIENTE_RAZON_SOCIAL || collaborator.fullName,
   CLIENTE_CEDULA: data.CLIENTE_CEDULA || collaborator.identificationNumber,
   CLIENTE_REPRESENTANTE: collaborator.fullName,
@@ -106,6 +107,7 @@ const GenerateDocumentFromTemplateService = async ({
   data,
   businessClientId,
   collaboratorId,
+  baseDocumentId,
   recipientMode = "manual",
   userId,
   userProfile
@@ -126,6 +128,17 @@ const GenerateDocumentFromTemplateService = async ({
   const activeVersion = template.versions?.find(version => version.isActive);
 
   if (!activeVersion) {
+    if (
+      normalizeDocumentType(
+        template.documentType,
+        isDocumentPurpose(template.purpose) ? template.purpose : "other"
+      ) === "contract_addendum"
+    ) {
+      throw new AppError(
+        "No hay una plantilla activa de addendum. Suba una plantilla DOCX antes de generar.",
+        400
+      );
+    }
     throw new AppError("ERR_DOCUMENT_TEMPLATE_WITHOUT_ACTIVE_VERSION", 400);
   }
 
@@ -138,6 +151,7 @@ const GenerateDocumentFromTemplateService = async ({
   );
   const isFreelanceSalesContract =
     normalizedDocumentType === "freelance_sales_contract";
+  const isContractAddendum = normalizedDocumentType === "contract_addendum";
 
   const normalizedClientId = normalizeOptionalDocumentId(
     businessClientId,
@@ -146,6 +160,10 @@ const GenerateDocumentFromTemplateService = async ({
   const normalizedCollaboratorId = normalizeOptionalDocumentId(
     collaboratorId,
     "El colaborador seleccionado"
+  );
+  const normalizedBaseDocumentId = normalizeOptionalDocumentId(
+    baseDocumentId,
+    "El documento base seleccionado"
   );
   if (normalizedClientId !== null && normalizedCollaboratorId !== null) {
     throw new AppError(
@@ -185,22 +203,47 @@ const GenerateDocumentFromTemplateService = async ({
     );
   }
   let documentData = { ...data };
+  let baseDocument: SmartDocument | null = null;
   if (normalizedClientId !== null) {
-    const client = await BusinessClient.findByPk(normalizedClientId, {
-      attributes: [
-        "id",
-        "type",
-        "displayName",
-        "legalName",
-        "identificationNumber",
-        "email",
-        "address"
-      ]
+    const client = await ShowBusinessClientService({
+      clientId: normalizedClientId,
+      actor: { id: userId, profile: userProfile }
     });
-    if (!client) {
-      throw new AppError("El cliente seleccionado no existe.", 400);
-    }
     documentData = applyPhysicalClientVariables(documentData, client);
+  }
+  if (isContractAddendum) {
+    if (normalizedClientId === null || normalizedBaseDocumentId === null) {
+      throw new AppError(
+        "Seleccione el cliente y el contrato o documento base del addendum.",
+        400
+      );
+    }
+    const baseLink = await BusinessClientDocument.findOne({
+      where: {
+        businessClientId: normalizedClientId,
+        documentId: normalizedBaseDocumentId
+      },
+      include: [{ model: SmartDocument, as: "document" }]
+    });
+    if (!baseLink?.document) {
+      throw new AppError(
+        "El documento base no pertenece al cliente seleccionado.",
+        400
+      );
+    }
+    baseDocument = baseLink.document;
+    documentData = {
+      ...documentData,
+      DOCUMENTO_BASE: baseDocument.title,
+      FECHA_DOCUMENTO_BASE:
+        baseDocument.documentDate ||
+        baseDocument.createdAt.toISOString().slice(0, 10)
+    };
+  } else if (normalizedBaseDocumentId !== null) {
+    throw new AppError(
+      "El documento base solo puede indicarse para un addendum.",
+      400
+    );
   }
   if (normalizedCollaboratorId !== null) {
     const collaborator = await showCollaborator(normalizedCollaboratorId, {
@@ -210,6 +253,16 @@ const GenerateDocumentFromTemplateService = async ({
     if (!collaborator.isActive) {
       throw new AppError(
         "El colaborador seleccionado no existe o está inactivo.",
+        400
+      );
+    }
+    if (
+      isFreelanceSalesContract &&
+      collaborator.contractualDenomination !== "LA CONTRATISTA" &&
+      collaborator.contractualDenomination !== "EL CONTRATISTA"
+    ) {
+      throw new AppError(
+        "Complete el sexo o denominación contractual del colaborador antes de generar el contrato.",
         400
       );
     }
@@ -231,7 +284,7 @@ const GenerateDocumentFromTemplateService = async ({
     documentData.FREELANCE_DENOMINACION !== "EL CONTRATISTA"
   ) {
     throw new AppError(
-      "La denominación contractual debe ser LA CONTRATISTA o EL CONTRATISTA.",
+      "Complete el sexo o denominación contractual del colaborador antes de generar el contrato.",
       400
     );
   }
@@ -289,72 +342,118 @@ const GenerateDocumentFromTemplateService = async ({
     "generated"
   );
   const originalName = buildGeneratedName(template.name, title);
-  let document: SmartDocument | null = null;
   try {
-    document = await SmartDocument.create({
-      title: title?.trim() || template.name,
-      description: `Generado desde plantilla: ${template.name}`,
-      originalName: path.basename(originalName),
-      storedName,
-      storagePath,
-      mimeType: docxMimeType,
-      size: outputBuffer.length,
-      category: template.category,
-      purpose: template.purpose,
-      status: "generated",
-      tags: `plantilla:${template.id};version:${activeVersion.version}`,
-      uploadedById: Number(userId),
-      contactId: null,
-      ticketId: null,
-      queueId: template.queueId,
-      ecosystemId: template.ecosystemId
-    } as unknown as SmartDocument);
+    const documentId = await sequelize.transaction(async transaction => {
+      const document = await SmartDocument.create(
+        {
+          title: title?.trim() || template.name,
+          description: `Generado desde plantilla: ${template.name}`,
+          originalName: path.basename(originalName),
+          storedName,
+          storagePath,
+          mimeType: docxMimeType,
+          size: outputBuffer.length,
+          category: template.category,
+          purpose: template.purpose,
+          status: "generated",
+          documentDate: new Date().toISOString().slice(0, 10),
+          baseDocumentId: baseDocument?.id || null,
+          tags: `plantilla:${template.id};version:${activeVersion.version}`,
+          uploadedById: Number(userId),
+          contactId: null,
+          ticketId: null,
+          queueId: template.queueId,
+          ecosystemId: template.ecosystemId
+        } as unknown as SmartDocument,
+        { transaction }
+      );
 
-    const reloadedDocument = await document.reload({
+      if (normalizedClientId !== null) {
+        await BusinessClientDocument.create(
+          {
+            documentId: document.id,
+            businessClientId: normalizedClientId,
+            linkedById: Number(userId)
+          } as unknown as BusinessClientDocument,
+          { transaction }
+        );
+        await recordDocumentEvent({
+          documentId: document.id,
+          userId,
+          eventType: "associated_client",
+          newStatus: "generated",
+          metadata: { businessClientId: normalizedClientId },
+          transaction
+        });
+      }
+      if (normalizedCollaboratorId !== null) {
+        await CollaboratorDocument.create(
+          {
+            documentId: document.id,
+            collaboratorId: normalizedCollaboratorId,
+            linkedById: Number(userId)
+          } as unknown as CollaboratorDocument,
+          { transaction }
+        );
+        await recordDocumentEvent({
+          documentId: document.id,
+          userId,
+          eventType: "associated_collaborator",
+          newStatus: "generated",
+          metadata: { collaboratorId: normalizedCollaboratorId },
+          transaction
+        });
+      }
+      if (baseDocument) {
+        await recordDocumentEvent({
+          documentId: document.id,
+          userId,
+          eventType: "associated_base_document",
+          newStatus: "generated",
+          metadata: { baseDocumentId: baseDocument.id },
+          transaction
+        });
+      }
+      await recordDocumentEvent({
+        documentId: document.id,
+        userId,
+        eventType: "generated",
+        newStatus: "generated",
+        metadata: {
+          templateId: template.id,
+          templateVersionId: activeVersion.id,
+          baseDocumentId: baseDocument?.id || null
+        },
+        transaction
+      });
+      return document.id;
+    });
+
+    const reloadedDocument = await SmartDocument.findByPk(documentId, {
       include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
     });
-
-    if (normalizedClientId !== null) {
-      await setDocumentBusinessClient({
-        documentId: reloadedDocument.id,
-        businessClientId: normalizedClientId,
-        actor: { id: userId, profile: userProfile }
-      });
+    if (!reloadedDocument) {
+      throw new AppError(
+        "No fue posible registrar el documento generado.",
+        500
+      );
     }
+    let preferredDropboxFolder: "clients" | "collaborators" | "proposals" =
+      "clients";
     if (normalizedCollaboratorId !== null) {
-      await setDocumentCollaborator({
-        documentId: reloadedDocument.id,
-        collaboratorId: normalizedCollaboratorId,
-        userId
-      });
+      preferredDropboxFolder = "collaborators";
+    } else if (normalizedPurpose === "quotations") {
+      preferredDropboxFolder = "proposals";
     }
-    await recordDocumentEvent({
+    await syncSmartDocumentToDropbox({
       documentId: reloadedDocument.id,
       userId,
-      eventType: "generated",
-      newStatus: "generated",
-      metadata: {
-        templateId: template.id,
-        templateVersionId: activeVersion.id
-      }
+      preferredFolder: preferredDropboxFolder
     });
-
-    return reloadedDocument;
+    return reloadedDocument.reload({
+      include: ["uploadedBy", "contact", "ticket", "queue", "ecosystem"]
+    });
   } catch (err) {
-    if (document) {
-      await BusinessClientDocument.destroy({
-        where: { documentId: document.id },
-        force: true
-      });
-      await CollaboratorDocument.destroy({
-        where: { documentId: document.id },
-        force: true
-      });
-      await SmartDocument.destroy({
-        where: { id: document.id },
-        force: true
-      });
-    }
     await removeDocumentFile(storagePath);
     throw err;
   }

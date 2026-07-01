@@ -1,5 +1,6 @@
 import Ticket from "../../models/Ticket";
 import AppError from "../../errors/AppError";
+import AfterHoursAutoReplyEvent from "../../models/AfterHoursAutoReplyEvent";
 
 const DeleteTicketService = async (id: string): Promise<Ticket> => {
   const ticket = await Ticket.findOne({
@@ -10,6 +11,9 @@ const DeleteTicketService = async (id: string): Promise<Ticket> => {
     throw new AppError("ERR_NO_TICKET_FOUND", 404);
   }
 
+  await AfterHoursAutoReplyEvent.destroy({
+    where: { ticketId: ticket.id }
+  });
   await ticket.destroy();
 
   return ticket;

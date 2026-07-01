@@ -82,6 +82,19 @@ const TicketActionButtons = ({ ticket }) => {
 					{i18n.t("messagesList.header.buttons.reopen")}
 				</ButtonWithSpinner>
 			)}
+			{ticket.status === "closed" && user?.profile === "admin" && (
+				<>
+					<IconButton onClick={handleOpenTicketOptionsMenu}>
+						<MoreVert />
+					</IconButton>
+					<TicketOptionsMenu
+						ticket={ticket}
+						anchorEl={anchorEl}
+						menuOpen={ticketOptionsMenuOpen}
+						handleClose={handleCloseTicketOptionsMenu}
+					/>
+				</>
+			)}
 			{ticket.status === "open" && (
 				<>
 					<ButtonWithSpinner
@@ -125,6 +138,19 @@ const TicketActionButtons = ({ ticket }) => {
 					>
 						{i18n.t("messagesList.header.buttons.assign")}
 					</ButtonWithSpinner>
+					{user?.profile === "admin" && (
+						<>
+							<IconButton onClick={handleOpenTicketOptionsMenu}>
+								<MoreVert />
+							</IconButton>
+							<TicketOptionsMenu
+								ticket={ticket}
+								anchorEl={anchorEl}
+								menuOpen={ticketOptionsMenuOpen}
+								handleClose={handleCloseTicketOptionsMenu}
+							/>
+						</>
+					)}
 					<TransferTicketModal
 						modalOpen={transferTicketModalOpen}
 						onClose={() => setTransferTicketModalOpen(false)}

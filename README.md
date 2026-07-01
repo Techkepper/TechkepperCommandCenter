@@ -70,8 +70,27 @@ docker compose exec backend npx sequelize db:seed:all
 docker compose logs -f backend
 ```
 
-El backend ejecuta migraciones al iniciar. El seed se ejecuta manualmente para
-evitar recrear datos iniciales por accidente.
+El backend ejecuta migraciones y seeds al iniciar (ver `backend/Dockerfile`).
+
+### Reset desde cero (desarrollo)
+
+El esquema completo vive en una sola migración baseline:
+`backend/src/database/migrations/20200717000000-initial-schema.ts`
+
+Para borrar la base de datos y volver a levantar todo:
+
+```bash
+./scripts/db-reset-dev.sh
+```
+
+O manualmente:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+Eso recrea MySQL vacío, aplica la migración baseline y ejecuta los seeds.
 
 ## WhatsApp Cloud API
 

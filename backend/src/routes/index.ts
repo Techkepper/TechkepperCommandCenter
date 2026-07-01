@@ -20,6 +20,8 @@ import businessClientRoutes from "./businessClientRoutes";
 import collaboratorRoutes from "./collaboratorRoutes";
 import internalNotificationRoutes from "./internalNotificationRoutes";
 import commercialProposalRoutes from "./commercialProposalRoutes";
+import dropboxRoutes from "./dropboxRoutes";
+import businessHoursRoutes from "./businessHoursRoutes";
 
 const routes = Router();
 
@@ -43,5 +45,7 @@ routes.use(businessClientRoutes);
 routes.use(collaboratorRoutes);
 routes.use(internalNotificationRoutes);
 routes.use(commercialProposalRoutes);
+routes.use(dropboxRoutes);
+routes.use(businessHoursRoutes);
 
 export default routes;

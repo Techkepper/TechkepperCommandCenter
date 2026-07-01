@@ -109,6 +109,14 @@ const useStyles = makeStyles((theme) => ({
       },
     },
   },
+  emptyDateInput: {
+    "& input[type='date']::-webkit-datetime-edit": {
+      color: "transparent",
+    },
+    "& input[type='date']:focus::-webkit-datetime-edit": {
+      color: "transparent",
+    },
+  },
   section: { marginBottom: theme.spacing(1) },
   grid: {
     display: "grid",
@@ -149,8 +157,7 @@ const statusValues = [
   "archived",
 ];
 
-const statusLabel = (value) =>
-  i18n.t(`commercialProposals.statuses.${value}`);
+const statusLabel = (value) => i18n.t(`commercialProposals.statuses.${value}`);
 
 const emptyItem = () => ({
   title: "",
@@ -394,7 +401,7 @@ const CommercialProposals = () => {
     const proposalId = new URLSearchParams(location.search).get("proposalId");
     if (proposalId) openDetail(proposalId);
     const editProposalId = new URLSearchParams(location.search).get(
-      "editProposalId"
+      "editProposalId",
     );
     if (editProposalId && canManage) openEdit(editProposalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -562,30 +569,32 @@ const CommercialProposals = () => {
         <Title>{i18n.t("commercialProposals.title")}</Title>
         <MainHeaderButtonsWrapper>
           <div className={classes.headerActions}>
-          <TextField
-            size="small"
-            variant="outlined"
-            placeholder={i18n.t("commercialProposals.search.placeholder")}
-            value={searchParam}
-            onChange={(event) => setSearchParam(event.target.value)}
-          />
-          {canManage && (
-            <Button
-              color="primary"
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={openCreate}
-            >
-              {i18n.t("commercialProposals.buttons.newProposal")}
-            </Button>
-          )}
+            <TextField
+              size="small"
+              variant="outlined"
+              placeholder={i18n.t("commercialProposals.search.placeholder")}
+              value={searchParam}
+              onChange={(event) => setSearchParam(event.target.value)}
+            />
+            {canManage && (
+              <Button
+                color="primary"
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={openCreate}
+              >
+                {i18n.t("commercialProposals.buttons.newProposal")}
+              </Button>
+            )}
           </div>
         </MainHeaderButtonsWrapper>
       </MainHeader>
 
       <div className={classes.filters}>
         <FormControl variant="outlined" size="small">
-          <InputLabel>{i18n.t("commercialProposals.filters.status")}</InputLabel>
+          <InputLabel>
+            {i18n.t("commercialProposals.filters.status")}
+          </InputLabel>
           <Select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
@@ -602,7 +611,9 @@ const CommercialProposals = () => {
           </Select>
         </FormControl>
         <FormControl variant="outlined" size="small">
-          <InputLabel>{i18n.t("commercialProposals.filters.client")}</InputLabel>
+          <InputLabel>
+            {i18n.t("commercialProposals.filters.client")}
+          </InputLabel>
           <Select
             value={clientFilter}
             onChange={(event) => setClientFilter(event.target.value)}
@@ -619,6 +630,7 @@ const CommercialProposals = () => {
           </Select>
         </FormControl>
         <TextField
+          className={!dateFrom ? classes.emptyDateInput : undefined}
           size="small"
           variant="outlined"
           type="date"
@@ -628,6 +640,7 @@ const CommercialProposals = () => {
           onChange={(event) => setDateFrom(event.target.value)}
         />
         <TextField
+          className={!dateTo ? classes.emptyDateInput : undefined}
           size="small"
           variant="outlined"
           type="date"
@@ -658,13 +671,21 @@ const CommercialProposals = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>{i18n.t("commercialProposals.table.number")}</TableCell>
-              <TableCell>{i18n.t("commercialProposals.table.client")}</TableCell>
+              <TableCell>
+                {i18n.t("commercialProposals.table.number")}
+              </TableCell>
+              <TableCell>
+                {i18n.t("commercialProposals.table.client")}
+              </TableCell>
               <TableCell>{i18n.t("commercialProposals.table.title")}</TableCell>
               <TableCell>{i18n.t("commercialProposals.table.total")}</TableCell>
-              <TableCell>{i18n.t("commercialProposals.table.status")}</TableCell>
+              <TableCell>
+                {i18n.t("commercialProposals.table.status")}
+              </TableCell>
               <TableCell>{i18n.t("commercialProposals.table.date")}</TableCell>
-              <TableCell>{i18n.t("commercialProposals.table.creator")}</TableCell>
+              <TableCell>
+                {i18n.t("commercialProposals.table.creator")}
+              </TableCell>
               <TableCell align="center">
                 {i18n.t("commercialProposals.table.actions")}
               </TableCell>
@@ -718,10 +739,15 @@ const CommercialProposals = () => {
                       {canArchive && (
                         <IconButton
                           size="small"
-                          title={i18n.t("commercialProposals.confirm.deleteTitle")}
-                          aria-label={i18n.t("commercialProposals.table.deleteAria", {
-                            number: proposal.proposalNumber,
-                          })}
+                          title={i18n.t(
+                            "commercialProposals.confirm.deleteTitle",
+                          )}
+                          aria-label={i18n.t(
+                            "commercialProposals.table.deleteAria",
+                            {
+                              number: proposal.proposalNumber,
+                            },
+                          )}
                           onClick={() => setProposalToDelete(proposal)}
                         >
                           <DeleteOutlineIcon />
@@ -786,7 +812,9 @@ const CommercialProposals = () => {
                       onChange={(event) =>
                         change("businessClientId", event.target.value)
                       }
-                      label={i18n.t("commercialProposals.fields.registeredClient")}
+                      label={i18n.t(
+                        "commercialProposals.fields.registeredClient",
+                      )}
                     >
                       {clients.map((client) => (
                         <MenuItem key={client.id} value={client.id}>
@@ -806,7 +834,9 @@ const CommercialProposals = () => {
                       }
                     />
                     <TextField
-                      label={i18n.t("commercialProposals.fields.identification")}
+                      label={i18n.t(
+                        "commercialProposals.fields.identification",
+                      )}
                       variant="outlined"
                       value={form.manualClientIdentification}
                       onChange={(event) =>
@@ -875,11 +905,16 @@ const CommercialProposals = () => {
                   disabled
                   helperText={
                     editingId
-                      ? i18n.t("commercialProposals.helpers.proposalNumberEditing")
+                      ? i18n.t(
+                          "commercialProposals.helpers.proposalNumberEditing",
+                        )
                       : i18n.t("commercialProposals.helpers.proposalNumberNew")
                   }
                 />
                 <TextField
+                  className={
+                    !form.offerDate ? classes.emptyDateInput : undefined
+                  }
                   label={i18n.t("commercialProposals.fields.offerDate")}
                   type="date"
                   variant="outlined"
@@ -906,10 +941,22 @@ const CommercialProposals = () => {
             <ExpansionPanelDetails>
               <div className={classes.grid}>
                 {[
-                  ["introduction", i18n.t("commercialProposals.fields.introductionText")],
-                  ["identifiedNeed", i18n.t("commercialProposals.fields.identifiedNeed")],
-                  ["generalScope", i18n.t("commercialProposals.fields.generalScope")],
-                  ["investmentAnalysis", i18n.t("commercialProposals.fields.investmentAnalysis")],
+                  [
+                    "introduction",
+                    i18n.t("commercialProposals.fields.introductionText"),
+                  ],
+                  [
+                    "identifiedNeed",
+                    i18n.t("commercialProposals.fields.identifiedNeed"),
+                  ],
+                  [
+                    "generalScope",
+                    i18n.t("commercialProposals.fields.generalScope"),
+                  ],
+                  [
+                    "investmentAnalysis",
+                    i18n.t("commercialProposals.fields.investmentAnalysis"),
+                  ],
                 ].map(([field, label]) => (
                   <TextField
                     key={field}
@@ -1043,14 +1090,35 @@ const CommercialProposals = () => {
                   </Select>
                 </FormControl>
                 {[
-                  ["desiredNetAmount", i18n.t("commercialProposals.fields.desiredNetAmount")],
-                  ["sellerCommissionRate", i18n.t("commercialProposals.fields.sellerCommissionRate")],
-                  ["externalCosts", i18n.t("commercialProposals.fields.externalCosts")],
-                  ["thirdPartyLicenses", i18n.t("commercialProposals.fields.thirdPartyLicenses")],
-                  ["additionalMarginRate", i18n.t("commercialProposals.fields.additionalMarginRate")],
-                  ["discountAmount", i18n.t("commercialProposals.fields.discountAmount")],
+                  [
+                    "desiredNetAmount",
+                    i18n.t("commercialProposals.fields.desiredNetAmount"),
+                  ],
+                  [
+                    "sellerCommissionRate",
+                    i18n.t("commercialProposals.fields.sellerCommissionRate"),
+                  ],
+                  [
+                    "externalCosts",
+                    i18n.t("commercialProposals.fields.externalCosts"),
+                  ],
+                  [
+                    "thirdPartyLicenses",
+                    i18n.t("commercialProposals.fields.thirdPartyLicenses"),
+                  ],
+                  [
+                    "additionalMarginRate",
+                    i18n.t("commercialProposals.fields.additionalMarginRate"),
+                  ],
+                  [
+                    "discountAmount",
+                    i18n.t("commercialProposals.fields.discountAmount"),
+                  ],
                   ["ivaRate", i18n.t("commercialProposals.fields.ivaRate")],
-                  ["manualSubtotal", i18n.t("commercialProposals.fields.manualSubtotal")],
+                  [
+                    "manualSubtotal",
+                    i18n.t("commercialProposals.fields.manualSubtotal"),
+                  ],
                 ].map(([field, label]) => (
                   <TextField
                     key={field}
@@ -1093,9 +1161,15 @@ const CommercialProposals = () => {
                   ) : (
                     <>
                       <Typography>
-                        {i18n.t("commercialProposals.totals.recommendedSubtotal", {
-                          value: money(totals.recommendedSubtotal, form.currency),
-                        })}
+                        {i18n.t(
+                          "commercialProposals.totals.recommendedSubtotal",
+                          {
+                            value: money(
+                              totals.recommendedSubtotal,
+                              form.currency,
+                            ),
+                          },
+                        )}
                       </Typography>
                       <Typography>
                         {i18n.t("commercialProposals.totals.finalSubtotal", {
@@ -1103,9 +1177,12 @@ const CommercialProposals = () => {
                         })}
                       </Typography>
                       <Typography>
-                        {i18n.t("commercialProposals.totals.estimatedCommission", {
-                          value: money(totals.commission, form.currency),
-                        })}
+                        {i18n.t(
+                          "commercialProposals.totals.estimatedCommission",
+                          {
+                            value: money(totals.commission, form.currency),
+                          },
+                        )}
                       </Typography>
                       <Typography>
                         {i18n.t("commercialProposals.totals.netTechkepper", {
@@ -1229,9 +1306,15 @@ const CommercialProposals = () => {
                   }
                 />
                 {[
-                  ["paymentTermsText", i18n.t("commercialProposals.fields.paymentTermsText")],
+                  [
+                    "paymentTermsText",
+                    i18n.t("commercialProposals.fields.paymentTermsText"),
+                  ],
                   ["termsText", i18n.t("commercialProposals.fields.termsText")],
-                  ["futureRecommendation", i18n.t("commercialProposals.fields.futureRecommendation")],
+                  [
+                    "futureRecommendation",
+                    i18n.t("commercialProposals.fields.futureRecommendation"),
+                  ],
                 ].map(([field, label]) => (
                   <TextField
                     key={field}

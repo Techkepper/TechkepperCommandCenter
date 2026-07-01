@@ -13,6 +13,7 @@ interface SerializedUser {
   isActive: boolean;
   theme: string;
   lastActivityAt: Date;
+  availabilityStatus: string;
 }
 
 export const SerializeUser = (user: User): SerializedUser => {
@@ -26,6 +27,7 @@ export const SerializeUser = (user: User): SerializedUser => {
     whatsappId: user.whatsappId,
     isActive: user.isActive,
     theme: user.theme,
-    lastActivityAt: user.lastActivityAt
+    lastActivityAt: user.lastActivityAt,
+    availabilityStatus: user.availabilityStatus || "available"
   };
 };

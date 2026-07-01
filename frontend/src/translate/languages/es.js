@@ -42,27 +42,28 @@ const messages = {
         },
         messages: {
           inAttendance: {
-            title: "En servicio"
+            title: "En servicio",
           },
           waiting: {
-            title: "Esperando"
+            title: "Esperando",
           },
           closed: {
-            title: "Finalizado"
-          }
-        }
+            title: "Finalizado",
+          },
+        },
       },
       connections: {
         title: "Conexión WhatsApp",
         toasts: {
-          deleted:
-            "La conexión de WhatsApp se eliminó correctamente.",
+          deleted: "La conexión de WhatsApp se eliminó correctamente.",
         },
         confirmationModal: {
           deleteTitle: "Borrar",
-          deleteMessage: "¿Confirma que desea eliminar esta conexión? Esta acción no se puede deshacer.",
+          deleteMessage:
+            "¿Confirma que desea eliminar esta conexión? Esta acción no se puede deshacer.",
           disconnectTitle: "Desconectar",
-          disconnectMessage: "¿Confirma que desea desconectar esta conexión de la API oficial?",
+          disconnectMessage:
+            "¿Confirma que desea desconectar esta conexión de la API oficial?",
         },
         buttons: {
           add: "Agregar conexión",
@@ -227,7 +228,8 @@ const messages = {
         success: "Usuario guardado correctamente.",
       },
       chat: {
-        noTicketMessage: "Seleccione una conversación para comenzar la atención.",
+        noTicketMessage:
+          "Seleccione una conversación para comenzar la atención.",
       },
       ticketsManager: {
         buttons: {
@@ -270,6 +272,8 @@ const messages = {
         fieldQueuePlaceholder: "Seleccione un departamento",
         fieldConnectionPlaceholder: "Seleccione una conexión",
         noOptions: "No se encontraron usuarios con ese nombre",
+        unavailableWarning:
+          "Este usuario no está disponible actualmente. ¿Desea asignarle la conversación de todos modos?",
         buttons: {
           ok: "Transferir",
           cancel: "Cancelar",
@@ -282,10 +286,12 @@ const messages = {
         connectionTitle: "Conexión que se está utilizando actualmente.",
         noTicketsMessage:
           "No se encontraron conversaciones con el estado o término indicado.",
+        noAvailableAgent: "Sin agente disponible",
         buttons: {
           accept: "Aceptar",
           assign: "Asignar",
         },
+        deleteSuccess: "Conversación eliminada.",
       },
       newTicketModal: {
         title: "Crear conversación",
@@ -415,7 +421,8 @@ const messages = {
         },
       },
       messagesInput: {
-        placeholderOpen: "Escriba un mensaje o presione '' / '' para usar las respuestas rápidas registradas",
+        placeholderOpen:
+          "Escriba un mensaje o presione '' / '' para usar las respuestas rápidas registradas",
         placeholderClosed:
           "Reabra o acepte esta conversación para enviar un mensaje.",
         placeholderObserver:
@@ -495,7 +502,8 @@ const messages = {
         ERR_SESSION_EXPIRED: "Sesión caducada. Inicie sesión.",
         ERR_USER_CREATION_DISABLED:
           "La creación de usuarios fue deshabilitada por el administrador.",
-        ERR_NO_PERMISSION: "No cuenta con permisos para acceder a este recurso.",
+        ERR_NO_PERMISSION:
+          "No cuenta con permisos para acceder a este recurso.",
         ERR_USER_INACTIVE:
           "Su usuario está inactivo. Comuníquese con un administrador.",
         ERR_USER_EMAIL_ALREADY_EXISTS:
@@ -506,16 +514,14 @@ const messages = {
           "Esta conversación ya fue asignada a otro responsable.",
         ERR_CORS_ORIGIN_NOT_ALLOWED:
           "El origen de la solicitud no está autorizado.",
-        ERR_ECOSYSTEM_NAME_REQUIRED:
-          "El nombre del ecosistema es obligatorio.",
+        ERR_ECOSYSTEM_NAME_REQUIRED: "El nombre del ecosistema es obligatorio.",
         ERR_NO_API_TOKEN_FOUND: "No se encontró el token de API solicitado.",
         ERR_NO_ECOSYSTEM_FOUND: "No se encontró el ecosistema solicitado.",
         ERR_NO_MEDIA_DATA: "No se encontraron datos multimedia para procesar.",
         ERR_NO_MESSAGE_FOUND: "No se encontró el mensaje solicitado.",
         ERR_NO_QUICK_ANSWER_FOUND:
           "No se encontró la respuesta rápida solicitada.",
-        ERR_NO_QUICK_ANSWERS_FOUND:
-          "No hay respuestas rápidas disponibles.",
+        ERR_NO_QUICK_ANSWERS_FOUND: "No hay respuestas rápidas disponibles.",
         ERR_NUMBER_NOT_ON_WHATSAPP:
           "El número indicado no está registrado en WhatsApp.",
         ERR_QUEUE_INVALID_COLOR:

@@ -3,6 +3,7 @@ import app from "./app";
 import { initIO } from "./libs/socket";
 import { logger } from "./utils/logger";
 import { StartAllWhatsAppsSessions } from "./services/WbotServices/StartAllWhatsAppsSessions";
+import { startDropboxSyncRetryWorker } from "./services/DropboxServices/retryWorker";
 
 const server = app.listen(process.env.PORT, () => {
   logger.info(`Server started on port: ${process.env.PORT}`);
@@ -10,6 +11,7 @@ const server = app.listen(process.env.PORT, () => {
 
 initIO(server);
 StartAllWhatsAppsSessions();
+startDropboxSyncRetryWorker();
 gracefulShutdown(server);
 
 process.on("uncaughtException", err => {

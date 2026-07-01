@@ -66,6 +66,27 @@ export const freelanceSalesRequiredVariables = [
   "FECHA_FIRMA"
 ] as const;
 
+export const contractAddendumRequiredVariables = [
+  "CLIENTE_RAZON_SOCIAL",
+  "CLIENTE_CEDULA",
+  "CLIENTE_REPRESENTANTE",
+  "CLIENTE_CEDULA_REPRESENTANTE",
+  "CLIENTE_CARGO_REPRESENTANTE",
+  "CLIENTE_CORREO",
+  "CLIENTE_TELEFONO",
+  "CLIENTE_DOMICILIO",
+  "DOCUMENTO_BASE",
+  "FECHA_DOCUMENTO_BASE",
+  "TITULO_ADDENDUM",
+  "MOTIVO_ADDENDUM",
+  "CAMBIOS_ADDENDUM",
+  "CLAUSULAS_MODIFICADAS",
+  "FECHA_VIGENCIA",
+  "CONDICIONES_ESPECIALES",
+  "LUGAR_FIRMA",
+  "FECHA_FIRMA"
+] as const;
+
 const contractTypes = {
   web_contract: {
     aliases: ["contract_web", "techkepper_web", "web"],
@@ -98,7 +119,8 @@ export const documentTypesByPurpose: Record<
     "growth_contract",
     "automate_contract",
     "service_contract",
-    "freelance_sales_contract"
+    "freelance_sales_contract",
+    "contract_addendum"
   ],
   quotations: ["quotation", "commercial_proposal"],
   nda: ["nda_mutual", "nda_unilateral"],
@@ -128,6 +150,11 @@ const documentTypeAliases: Record<string, string> = {
   sales_freelance_contract: "freelance_sales_contract",
   contrato_freelance: "freelance_sales_contract",
   contrato_freelance_ventas: "freelance_sales_contract",
+  addendum: "contract_addendum",
+  adendum: "contract_addendum",
+  adenda: "contract_addendum",
+  addendum_contrato: "contract_addendum",
+  adenda_contrato: "contract_addendum",
   proposal: "commercial_proposal",
   cotizacion: "commercial_proposal",
   propuesta_comercial: "commercial_proposal",
@@ -171,6 +198,9 @@ export const getRequiredVariablesByDocumentType = (
   if (documentType === "freelance_sales_contract") {
     return [...freelanceSalesRequiredVariables];
   }
+  if (documentType === "contract_addendum") {
+    return [...contractAddendumRequiredVariables];
+  }
   return [];
 };
 
@@ -196,7 +226,8 @@ export const getDocumentRecipientKind = (
   if (
     isEcosystemContractType(documentType) ||
     documentType === "nda_mutual" ||
-    documentType === "nda_unilateral"
+    documentType === "nda_unilateral" ||
+    documentType === "contract_addendum"
   ) {
     return "client";
   }

@@ -44,6 +44,13 @@ class Collaborator extends Model<Collaborator> {
   })
   contractualDenomination: "LA CONTRATISTA" | "EL CONTRATISTA";
 
+  @Default("unspecified")
+  @Column({
+    type: DataType.ENUM("female", "male", "unspecified"),
+    allowNull: false
+  })
+  sex: "female" | "male" | "unspecified";
+
   @Column({ type: DataType.STRING(255), allowNull: true })
   email: string | null;
 

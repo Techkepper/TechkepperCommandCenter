@@ -13,6 +13,13 @@ export const EmitUserEvent = (
     audience = audience.to(`user:${resolvedUserId}`);
   }
 
+  const queues = user && Array.isArray(user.queues) ? user.queues : [];
+  queues.forEach((queue: { id?: number }) => {
+    if (queue.id) {
+      audience = audience.to(`role:supervisor:queue:${queue.id}`);
+    }
+  });
+
   audience.emit("user", {
     action,
     ...(user ? { user } : {}),
@@ -20,7 +27,9 @@ export const EmitUserEvent = (
   });
 };
 
-export const RevokeUserSockets = async (userId: string | number): Promise<void> => {
+export const RevokeUserSockets = async (
+  userId: string | number
+): Promise<void> => {
   const io = getIO();
   const socketIds = await io.in(`user:${userId}`).allSockets();
 
