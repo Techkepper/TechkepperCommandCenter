@@ -16,7 +16,6 @@ import ValidateSecurityConfig from "./helpers/ValidateSecurityConfig";
 import whatsappWebhookRoutes from "./routes/whatsappWebhookRoutes";
 import { isAllowedOrigin } from "./config/allowedOrigins";
 
-Sentry.init({ dsn: process.env.SENTRY_DSN });
 ValidateSecurityConfig();
 
 const app = express();
@@ -64,7 +63,6 @@ app.use("/auth", (_req, res, next) => {
   res.setHeader("Pragma", "no-cache");
   next();
 });
-app.use(Sentry.Handlers.requestHandler());
 app.use(
   "/public",
   express.static(uploadConfig.directory, {
@@ -78,7 +76,7 @@ app.use(
 );
 app.use(routes);
 
-app.use(Sentry.Handlers.errorHandler());
+Sentry.setupExpressErrorHandler(app);
 
 const getRequestLogContext = (req: Request, statusCode?: number) => ({
   method: req.method,

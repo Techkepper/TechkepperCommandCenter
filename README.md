@@ -17,8 +17,8 @@ de WhatsApp Business Platform (Cloud API) de Meta.
 
 ## Requisitos
 
-- Node.js 20 LTS.
-- npm 10 o superior.
+- Node.js 24.18.0 LTS.
+- npm 10 o superior (incluido con Node 24).
 - MySQL 8 o MariaDB 10.11+.
 - Una cuenta empresarial de Meta, WABA y número registrado en Cloud API.
 - Docker Engine y Docker Compose para despliegue en contenedores.
