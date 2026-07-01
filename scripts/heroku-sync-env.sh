@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_NAME="${1:?Usage: heroku-sync-env.sh <heroku-app-name> [env-file]}"
 ENV_FILE="${2:-.env.production}"
-FRONTEND_APP="${HEROKU_FRONTEND_APP:-web-command-center}"
+FRONTEND_APP="${HEROKU_FRONTEND_APP:-web-command-center-e0b9cd1e60e4}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "No se encontró el archivo de entorno: $ENV_FILE" >&2
