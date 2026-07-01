@@ -291,6 +291,7 @@ const messages = {
           accept: "Aceptar",
           assign: "Asignar",
         },
+        deleteSuccess: "Conversación eliminada.",
       },
       newTicketModal: {
         title: "Crear conversación",

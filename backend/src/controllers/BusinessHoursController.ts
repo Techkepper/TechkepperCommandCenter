@@ -7,13 +7,23 @@ import {
   updateBusinessHoursConfig,
   updateSpecialDate
 } from "../services/BusinessHoursServices/BusinessHoursService";
+import { getSmtpStatus } from "../services/EmailServices/SmtpEmailService";
+import { getLatestUrgentEmailFailure } from "../services/BusinessHoursServices/UrgentAfterHoursAlertService";
 
 export const show = async (_req: Request, res: Response): Promise<Response> => {
-  const [config, specialDates] = await Promise.all([
+  const [config, specialDates, lastUrgentEmailFailure] = await Promise.all([
     getBusinessHoursConfig(),
-    listSpecialDates()
+    listSpecialDates(),
+    getLatestUrgentEmailFailure()
   ]);
-  return res.status(200).json({ config, specialDates });
+  return res.status(200).json({
+    config,
+    specialDates,
+    emailDelivery: {
+      ...getSmtpStatus(),
+      lastUrgentEmailFailure
+    }
+  });
 };
 
 export const update = async (

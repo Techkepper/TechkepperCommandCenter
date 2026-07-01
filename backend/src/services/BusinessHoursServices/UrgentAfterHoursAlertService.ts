@@ -3,6 +3,7 @@ import AfterHoursAutoReplyEvent from "../../models/AfterHoursAutoReplyEvent";
 import Ticket from "../../models/Ticket";
 import { logger } from "../../utils/logger";
 import SmtpEmailService from "../EmailServices/SmtpEmailService";
+import ShowTicketService from "../TicketServices/ShowTicketService";
 import {
   BusinessHoursEvaluation,
   evaluateBusinessHoursCondition,
@@ -16,6 +17,9 @@ interface Request {
 }
 
 const inFlight = new Set<string>();
+
+const safeError = (error: unknown): string =>
+  error instanceof Error ? error.message.substring(0, 200) : "Unknown error";
 
 const normalizeText = (value: string): string =>
   value
@@ -75,6 +79,42 @@ const buildEmailText = ({
   ].join("\n");
 };
 
+const hasActiveUrgentEmailCooldown = async ({
+  contactId,
+  ticketId,
+  cooldownMinutes
+}: {
+  contactId: number;
+  ticketId: number;
+  cooldownMinutes: number;
+}): Promise<boolean> => {
+  const cooldownStart = new Date(
+    Date.now() - cooldownMinutes * 60 * 1000
+  );
+  const recentEvents = await AfterHoursAutoReplyEvent.findAll({
+    where: {
+      replyType: "urgent_email",
+      status: "sent",
+      createdAt: { [Op.gte]: cooldownStart },
+      [Op.or]: [{ contactId }, { ticketId }]
+    },
+    attributes: ["ticketId"]
+  });
+
+  if (!recentEvents.length) {
+    return false;
+  }
+
+  const ticketIds = [...new Set(recentEvents.map(event => event.ticketId))];
+  const existingTickets = await Ticket.findAll({
+    where: { id: ticketIds },
+    attributes: ["id"]
+  });
+  const existingTicketIds = new Set(existingTickets.map(ticket => ticket.id));
+
+  return recentEvents.some(event => existingTicketIds.has(event.ticketId));
+};
+
 const UrgentAfterHoursAlertService = async ({
   ticket,
   messageBody,
@@ -128,18 +168,13 @@ const UrgentAfterHoursAlertService = async ({
 
     inFlight.add(lockKey);
     try {
-      const cooldownStart = new Date(
-        Date.now() - config.urgentEmailCooldownMinutes * 60 * 1000
-      );
-      const previous = await AfterHoursAutoReplyEvent.findOne({
-        where: {
-          replyType: "urgent_email",
-          status: "sent",
-          createdAt: { [Op.gte]: cooldownStart },
-          [Op.or]: [{ contactId: ticket.contactId }, { ticketId: ticket.id }]
-        }
-      });
-      if (previous) {
+      if (
+        await hasActiveUrgentEmailCooldown({
+          contactId: ticket.contactId,
+          ticketId: ticket.id,
+          cooldownMinutes: config.urgentEmailCooldownMinutes
+        })
+      ) {
         logger.info(
           { ticketId: ticket.id, reason: "cooldown" },
           "urgent_after_hours_email_skipped"
@@ -147,11 +182,13 @@ const UrgentAfterHoursAlertService = async ({
         return;
       }
 
+      const hydratedTicket = await ShowTicketService(ticket.id);
+
       await SmtpEmailService({
         to: config.urgentEmailRecipients,
         subject: config.urgentEmailSubject,
         text: buildEmailText({
-          ticket,
+          ticket: hydratedTicket,
           messageBody,
           receivedAt,
           timezone: config.timezone,
@@ -169,7 +206,8 @@ const UrgentAfterHoursAlertService = async ({
         {
           ticketId: ticket.id,
           contactId: ticket.contactId,
-          condition: replyType
+          condition: replyType,
+          keyword
         },
         "urgent_after_hours_email_sent"
       );
@@ -177,19 +215,22 @@ const UrgentAfterHoursAlertService = async ({
       inFlight.delete(lockKey);
     }
   } catch (error) {
+    const detail = safeError(error);
     await AfterHoursAutoReplyEvent.create({
       contactId: ticket.contactId,
       ticketId: ticket.id,
       replyType: "urgent_email",
       status: "failed",
-      detail: replyType ? `condition:${replyType}` : "condition:unknown"
+      detail: replyType
+        ? `condition:${replyType};error:${detail}`
+        : `error:${detail}`
     } as AfterHoursAutoReplyEvent).catch(() => undefined);
     logger.warn(
       {
         ticketId: ticket.id,
         contactId: ticket.contactId,
         condition: replyType,
-        errorName: error instanceof Error ? error.name : "UnknownError"
+        error: detail
       },
       "urgent_after_hours_email_failed"
     );
@@ -197,4 +238,36 @@ const UrgentAfterHoursAlertService = async ({
 };
 
 export { findUrgentKeyword };
+
+export const getLatestUrgentEmailFailure = async (): Promise<{
+  at: Date;
+  detail: string;
+} | null> => {
+  const [lastFailure, lastSuccess] = await Promise.all([
+    AfterHoursAutoReplyEvent.findOne({
+      where: { replyType: "urgent_email", status: "failed" },
+      order: [["createdAt", "DESC"]],
+      attributes: ["detail", "createdAt"]
+    }),
+    AfterHoursAutoReplyEvent.findOne({
+      where: { replyType: "urgent_email", status: "sent" },
+      order: [["createdAt", "DESC"]],
+      attributes: ["createdAt"]
+    })
+  ]);
+
+  if (
+    !lastFailure?.detail ||
+    (lastSuccess &&
+      lastSuccess.createdAt.getTime() >= lastFailure.createdAt.getTime())
+  ) {
+    return null;
+  }
+
+  return {
+    at: lastFailure.createdAt,
+    detail: lastFailure.detail
+  };
+};
+
 export default UrgentAfterHoursAlertService;

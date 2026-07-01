@@ -286,6 +286,7 @@ const messages = {
           accept: "Accept",
           assign: "Assign",
         },
+        deleteSuccess: "Conversation deleted.",
       },
       newTicketModal: {
         title: "Create Ticket",

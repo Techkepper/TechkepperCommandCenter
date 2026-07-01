@@ -22,7 +22,9 @@ import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import AutoAssignTicketService from "../services/TicketServices/AutoAssignTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
-import AfterHoursAutoReplyService from "../services/BusinessHoursServices/AfterHoursAutoReplyService";
+import AfterHoursAutoReplyService, {
+  shouldSkipConnectionGreeting
+} from "../services/BusinessHoursServices/AfterHoursAutoReplyService";
 import UrgentAfterHoursAlertService from "../services/BusinessHoursServices/UrgentAfterHoursAlertService";
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
@@ -140,12 +142,14 @@ const handleQueueLogic = async (
   whatsappId: number,
   messageBody: string,
   ticket: Ticket,
-  contactPayload: ContactPayload
+  contactPayload: ContactPayload,
+  greetingOptions: { skipGreeting?: boolean } = {}
 ): Promise<void> => {
+  const skipGreeting = Boolean(greetingOptions.skipGreeting);
   const { queues, greetingMessage } = await ShowWhatsAppService(whatsappId);
 
   const sendGreeting = async (bodyTemplate: string): Promise<void> => {
-    if (!bodyTemplate) return;
+    if (skipGreeting || !bodyTemplate) return;
 
     const body = formatBody(`\u200e${bodyTemplate}`, contactPayload as any);
     try {
@@ -183,35 +187,40 @@ const handleQueueLogic = async (
     });
 
     await sendGreeting(choosenQueue.greetingMessage || greetingMessage);
-  } else {
-    let options = "";
-    queues.forEach((queue, index) => {
-      options += `*${index + 1}* - ${queue.name}\n`;
-    });
-
-    const body = formatBody(
-      `\u200e${greetingMessage}\n${options}`,
-      contactPayload as any
-    );
-
-    const debouncedSentMessage = debounce(
-      async () => {
-        try {
-          await whatsappProvider.sendMessage(
-            whatsappId,
-            `${contactPayload.number}@c.us`,
-            body
-          );
-        } catch (error) {
-          logger.error("Error sending queue options message:", error);
-        }
-      },
-      3000,
-      ticket.id
-    );
-
-    debouncedSentMessage();
+    return;
   }
+
+  if (skipGreeting) {
+    return;
+  }
+
+  let queueOptionsText = "";
+  queues.forEach((queue, index) => {
+    queueOptionsText += `*${index + 1}* - ${queue.name}\n`;
+  });
+
+  const body = formatBody(
+    `\u200e${greetingMessage}\n${queueOptionsText}`,
+    contactPayload as any
+  );
+
+  const debouncedSentMessage = debounce(
+    async () => {
+      try {
+        await whatsappProvider.sendMessage(
+          whatsappId,
+          `${contactPayload.number}@c.us`,
+          body
+        );
+      } catch (error) {
+        logger.error("Error sending queue options message:", error);
+      }
+    },
+    3000,
+    ticket.id
+  );
+
+  debouncedSentMessage();
 };
 
 export const handleMessage = async (
@@ -260,6 +269,10 @@ export const handleMessage = async (
 
     let activeTicket = await ShowTicketService(ticket.id);
 
+    const receivedAt = Number.isFinite(processedMessage.timestamp)
+      ? new Date(processedMessage.timestamp * 1000)
+      : new Date();
+
     if (
       !activeTicket.queueId &&
       !contextPayload.groupContact &&
@@ -267,11 +280,21 @@ export const handleMessage = async (
       !activeTicket.userId &&
       (whatsapp.queues.length >= 1 || Boolean(whatsapp.greetingMessage))
     ) {
+      const skipGreeting =
+        !processedMessage.fromMe && !contextPayload.groupContact
+          ? await shouldSkipConnectionGreeting({
+              contactId: contact.id,
+              ticketId: activeTicket.id,
+              receivedAt
+            })
+          : false;
+
       await handleQueueLogic(
         contextPayload.whatsappId,
         processedMessage.body,
         activeTicket,
-        contactPayload
+        contactPayload,
+        { skipGreeting }
       );
       activeTicket = await ShowTicketService(ticket.id);
     }
@@ -317,9 +340,6 @@ export const handleMessage = async (
     await CreateMessageService({ messageData });
 
     if (!processedMessage.fromMe && !contextPayload.groupContact) {
-      const receivedAt = Number.isFinite(processedMessage.timestamp)
-        ? new Date(processedMessage.timestamp * 1000)
-        : new Date();
       UrgentAfterHoursAlertService({
         ticket: activeTicket,
         messageBody: processedMessage.body,
@@ -328,6 +348,7 @@ export const handleMessage = async (
         logger.warn(
           {
             ticketId: activeTicket.id,
+            error: error instanceof Error ? error.message : String(error),
             errorName: error instanceof Error ? error.name : "UnknownError"
           },
           "urgent_after_hours_email_failed"
@@ -335,7 +356,10 @@ export const handleMessage = async (
       });
 
       try {
-        await AfterHoursAutoReplyService(activeTicket);
+        await AfterHoursAutoReplyService({
+          ticket: activeTicket,
+          receivedAt
+        });
       } catch (error) {
         logger.warn(
           {

@@ -25,6 +25,9 @@ import { Add, DeleteOutline, Edit } from "@material-ui/icons";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import TagListInput from "../TagListInput";
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 const specialMessage = `Hola, gracias por comunicarse con Techkepper Company S.A. 👋
 
@@ -34,12 +37,6 @@ Gracias por su comprensión.`;
 
 const urgentInstruction =
   "Si su caso es urgente, responda con la palabra URGENTE y una breve descripción del problema.";
-
-const splitList = (value) =>
-  value
-    .split(/[;,\n]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 
 const emptySpecialDate = {
   name: "",
@@ -73,12 +70,22 @@ const BusinessHoursSettings = ({ cardClass }) => {
   const [specialDates, setSpecialDates] = useState([]);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [urgentEmailRecipients, setUrgentEmailRecipients] = useState([]);
+  const [urgentKeywords, setUrgentKeywords] = useState([]);
+  const [emailDelivery, setEmailDelivery] = useState(null);
+
+  const syncListInputs = (nextConfig) => {
+    setUrgentEmailRecipients(nextConfig.urgentEmailRecipients || []);
+    setUrgentKeywords(nextConfig.urgentKeywords || []);
+  };
 
   const load = async () => {
     try {
       const { data } = await api.get("/business-hours");
       setConfig(data.config);
+      syncListInputs(data.config);
       setSpecialDates(data.specialDates);
+      setEmailDelivery(data.emailDelivery || null);
     } catch (error) {
       toastError(error);
     }
@@ -102,10 +109,28 @@ const BusinessHoursSettings = ({ cardClass }) => {
   };
 
   const saveConfig = async () => {
+    const invalidEmail = urgentEmailRecipients.find(
+      (email) => !isValidEmail(email),
+    );
+    if (invalidEmail) {
+      toast.error(`Correo inválido: ${invalidEmail}`);
+      return;
+    }
+    if (!urgentKeywords.length) {
+      toast.error("Agregue al menos una palabra clave de urgencia.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const { data } = await api.put("/business-hours", config);
+      const payload = {
+        ...config,
+        urgentEmailRecipients,
+        urgentKeywords,
+      };
+      const { data } = await api.put("/business-hours", payload);
       setConfig(data);
+      syncListInputs(data);
       toast.success("Horario y respuestas automáticas actualizados.");
     } catch (error) {
       toastError(error);
@@ -295,6 +320,25 @@ const BusinessHoursSettings = ({ cardClass }) => {
               Se envían únicamente fuera de horario, en días no laborables o
               durante una fecha especial activa.
             </Typography>
+            <Typography color="textSecondary" variant="body2">
+              {emailDelivery?.configured
+                ? `Remitente SMTP: ${emailDelivery.from}`
+                : "SMTP no configurado. Defina SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS y SMTP_FROM."}
+            </Typography>
+            {emailDelivery?.warning && (
+              <Typography color="textSecondary" variant="body2">
+                {emailDelivery.warning}
+              </Typography>
+            )}
+            {emailDelivery?.lastUrgentEmailFailure?.detail && (
+              <Typography color="error" variant="body2">
+                Último fallo de correo urgente (
+                {new Date(
+                  emailDelivery.lastUrgentEmailFailure.at
+                ).toLocaleString()}
+                ): {emailDelivery.lastUrgentEmailFailure.detail}
+              </Typography>
+            )}
           </Box>
         </Grid>
         <Grid item xs={12}>
@@ -312,17 +356,14 @@ const BusinessHoursSettings = ({ cardClass }) => {
           />
         </Grid>
         <Grid item xs={12} sm={8}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            variant="outlined"
+          <TagListInput
             label="Correos destinatarios"
-            helperText="Separe múltiples correos con coma o una línea nueva."
-            value={(config.urgentEmailRecipients || []).join("\n")}
-            onChange={(event) =>
-              setValue("urgentEmailRecipients", splitList(event.target.value))
-            }
+            helperText="Escriba un correo y pulse Enter o coma para convertirlo en un globo. Haga clic en × para quitarlo."
+            items={urgentEmailRecipients}
+            onChange={setUrgentEmailRecipients}
+            validateItem={isValidEmail}
+            invalidMessage="Ingrese un correo electrónico válido."
+            placeholder="correo@empresa.com"
           />
         </Grid>
         <Grid item xs={12} sm={4}>
@@ -350,17 +391,12 @@ const BusinessHoursSettings = ({ cardClass }) => {
           />
         </Grid>
         <Grid item xs={12}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            variant="outlined"
+          <TagListInput
             label="Palabras clave de urgencia"
-            helperText="Una palabra o frase por línea."
-            value={(config.urgentKeywords || []).join("\n")}
-            onChange={(event) =>
-              setValue("urgentKeywords", splitList(event.target.value))
-            }
+            helperText="Escriba una palabra o frase y pulse Enter o coma para agregarla."
+            items={urgentKeywords}
+            onChange={setUrgentKeywords}
+            placeholder="URGENTE"
           />
         </Grid>
       </Grid>

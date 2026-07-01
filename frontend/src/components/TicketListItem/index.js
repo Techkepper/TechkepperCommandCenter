@@ -19,9 +19,13 @@ import api from "../../services/api";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import MarkdownWrapper from "../MarkdownWrapper";
 import { Tooltip } from "@material-ui/core";
+import IconButton from "@material-ui/core/IconButton";
+import DeleteOutline from "@material-ui/icons/DeleteOutline";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 import TransferTicketModal from "../TransferTicketModal";
+import ConfirmationModal from "../ConfirmationModal";
+import { toast } from "react-toastify";
 
 const useStyles = makeStyles(() => ({
   ticket: {
@@ -117,6 +121,14 @@ const useStyles = makeStyles(() => ({
   acceptButton: {
     position: "absolute",
     left: "50%",
+    transform: "translateX(-50%)",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+  },
+
+  deleteButton: {
+    backgroundColor: "rgba(244, 67, 54, 0.08)",
   },
 
   ticketQueueColor: {
@@ -154,10 +166,12 @@ const TicketListItem = ({ ticket }) => {
   const history = useHistory();
   const [loading, setLoading] = useState(false);
   const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const { ticketId } = useParams();
   const isMounted = useRef(true);
   const { user } = useContext(AuthContext);
   const isManager = user?.profile === "admin" || user?.profile === "supervisor";
+  const isAdmin = user?.profile === "admin";
 
   useEffect(() => {
     return () => {
@@ -199,6 +213,27 @@ const TicketListItem = ({ ticket }) => {
   const handleOpenTransferModal = (e) => {
     e.stopPropagation();
     setTransferTicketModalOpen(true);
+  };
+
+  const handleOpenDeleteConfirmation = (e) => {
+    e.stopPropagation();
+    setDeleteConfirmationOpen(true);
+  };
+
+  const handleDeleteTicket = async () => {
+    try {
+      await api.delete(`/tickets/${ticket.id}`);
+      toast.success(i18n.t("ticketsList.deleteSuccess"));
+      if (ticketId && +ticketId === ticket.id) {
+        history.push("/tickets");
+      }
+    } catch (err) {
+      toastError(err);
+    } finally {
+      if (isMounted.current) {
+        setDeleteConfirmationOpen(false);
+      }
+    }
   };
 
   return (
@@ -299,23 +334,48 @@ const TicketListItem = ({ ticket }) => {
             </span>
           }
         />
+        {ticket.status === "closed" && isAdmin && (
+          <span className={classes.acceptButton}>
+            <Tooltip title={i18n.t("ticketOptionsMenu.delete")}>
+              <IconButton
+                size="small"
+                className={classes.deleteButton}
+                onClick={handleOpenDeleteConfirmation}
+              >
+                <DeleteOutline fontSize="small" color="error" />
+              </IconButton>
+            </Tooltip>
+          </span>
+        )}
         {ticket.status === "pending" && (
-          <ButtonWithSpinner
-            color="primary"
-            variant="contained"
-            className={classes.acceptButton}
-            size="small"
-            loading={loading}
-            onClick={(e) =>
-              isManager
-                ? handleOpenTransferModal(e)
-                : handleAcepptTicket(e, ticket.id)
-            }
-          >
-            {isManager
-              ? i18n.t("ticketsList.buttons.assign")
-              : i18n.t("ticketsList.buttons.accept")}
-          </ButtonWithSpinner>
+          <span className={classes.acceptButton}>
+            <ButtonWithSpinner
+              color="primary"
+              variant="contained"
+              size="small"
+              loading={loading}
+              onClick={(e) =>
+                isManager
+                  ? handleOpenTransferModal(e)
+                  : handleAcepptTicket(e, ticket.id)
+              }
+            >
+              {isManager
+                ? i18n.t("ticketsList.buttons.assign")
+                : i18n.t("ticketsList.buttons.accept")}
+            </ButtonWithSpinner>
+            {isAdmin && (
+              <Tooltip title={i18n.t("ticketOptionsMenu.delete")}>
+                <IconButton
+                  size="small"
+                  className={classes.deleteButton}
+                  onClick={handleOpenDeleteConfirmation}
+                >
+                  <DeleteOutline fontSize="small" color="error" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </span>
         )}
       </ListItem>
       <Divider variant="inset" component="li" />
@@ -326,6 +386,18 @@ const TicketListItem = ({ ticket }) => {
         ticketWhatsappId={ticket.whatsappId}
         ticketEcosystemId={ticket.ecosystemId}
       />
+      <ConfirmationModal
+        title={`${i18n.t("ticketOptionsMenu.confirmationModal.title")}${
+          ticket.id
+        } ${i18n.t("ticketOptionsMenu.confirmationModal.titleFrom")}${
+          ticket.contact.name
+        }?`}
+        open={deleteConfirmationOpen}
+        onClose={setDeleteConfirmationOpen}
+        onConfirm={handleDeleteTicket}
+      >
+        {i18n.t("ticketOptionsMenu.confirmationModal.message")}
+      </ConfirmationModal>
     </React.Fragment>
   );
 };

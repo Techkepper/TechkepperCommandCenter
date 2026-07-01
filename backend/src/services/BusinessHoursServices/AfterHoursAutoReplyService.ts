@@ -3,21 +3,118 @@ import AfterHoursAutoReplyEvent from "../../models/AfterHoursAutoReplyEvent";
 import Ticket from "../../models/Ticket";
 import { logger } from "../../utils/logger";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
+import ShowTicketService from "../TicketServices/ShowTicketService";
 import {
+  BusinessHoursEvaluation,
   evaluateBusinessHours,
   getBusinessHoursConfig
 } from "./BusinessHoursService";
 
 const inFlight = new Set<string>();
 
+const AUTO_REPLY_TYPES = ["after_hours", "non_working_day", "special_date"];
+
 const safeError = (error: unknown): string =>
   error instanceof Error ? error.message.substring(0, 200) : "Unknown error";
 
-const AfterHoursAutoReplyService = async (ticket: Ticket): Promise<void> => {
-  const evaluation = await evaluateBusinessHours();
+const hasActiveAfterHoursCooldown = async ({
+  contactId,
+  replyType,
+  cooldownHours
+}: {
+  contactId: number;
+  replyType: NonNullable<BusinessHoursEvaluation["replyType"]>;
+  cooldownHours: number;
+}): Promise<boolean> => {
+  const cooldownStart = new Date(
+    Date.now() - cooldownHours * 60 * 60 * 1000
+  );
+  const recentEvents = await AfterHoursAutoReplyEvent.findAll({
+    where: {
+      contactId,
+      replyType,
+      status: "sent",
+      createdAt: { [Op.gte]: cooldownStart }
+    },
+    attributes: ["ticketId"]
+  });
+
+  if (!recentEvents.length) {
+    return false;
+  }
+
+  const ticketIds = [...new Set(recentEvents.map(event => event.ticketId))];
+  const existingTickets = await Ticket.findAll({
+    where: { id: ticketIds },
+    attributes: ["id"]
+  });
+  const existingTicketIds = new Set(existingTickets.map(ticket => ticket.id));
+
+  return recentEvents.some(event => existingTicketIds.has(event.ticketId));
+};
+
+export const shouldSendAfterHoursAutoReply = async ({
+  contactId,
+  receivedAt = new Date()
+}: {
+  contactId: number;
+  receivedAt?: Date;
+}): Promise<boolean> => {
+  const evaluation = await evaluateBusinessHours(receivedAt);
+  if (!evaluation.replyType || !evaluation.message) {
+    return false;
+  }
+
+  const config = await getBusinessHoursConfig();
+  return !(await hasActiveAfterHoursCooldown({
+    contactId,
+    replyType: evaluation.replyType,
+    cooldownHours: config.cooldownHours
+  }));
+};
+
+export const shouldSkipConnectionGreeting = async ({
+  contactId,
+  ticketId,
+  receivedAt = new Date()
+}: {
+  contactId: number;
+  ticketId: number;
+  receivedAt?: Date;
+}): Promise<boolean> => {
+  const evaluation = await evaluateBusinessHours(receivedAt);
+  if (evaluation.replyType && evaluation.message) {
+    return true;
+  }
+
+  const priorAutoReply = await AfterHoursAutoReplyEvent.findOne({
+    where: {
+      ticketId,
+      status: "sent",
+      replyType: { [Op.in]: AUTO_REPLY_TYPES }
+    }
+  });
+
+  return Boolean(priorAutoReply);
+};
+
+interface AfterHoursAutoReplyRequest {
+  ticket: Ticket;
+  receivedAt?: Date;
+}
+
+const AfterHoursAutoReplyService = async ({
+  ticket,
+  receivedAt = new Date()
+}: AfterHoursAutoReplyRequest): Promise<void> => {
+  const evaluation = await evaluateBusinessHours(receivedAt);
   if (!evaluation.replyType || !evaluation.message) {
     logger.info(
-      { ticketId: ticket.id, reason: "inside_business_hours_or_disabled" },
+      {
+        ticketId: ticket.id,
+        reason: "inside_business_hours_or_disabled",
+        receivedAt: receivedAt.toISOString()
+      },
       "after_hours_auto_reply_skipped"
     );
     return;
@@ -39,18 +136,13 @@ const AfterHoursAutoReplyService = async (ticket: Ticket): Promise<void> => {
   inFlight.add(key);
   try {
     const config = await getBusinessHoursConfig();
-    const cooldownStart = new Date(
-      Date.now() - config.cooldownHours * 60 * 60 * 1000
-    );
-    const previous = await AfterHoursAutoReplyEvent.findOne({
-      where: {
+    if (
+      await hasActiveAfterHoursCooldown({
         contactId: ticket.contactId,
         replyType: evaluation.replyType,
-        status: "sent",
-        createdAt: { [Op.gte]: cooldownStart }
-      }
-    });
-    if (previous) {
+        cooldownHours: config.cooldownHours
+      })
+    ) {
       logger.info(
         {
           ticketId: ticket.id,
@@ -63,9 +155,11 @@ const AfterHoursAutoReplyService = async (ticket: Ticket): Promise<void> => {
       return;
     }
 
+    const hydratedTicket = await ShowTicketService(ticket.id);
+
     await SendWhatsAppMessage({
       body: evaluation.message,
-      ticket,
+      ticket: hydratedTicket,
       skipProviderPersist: true
     });
     await AfterHoursAutoReplyEvent.create({
@@ -81,7 +175,8 @@ const AfterHoursAutoReplyService = async (ticket: Ticket): Promise<void> => {
       {
         ticketId: ticket.id,
         contactId: ticket.contactId,
-        replyType: evaluation.replyType
+        replyType: evaluation.replyType,
+        receivedAt: receivedAt.toISOString()
       },
       "after_hours_auto_reply_sent"
     );
