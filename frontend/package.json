@@ -28,6 +28,7 @@
     "react-router-dom": "^5.2.0",
     "react-toastify": "^6.0.9",
     "recharts": "^2.0.2",
+    "serve": "^14.2.6",
     "socket.io-client": "^4.8.3",
     "use-sound": "^2.0.1",
     "yup": "^0.32.8"
@@ -36,7 +37,9 @@
     "dev": "vite",
     "start": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:prod": "serve -s build -l $PORT",
+    "heroku-postbuild": "npm run build"
   },
   "browserslist": {
     "production": [
