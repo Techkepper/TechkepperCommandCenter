@@ -9,6 +9,7 @@ import { Op } from "sequelize";
 import AppError from "../../errors/AppError";
 import ExternalStorageConnection from "../../models/ExternalStorageConnection";
 import SmartDocument from "../../models/SmartDocument";
+import { getDropboxRedirectUri } from "../../config/appUrls";
 import { logger } from "../../utils/logger";
 import {
   removeDocumentFile,
@@ -59,7 +60,7 @@ const getDropboxConfig = () => ({
   appKey: process.env.DROPBOX_APP_KEY || "",
   appSecret: process.env.DROPBOX_APP_SECRET || "",
   refreshToken: process.env.DROPBOX_REFRESH_TOKEN || "",
-  redirectUri: process.env.DROPBOX_REDIRECT_URI || ""
+  redirectUri: getDropboxRedirectUri()
 });
 
 const hasDropboxEnvConfig = (): boolean => {

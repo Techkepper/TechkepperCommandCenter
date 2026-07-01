@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { getPublicBackendOrigin } from "../config/appUrls";
 import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSession";
 
 import CreateWhatsAppService from "../services/WhatsappService/CreateWhatsAppService";
@@ -77,7 +78,7 @@ export const metaInfo = async (
   await ShowWhatsAppService(whatsappId);
   const info = await getCloudApiPhoneInfo(Number(whatsappId));
 
-  const publicUrl = (process.env.BACKEND_PUBLIC_URL || "").replace(/\/+$/, "");
+  const publicUrl = getPublicBackendOrigin();
   const webhookUrl = publicUrl
     ? `${publicUrl}/webhooks/whatsapp`
     : "/webhooks/whatsapp";
