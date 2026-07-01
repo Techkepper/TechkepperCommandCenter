@@ -1,4 +1,4 @@
-FROM node:20-bookworm as build-deps
+FROM node:24.18.0-bookworm as build-deps
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
