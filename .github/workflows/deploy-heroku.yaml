@@ -12,10 +12,6 @@ concurrency:
   group: deploy-heroku-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  HEROKU_BACKEND_APP: api-command-center-6a6bbf5602c2
-  HEROKU_FRONTEND_APP: web-command-center-e0b9cd1e60e4
-
 jobs:
   deploy:
     if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feat/heroku-deploy'
@@ -26,6 +22,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Configure Heroku app names
+        run: |
+          backend_app="${{ vars.HEROKU_BACKEND_APP }}"
+          frontend_app="${{ vars.HEROKU_FRONTEND_APP }}"
+          if [ -z "$backend_app" ]; then
+            backend_app="api-command-center-6a6bbf5602c2"
+          fi
+          if [ -z "$frontend_app" ]; then
+            frontend_app="web-command-center-e0b9cd1e60e4"
+          fi
+          echo "HEROKU_BACKEND_APP=$backend_app" >> "$GITHUB_ENV"
+          echo "HEROKU_FRONTEND_APP=$frontend_app" >> "$GITHUB_ENV"
+          echo "Backend app: $backend_app"
+          echo "Frontend app: $frontend_app"
 
       - name: Validate secrets
         env:
@@ -48,6 +59,13 @@ jobs:
 
       - name: Install Heroku CLI
         run: curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Verify Heroku access and apps
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          chmod +x scripts/heroku-preflight.sh
+          ./scripts/heroku-preflight.sh "$HEROKU_BACKEND_APP" "$HEROKU_FRONTEND_APP"
 
       - name: Sync backend config vars
         env:
