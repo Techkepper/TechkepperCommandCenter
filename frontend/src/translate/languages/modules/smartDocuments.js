@@ -138,7 +138,9 @@ export const smartDocuments = {
         deleteDocumentTitle: "Eliminar documento {{title}}?",
         deleteDocumentTitleDefault: "Eliminar documento",
         deleteDocumentBody:
-          "Esta acción quitará el documento del módulo y eliminará el archivo almacenado.",
+          "Esta acción quitará el documento del módulo y eliminará el archivo local.",
+        deleteDropboxCheckbox:
+          "Confirmo eliminar también la copia en Dropbox",
         deleteTemplateTitle: "Eliminar plantilla {{name}}?",
         deleteTemplateTitleDefault: "Eliminar plantilla",
         deleteTemplateBody:
@@ -558,7 +560,9 @@ export const smartDocuments = {
         deleteDocumentTitle: "Delete document {{title}}?",
         deleteDocumentTitleDefault: "Delete document",
         deleteDocumentBody:
-          "This action will remove the document from the module and delete the stored file.",
+          "This action will remove the document from the module and delete the local file.",
+        deleteDropboxCheckbox:
+          "I confirm deleting the Dropbox copy as well",
         deleteTemplateTitle: "Delete template {{name}}?",
         deleteTemplateTitleDefault: "Delete template",
         deleteTemplateBody:
@@ -978,7 +982,9 @@ export const smartDocuments = {
         deleteDocumentTitle: "Excluir documento {{title}}?",
         deleteDocumentTitleDefault: "Excluir documento",
         deleteDocumentBody:
-          "Esta ação removerá o documento do módulo e excluirá o arquivo armazenado.",
+          "Esta ação removerá o documento do módulo e excluirá o arquivo local.",
+        deleteDropboxCheckbox:
+          "Confirmo excluir também a cópia no Dropbox",
         deleteTemplateTitle: "Excluir modelo {{name}}?",
         deleteTemplateTitleDefault: "Excluir modelo",
         deleteTemplateBody:

@@ -319,7 +319,8 @@ export const remove = async (
     await DeleteDocumentService({
       documentId,
       userId: req.user.id,
-      userProfile: req.user.profile
+      userProfile: req.user.profile,
+      deleteFromDropbox: String(req.query.deleteFromDropbox) === "true"
     });
 
     return res.status(200).json({ message: "Documento eliminado" });

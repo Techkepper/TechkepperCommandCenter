@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import {
   Button,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
@@ -896,6 +897,7 @@ const SmartDocuments = () => {
   const [installRequired, setInstallRequired] = useState(false);
   const [deletingDocument, setDeletingDocument] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [deleteDropboxToo, setDeleteDropboxToo] = useState(false);
   const [downloadingDocument, setDownloadingDocument] = useState(null);
   const [deletingTemplate, setDeletingTemplate] = useState(null);
   const [templateConfirmOpen, setTemplateConfirmOpen] = useState(false);
@@ -1440,7 +1442,11 @@ const SmartDocuments = () => {
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/documents/${deletingDocument.id}`);
+      await api.delete(`/documents/${deletingDocument.id}`, {
+        params: {
+          deleteFromDropbox: deleteDropboxToo ? "true" : "false",
+        },
+      });
       setDocuments((current) =>
         current.filter((document) => document.id !== deletingDocument.id),
       );
@@ -1449,6 +1455,7 @@ const SmartDocuments = () => {
       toastError(err);
     } finally {
       setDeletingDocument(null);
+      setDeleteDropboxToo(false);
       setConfirmModalOpen(false);
     }
   };
@@ -1800,20 +1807,60 @@ const SmartDocuments = () => {
 
   return (
     <MainContainer>
-      <ConfirmationModal
-        title={
-          deletingDocument
+      <Dialog
+        open={confirmModalOpen}
+        onClose={() => {
+          setConfirmModalOpen(false);
+          setDeleteDropboxToo(false);
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {deletingDocument
             ? i18n.t("smartDocuments.confirm.deleteDocumentTitle", {
                 title: deletingDocument.title,
               })
-            : i18n.t("smartDocuments.confirm.deleteDocumentTitleDefault")
-        }
-        open={confirmModalOpen}
-        onClose={setConfirmModalOpen}
-        onConfirm={handleDelete}
-      >
-        {i18n.t("smartDocuments.confirm.deleteDocumentBody")}
-      </ConfirmationModal>
+            : i18n.t("smartDocuments.confirm.deleteDocumentTitleDefault")}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography gutterBottom>
+            {i18n.t("smartDocuments.confirm.deleteDocumentBody")}
+          </Typography>
+          {deletingDocument?.hasCloudCopy && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  color="primary"
+                  checked={deleteDropboxToo}
+                  onChange={(event) =>
+                    setDeleteDropboxToo(event.target.checked)
+                  }
+                />
+              }
+              label={i18n.t("smartDocuments.confirm.deleteDropboxCheckbox")}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setConfirmModalOpen(false);
+              setDeleteDropboxToo(false);
+            }}
+          >
+            {i18n.t("confirmationModal.buttons.cancel")}
+          </Button>
+          <Button
+            color="secondary"
+            variant="contained"
+            disabled={Boolean(deletingDocument?.hasCloudCopy && !deleteDropboxToo)}
+            onClick={handleDelete}
+          >
+            {i18n.t("confirmationModal.buttons.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(statusDocument)}
@@ -3054,6 +3101,7 @@ const SmartDocuments = () => {
                           size="small"
                           onClick={() => {
                             setDeletingDocument(document);
+                            setDeleteDropboxToo(false);
                             setConfirmModalOpen(true);
                           }}
                         >
