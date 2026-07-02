@@ -3,6 +3,7 @@
 .npm-cache/
 ssl/
 .env
+.env.production
 .wwebjs_auth
 .wwebjs_cache
 .idea

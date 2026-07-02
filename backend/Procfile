@@ -1,0 +1,2 @@
+release: npm run db:release
+web: npm run start:prod

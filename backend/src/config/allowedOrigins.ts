@@ -9,19 +9,31 @@ const configuredOrigins = [
 
 const allowedHostSuffixes = [".ngrok-free.app", ".ngrok.io"];
 
+const isHerokuFrontendOrigin = (hostname: string): boolean =>
+  /^web-command-center(-[a-z0-9]+)?\.herokuapp\.com$/i.test(hostname);
+
+const isTechkepperOrigin = (hostname: string): boolean =>
+  hostname === "center.techkepper.com" || hostname.endsWith(".techkepper.com");
+
 export const isAllowedOrigin = (origin?: string): boolean => {
   if (!origin) return true;
   if (configuredOrigins.includes(origin)) return true;
 
   try {
     const url = new URL(origin);
-    return (
+    if (
       url.protocol === "https:" &&
-      allowedHostSuffixes.some(suffix => url.hostname.endsWith(suffix))
-    );
+      (allowedHostSuffixes.some(suffix => url.hostname.endsWith(suffix)) ||
+        isHerokuFrontendOrigin(url.hostname) ||
+        isTechkepperOrigin(url.hostname))
+    ) {
+      return true;
+    }
   } catch (_err) {
     return false;
   }
+
+  return false;
 };
 
 export const getAllowedOrigins = (): string[] => configuredOrigins;

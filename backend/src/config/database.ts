@@ -1,6 +1,19 @@
 require("../bootstrap");
 
-module.exports = {
+const sslEnabled = String(process.env.DB_SSL || "false").toLowerCase() === "true";
+const sslRejectUnauthorized =
+  process.env.DB_SSL_REJECT_UNAUTHORIZED !== undefined
+    ? String(process.env.DB_SSL_REJECT_UNAUTHORIZED).toLowerCase() === "true"
+    : false;
+const dialectOptions = sslEnabled
+  ? {
+      ssl: {
+        rejectUnauthorized: sslRejectUnauthorized
+      }
+    }
+  : undefined;
+
+const baseConfig = {
   define: {
     charset: "utf8mb4",
     collate: "utf8mb4_bin"
@@ -10,11 +23,24 @@ module.exports = {
   // sin reinsertar datos (evita errores de clave duplicada al reiniciar).
   seederStorage: "sequelize",
   seederStorageTableName: "SequelizeData",
-  dialect: process.env.DB_DIALECT || "mysql",
-  timezone: "-03:00",
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  username: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  logging: false
+  dialect: "mysql",
+  timezone: process.env.DB_TIMEZONE || "-03:00",
+  logging: false,
+  ...(dialectOptions ? { dialectOptions } : {})
 };
+
+const databaseUrl = process.env.DATABASE_URL?.trim();
+
+module.exports = databaseUrl
+  ? {
+      ...baseConfig,
+      url: databaseUrl
+    }
+  : {
+      ...baseConfig,
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT || 3306),
+      database: process.env.DB_NAME,
+      username: process.env.DB_USER,
+      password: process.env.DB_PASS
+    };

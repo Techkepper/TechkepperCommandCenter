@@ -1,0 +1,94 @@
+name: Deploy Frontend Heroku
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - dev
+
+concurrency:
+  group: deploy-heroku-frontend-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Configure Heroku frontend app name
+        run: |
+          frontend_app="${{ vars.HEROKU_FRONTEND_APP }}"
+          if [ -z "$frontend_app" ]; then
+            frontend_app="web-command-center"
+          fi
+          echo "HEROKU_FRONTEND_APP=$frontend_app" >> "$GITHUB_ENV"
+          echo "Frontend app (CLI): $frontend_app"
+
+      - name: Validate secrets
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          ENV_PRODUCTION: ${{ secrets.ENV_PRODUCTION }}
+        run: |
+          if [ -z "$HEROKU_API_KEY" ]; then
+            echo "Falta el secret HEROKU_API_KEY en GitHub Actions." >&2
+            exit 1
+          fi
+          if [ -z "$ENV_PRODUCTION" ]; then
+            echo "Falta el secret ENV_PRODUCTION con el contenido de .env.production." >&2
+            exit 1
+          fi
+
+      - name: Prepare production env file
+        env:
+          ENV_PRODUCTION: ${{ secrets.ENV_PRODUCTION }}
+        run: |
+          printf '%s\n' "$ENV_PRODUCTION" > .env.production
+          echo "URLs en ENV_PRODUCTION (runtime):"
+          grep -E '^(PUBLIC_BACKEND_URL|FRONTEND_URL|VITE_BACKEND_URL|CORS_ALLOWED_ORIGINS)=' .env.production || true
+
+      - name: Install Heroku CLI
+        run: curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Verify Heroku frontend app
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          chmod +x scripts/heroku-preflight.sh
+          ./scripts/heroku-preflight.sh "$HEROKU_FRONTEND_APP" frontend
+
+      - name: Sync frontend config vars
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_FRONTEND_APP: ${{ env.HEROKU_FRONTEND_APP }}
+        run: |
+          chmod +x scripts/heroku-sync-env.sh
+          ./scripts/heroku-sync-env.sh "$HEROKU_FRONTEND_APP" .env.production
+
+      - name: Deploy frontend
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          git config user.email "github-actions@local"
+          git config user.name "GitHub Actions"
+          git subtree split --prefix=frontend -b heroku-frontend-deploy
+          git push "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_FRONTEND_APP}.git" heroku-frontend-deploy:main --force
+
+      - name: Deploy summary
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: |
+          web_url="$(heroku apps:info --app "$HEROKU_FRONTEND_APP" | awk -F': ' '/^Web URL/ {print $2}')"
+          vite_url="$(grep '^VITE_BACKEND_URL=' .env.production | cut -d= -f2- || true)"
+          echo "## Deploy frontend completado" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Rama:** \`${{ github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **App Heroku (CLI):** \`${{ env.HEROKU_FRONTEND_APP }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Web URL Heroku:** ${web_url:-https://${HEROKU_FRONTEND_APP}.herokuapp.com/}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **VITE_BACKEND_URL (env):** ${vite_url:-no definida}" >> "$GITHUB_STEP_SUMMARY"

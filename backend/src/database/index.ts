@@ -29,11 +29,12 @@ import ExternalStorageConnection from "../models/ExternalStorageConnection";
 import BusinessHoursSpecialDate from "../models/BusinessHoursSpecialDate";
 import AfterHoursAutoReplyEvent from "../models/AfterHoursAutoReplyEvent";
 
-// eslint-disable-next-line
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const dbConfig = require("../config/database");
-// import dbConfig from "../config/database";
 
-const sequelize = new Sequelize(dbConfig);
+const sequelize = dbConfig.url
+  ? new Sequelize(dbConfig.url, dbConfig)
+  : new Sequelize(dbConfig);
 
 const models = [
   User,

@@ -22,13 +22,12 @@ RUN PUPPETEER_SKIP_DOWNLOAD=true npm ci
 COPY . .
 RUN npm run build
 
+RUN chmod +x docker-entrypoint.sh
+
 ENV NODE_ENV=production
 ENV PORT=3000
 
 EXPOSE 3000
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD dockerize -wait tcp://${DB_HOST}:3306 \
-  && npx sequelize db:migrate \
-  && npx sequelize db:seed:all \
-  && node dist/server.js
+CMD ["./docker-entrypoint.sh"]

@@ -58,7 +58,8 @@ const ListUsersService = async ({
           "profile",
           "isActive",
           "lastActivityAt",
-          "availabilityStatus"
+          "availabilityStatus",
+          "createdAt"
         ],
     limit,
     offset,

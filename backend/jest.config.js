@@ -7,6 +7,9 @@ module.exports = {
   // All imported modules in your tests should be mocked automatically
   // automock: false,
 
+  // Integration tests share one MySQL schema; run serially to avoid cross-file truncate races.
+  maxWorkers: 1,
+
   // Stop running tests after `n` failures
   bail: 1,
 

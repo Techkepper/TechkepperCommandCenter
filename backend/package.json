@@ -4,9 +4,12 @@
   "description": "Backend multiagente de Techkepper Command Center",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "watch": "tsc -w",
     "start": "nodemon dist/server.js",
+    "start:prod": "node dist/server.js",
+    "db:release": "npx sequelize db:migrate && npx sequelize db:seed:all",
+    "heroku-postbuild": "npm run build",
     "dev": "ts-node-dev --respawn --transpile-only --ignore node_modules src/server.ts",
     "pretest": "NODE_ENV=test sequelize db:migrate && NODE_ENV=test sequelize db:seed:all",
     "test": "NODE_ENV=test jest",
