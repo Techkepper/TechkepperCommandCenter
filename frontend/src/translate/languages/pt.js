@@ -323,6 +323,8 @@ const messages = {
             profile: "Perfil",
             logout: "Sair",
             language: "Idioma",
+            lightTheme: "Tema claro",
+            darkTheme: "Tema escuro",
           },
         },
       },
