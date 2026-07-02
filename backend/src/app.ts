@@ -15,12 +15,15 @@ import { logger } from "./utils/logger";
 import ValidateSecurityConfig from "./helpers/ValidateSecurityConfig";
 import whatsappWebhookRoutes from "./routes/whatsappWebhookRoutes";
 import { isAllowedOrigin } from "./config/allowedOrigins";
+import httpLogger from "./middleware/httpLogger";
 
 ValidateSecurityConfig();
 
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
+
+app.use(httpLogger);
 
 app.use(
   cors({
