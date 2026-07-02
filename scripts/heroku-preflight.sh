@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BACKEND_APP="${1:?Usage: heroku-preflight.sh <backend-app> <frontend-app>}"
-FRONTEND_APP="${2:?Usage: heroku-preflight.sh <backend-app> <frontend-app>}"
+APP_NAME="${1:?Usage: heroku-preflight.sh <heroku-app-name> [backend|frontend]}"
+ROLE="${2:-app}"
 
 if [[ -z "${HEROKU_API_KEY:-}" ]]; then
   echo "HEROKU_API_KEY no está definida." >&2
@@ -16,22 +16,17 @@ echo ""
 echo "==> Apps accesibles con esta API key"
 heroku apps
 
-verify_app() {
-  local app="$1"
-  local role="$2"
+if ! heroku apps:info --app "$APP_NAME" >/dev/null 2>&1; then
+  echo "" >&2
+  echo "No se encontró la app '${APP_NAME}' (${ROLE})." >&2
+  echo "Configure la variable de repo HEROKU_BACKEND_APP o HEROKU_FRONTEND_APP en GitHub." >&2
+  echo "Valores actuales en tu cuenta (ver listado arriba): api-command-center, web-command-center, etc." >&2
+  exit 1
+fi
 
-  if ! heroku apps:info --app "$app" >/dev/null 2>&1; then
-    echo "" >&2
-    echo "No se encontró la app de ${role}: '${app}'" >&2
-    echo "Verifique que HEROKU_API_KEY pertenece a la cuenta dueña de las apps." >&2
-    echo "Si el nombre es distinto, configure las variables de repo HEROKU_BACKEND_APP y HEROKU_FRONTEND_APP." >&2
-    exit 1
-  fi
-
-  echo "  ✓ ${role}: ${app}"
-}
+WEB_URL="$(heroku apps:info --app "$APP_NAME" | awk -F': ' '/^Web URL/ {print $2}')"
 
 echo ""
-echo "==> Verificando apps del deploy"
-verify_app "$BACKEND_APP" "backend"
-verify_app "$FRONTEND_APP" "frontend"
+echo "==> App verificada (${ROLE})"
+echo "  ✓ Nombre CLI: ${APP_NAME}"
+echo "  ✓ Web URL:    ${WEB_URL:-https://${APP_NAME}.herokuapp.com/}"

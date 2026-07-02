@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env.production}"
-BACKEND_APP="${HEROKU_BACKEND_APP:-api-command-center-6a6bbf5602c2}"
-FRONTEND_APP="${HEROKU_FRONTEND_APP:-web-command-center-e0b9cd1e60e4}"
+BACKEND_APP="${HEROKU_BACKEND_APP:-api-command-center}"
+FRONTEND_APP="${HEROKU_FRONTEND_APP:-web-command-center}"
 
 if [[ -z "${HEROKU_API_KEY:-}" ]]; then
   echo "Define HEROKU_API_KEY antes de desplegar." >&2
@@ -17,6 +17,12 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 cd "$ROOT_DIR"
+
+echo "==> Verificando app backend"
+"${ROOT_DIR}/scripts/heroku-preflight.sh" "$BACKEND_APP" backend
+
+echo "==> Verificando app frontend"
+"${ROOT_DIR}/scripts/heroku-preflight.sh" "$FRONTEND_APP" frontend
 
 echo "==> Sincronizando config del backend"
 HEROKU_FRONTEND_APP="$FRONTEND_APP" "${ROOT_DIR}/scripts/heroku-sync-env.sh" "$BACKEND_APP" "$ENV_FILE"
