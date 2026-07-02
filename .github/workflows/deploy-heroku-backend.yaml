@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - dev
-      - feat/heroku-deploy
 
 concurrency:
   group: deploy-heroku-backend-${{ github.ref }}
@@ -14,7 +13,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/feat/heroku-deploy'
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
 
     steps:
