@@ -55,6 +55,10 @@ const useStyles = makeStyles((theme) => ({
   },
   toolbar: {
     paddingRight: 24,
+    [theme.breakpoints.down("xs")]: {
+      paddingLeft: theme.spacing(1),
+      paddingRight: theme.spacing(0.5),
+    },
   },
   toolbarIcon: {
     display: "flex",
@@ -89,6 +93,10 @@ const useStyles = makeStyles((theme) => ({
   menuButton: {
     marginRight: 36,
     color: theme.palette.text.primary,
+    [theme.breakpoints.down("xs")]: {
+      marginRight: theme.spacing(0.5),
+      padding: theme.spacing(1),
+    },
   },
   menuButtonHidden: {
     display: "none",
@@ -96,6 +104,9 @@ const useStyles = makeStyles((theme) => ({
   title: {
     flexGrow: 1,
     color: theme.palette.text.primary,
+    [theme.breakpoints.down("xs")]: {
+      display: "none",
+    },
   },
   drawerPaper: {
     position: "relative",
@@ -141,19 +152,58 @@ const useStyles = makeStyles((theme) => ({
   },
   iconButton: {
     color: theme.palette.text.primary,
+    [theme.breakpoints.down("xs")]: {
+      padding: theme.spacing(1),
+    },
   },
   themeSwitchContainer: {
     display: "flex",
     alignItems: "center",
+    [theme.breakpoints.down("xs")]: {
+      display: "none",
+    },
   },
   themeIcon: {
     color: theme.palette.text.primary,
+  },
+  secondaryControl: {
+    [theme.breakpoints.down("xs")]: {
+      display: "none",
+    },
+  },
+  mobileMenuItem: {
+    display: "none",
+    [theme.breakpoints.down("xs")]: {
+      display: "flex",
+    },
+  },
+  mobileMenuIcon: {
+    marginRight: theme.spacing(1),
+  },
+  notificationsControl: {
+    display: "flex",
+    [theme.breakpoints.down("xs")]: {
+      "& .MuiIconButton-root": {
+        padding: theme.spacing(1),
+      },
+    },
   },
   availabilitySelect: {
     minWidth: 130,
     marginRight: theme.spacing(1),
     "& .MuiSelect-select": { paddingTop: 7, paddingBottom: 7 },
-    [theme.breakpoints.down("xs")]: { minWidth: 105 },
+    [theme.breakpoints.down("xs")]: {
+      minWidth: 94,
+      maxWidth: 94,
+      marginLeft: "auto",
+      marginRight: 0,
+      "& .MuiSelect-select": {
+        overflow: "hidden",
+        paddingLeft: theme.spacing(1),
+        paddingRight: theme.spacing(3),
+        textOverflow: "ellipsis",
+      },
+    },
   },
 }));
 
@@ -266,7 +316,10 @@ const LoggedInLayout = ({ children }) => {
       />
       <AppBar
         position="absolute"
-        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+        className={clsx(
+          classes.appBar,
+          drawerVariant === "permanent" && drawerOpen && classes.appBarShift,
+        )}
       >
         <Toolbar variant="dense" className={classes.toolbar}>
           <IconButton
@@ -331,7 +384,7 @@ const LoggedInLayout = ({ children }) => {
               aria-controls="menu-language"
               aria-haspopup="true"
               onClick={handleOpenLangMenu}
-              className={classes.iconButton}
+              className={clsx(classes.iconButton, classes.secondaryControl)}
             >
               <TranslateIcon />
             </IconButton>
@@ -357,7 +410,11 @@ const LoggedInLayout = ({ children }) => {
             ))}
           </Menu>
 
-          {user.id && <NotificationsPopOver className={classes.iconButton} />}
+          {user.id && (
+            <div className={classes.notificationsControl}>
+              <NotificationsPopOver />
+            </div>
+          )}
 
           <div>
             <IconButton
@@ -384,6 +441,30 @@ const LoggedInLayout = ({ children }) => {
               open={menuOpen}
               onClose={handleCloseMenu}
             >
+              <MenuItem
+                className={classes.mobileMenuItem}
+                onClick={toggleTheme}
+              >
+                <Brightness4Icon
+                  fontSize="small"
+                  className={classes.mobileMenuIcon}
+                />
+                {i18n.t(
+                  darkMode
+                    ? "mainDrawer.appBar.user.lightTheme"
+                    : "mainDrawer.appBar.user.darkTheme",
+                )}
+              </MenuItem>
+              <MenuItem
+                className={classes.mobileMenuItem}
+                onClick={handleOpenLangMenu}
+              >
+                <TranslateIcon
+                  fontSize="small"
+                  className={classes.mobileMenuIcon}
+                />
+                {i18n.t("mainDrawer.appBar.user.language")}
+              </MenuItem>
               <MenuItem onClick={handleOpenUserModal}>
                 {i18n.t("mainDrawer.appBar.user.profile")}
               </MenuItem>

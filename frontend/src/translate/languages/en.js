@@ -322,6 +322,8 @@ const messages = {
             profile: "Profile",
             logout: "Logout",
             language: "Language",
+            lightTheme: "Light theme",
+            darkTheme: "Dark theme",
           },
         },
       },
