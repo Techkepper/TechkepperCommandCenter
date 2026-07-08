@@ -1,7 +1,8 @@
 import { CookieOptions, Response } from "express";
 import { isPublicBackendSecure } from "../config/appUrls";
 
-const refreshCookiePath = process.env.REFRESH_COOKIE_PATH || "/auth";
+// Default "/" so the cookie is sent for both direct (/auth/*) and proxied (/api/auth/*) API calls.
+const refreshCookiePath = process.env.REFRESH_COOKIE_PATH || "/";
 
 const getRefreshCookieOptions = (): CookieOptions => ({
   httpOnly: true,

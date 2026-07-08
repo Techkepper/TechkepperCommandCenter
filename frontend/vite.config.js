@@ -21,6 +21,9 @@ export default defineConfig(({ mode }) => {
           secure: false,
           ws: true,
           rewrite: (path) => path.replace(/^\/api/, ""),
+          cookiePathRewrite: {
+            "/auth": "/api/auth",
+          },
         },
       },
     },
